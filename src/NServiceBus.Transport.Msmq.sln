@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NServiceBus.Transport.Msmq.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NserviceBus.Transport.Msmq", "NserviceBus.Transport.Msmq\NserviceBus.Transport.Msmq.csproj", "{D60AC41F-E7A9-46C7-9086-87A3D2AD3325}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NServiceBus.Transport.Msmq.Tests", "NServiceBus.Transport.Msmq.Tests\NServiceBus.Transport.Msmq.Tests.csproj", "{A366459A-1F80-477D-BBFB-5A8C8132F22C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{D60AC41F-E7A9-46C7-9086-87A3D2AD3325}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D60AC41F-E7A9-46C7-9086-87A3D2AD3325}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D60AC41F-E7A9-46C7-9086-87A3D2AD3325}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A366459A-1F80-477D-BBFB-5A8C8132F22C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A366459A-1F80-477D-BBFB-5A8C8132F22C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A366459A-1F80-477D-BBFB-5A8C8132F22C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A366459A-1F80-477D-BBFB-5A8C8132F22C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
