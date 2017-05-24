@@ -10,6 +10,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NServiceBus" Version="7.0.0-remove-msmq0001" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
   </ItemGroup>
