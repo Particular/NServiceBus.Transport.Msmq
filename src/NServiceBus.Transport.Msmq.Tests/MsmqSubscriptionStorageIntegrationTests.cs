@@ -1,9 +1,10 @@
-﻿namespace NServiceBus.Core.Tests.Msmq
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.Messaging;
     using System.Threading.Tasks;
     using Extensibility;
     using NUnit.Framework;
+    using Persistence.Msmq;
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
     using MessageType = Unicast.Subscriptions.MessageType;
 

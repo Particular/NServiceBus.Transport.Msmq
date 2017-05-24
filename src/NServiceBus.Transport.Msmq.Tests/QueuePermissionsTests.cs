@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Core.Tests.Msmq
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.IO;
     using System.Messaging;
@@ -48,7 +48,7 @@
         [TestCase(MessageQueueAccessRights.TakeQueueOwnership)]
         public void Should_not_warn_if_queue_has_public_access_set_to_deny(MessageQueueAccessRights accessRights)
         {
-            // Set up a queue with the specified access for everyone/anonymous explicitly set to DENY. 
+            // Set up a queue with the specified access for everyone/anonymous explicitly set to DENY.
             var everyoneGroupName = new SecurityIdentifier(WellKnownSidType.WorldSid, null).Translate(typeof(NTAccount)).ToString();
             var anonymousGroupName = new SecurityIdentifier(WellKnownSidType.AnonymousSid, null).Translate(typeof(NTAccount)).ToString();
 
@@ -99,7 +99,7 @@
         }
 
         // MSMQ Access Rights are defined here: https://msdn.microsoft.com/en-us/library/system.messaging.messagequeueaccessrights(v=vs.110).aspx
-        // FullControl, GenericWrite, GenericRead, ReceiveJournalMessage and ReceiveMessage are combination of rights. See above doco. 
+        // FullControl, GenericWrite, GenericRead, ReceiveJournalMessage and ReceiveMessage are combination of rights. See above doco.
         [TestCase(MessageQueueAccessRights.ChangeQueuePermissions, WellKnownSidType.WorldSid)]
         [TestCase(MessageQueueAccessRights.DeleteQueue, WellKnownSidType.WorldSid)]
         [TestCase(MessageQueueAccessRights.FullControl, WellKnownSidType.WorldSid)]

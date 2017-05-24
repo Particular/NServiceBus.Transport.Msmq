@@ -1,4 +1,4 @@
-namespace NServiceBus.Core.Tests.Msmq
+namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using NUnit.Framework;
@@ -28,7 +28,7 @@ namespace NServiceBus.Core.Tests.Msmq
             });
             Assert.AreEqual("202.171.13.141", returnAddress.Machine);
         }
-        
+
         [Test]
         public void If_reference_address_is_specified_via_ip_and_this_is_specified_via_host_name_it_should_convert_to_ip()
         {

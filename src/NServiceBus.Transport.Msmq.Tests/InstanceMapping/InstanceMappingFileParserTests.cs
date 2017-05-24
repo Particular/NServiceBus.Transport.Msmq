@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Core.Tests.Routing
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.Xml.Linq;
     using System.Xml.Schema;
