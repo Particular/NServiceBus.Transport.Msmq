@@ -1,4 +1,4 @@
-namespace NServiceBus
+namespace NServiceBus.Persistence.Msmq
 {
     using System;
     using System.Collections.Generic;

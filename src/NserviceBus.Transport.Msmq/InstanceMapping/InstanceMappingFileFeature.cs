@@ -1,4 +1,4 @@
-namespace NServiceBus.Features
+namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.IO;
@@ -15,7 +15,7 @@ namespace NServiceBus.Features
             Prerequisite(c => c.Settings.HasExplicitValue(FilePathSettingsKey) || File.Exists(GetRootedPath(DefaultInstanceMappingFileName)), "No explicit instance mapping file configuration and default file does not exist.");
         }
 
-        protected internal override void Setup(FeatureConfigurationContext context)
+        protected override void Setup(FeatureConfigurationContext context)
         {
             var filePath = GetRootedPath(context.Settings.Get<string>(FilePathSettingsKey));
 

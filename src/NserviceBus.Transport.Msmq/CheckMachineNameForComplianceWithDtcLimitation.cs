@@ -1,4 +1,4 @@
-namespace NServiceBus.Features
+namespace NServiceBus.Transport.Msmq
 {
     using System.Runtime.InteropServices;
     using System.Text;

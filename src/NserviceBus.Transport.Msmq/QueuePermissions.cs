@@ -1,4 +1,4 @@
-﻿namespace NServiceBus
+﻿namespace NServiceBus.Transport.Msmq
 {
     using System.Messaging;
     using System.Security;

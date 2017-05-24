@@ -1,4 +1,4 @@
-namespace NServiceBus
+namespace NServiceBus.Transport.Msmq
 {
     using System.IO;
     using System.Xml;

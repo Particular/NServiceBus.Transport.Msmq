@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Features
+﻿namespace NServiceBus.Persistence.Msmq
 {
     using Logging;
     using Persistence.Legacy;
@@ -7,7 +7,7 @@
     /// <summary>
     /// Provides subscription storage using a msmq queue as the backing store.
     /// </summary>
-    public class MsmqSubscriptionPersistence : Feature
+    class MsmqSubscriptionPersistence : Feature
     {
         internal MsmqSubscriptionPersistence()
         {
@@ -17,7 +17,7 @@
         /// Invoked if the feature is activated.
         /// </summary>
         /// <param name="context">The feature context.</param>
-        protected internal override void Setup(FeatureConfigurationContext context)
+        protected override void Setup(FeatureConfigurationContext context)
         {
             var queueName = context.Settings.GetConfiguredMsmqPersistenceSubscriptionQueue();
 
