@@ -20,6 +20,11 @@ namespace NServiceBus.Transport.Msmq
             this.endpointInstances = endpointInstances;
         }
 
+        internal Task Start(IMessageSession session)
+        {
+            return OnStart(session);
+        }
+
         protected override Task OnStart(IMessageSession session)
         {
             timer.Start(() =>

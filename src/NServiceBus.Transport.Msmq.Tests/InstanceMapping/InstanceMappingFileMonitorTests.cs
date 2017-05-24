@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Core.Tests.Routing
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Collections.Generic;
@@ -6,8 +6,8 @@
     using System.Text;
     using System.Threading.Tasks;
     using System.Xml.Linq;
-    using NServiceBus.Logging;
-    using NServiceBus.Routing;
+    using Logging;
+    using Routing;
     using NUnit.Framework;
     using Testing;
 
@@ -70,7 +70,7 @@
             });
 
             var monitor = new InstanceMappingFileMonitor("unused", TimeSpan.Zero, timer, fileAccess, new EndpointInstances());
-            await monitor.PerformStartup(null);
+            await monitor.Start(null);
 
             fail = true;
             await timer.Trigger();
