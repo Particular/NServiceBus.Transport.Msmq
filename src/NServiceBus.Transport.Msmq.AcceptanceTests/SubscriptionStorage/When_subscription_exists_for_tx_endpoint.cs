@@ -8,7 +8,6 @@
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
-    using Persistence.Legacy;
 
     public class When_subscription_exists_for_tx_endpoint : NServiceBusAcceptanceTest
     {

@@ -2,7 +2,7 @@
 {
     using System;
     using AcceptanceTesting;
-    using EndpointTemplates;
+    using NServiceBus.Transport.Msmq.AcceptanceTests;
     using NUnit.Framework;
 
     public class When_no_explicit_error_queue_is_configured : NServiceBusAcceptanceTest
@@ -24,21 +24,12 @@
         {
             public EndpointWithNoErrorQConfig()
             {
-                EndpointSetup<PlainVanillaEndpoint>();
+                EndpointSetup<ServerWithNoErrorQueueConfigured>();
             }
         }
 
         public class Context : ScenarioContext
         {
-        }
-
-        public class PlainVanillaEndpoint : BasicServer
-        {
-         
-            protected override void ApplyConfig(EndpointConfiguration configuration)
-            {
-                //no-op
-            }
         }
     }
 }

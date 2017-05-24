@@ -7,7 +7,6 @@
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
-    using Persistence.Legacy;
 
     public class When_using_subscription_store_on_non_tx_endpoint : NServiceBusAcceptanceTest
     {
