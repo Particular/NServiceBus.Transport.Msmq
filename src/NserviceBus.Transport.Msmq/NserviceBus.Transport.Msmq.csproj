@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net452</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Messaging" />
+    <Reference Include="System.Transactions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="InstanceMapping\endpoints.xsd" />
+    <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
+  </ItemGroup>
+
+</Project>
