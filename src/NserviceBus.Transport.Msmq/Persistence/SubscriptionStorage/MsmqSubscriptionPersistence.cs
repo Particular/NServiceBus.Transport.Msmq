@@ -1,8 +1,9 @@
 ﻿namespace NServiceBus.Persistence.Msmq
 {
+    using Features;
     using Logging;
-    using Persistence.Legacy;
     using Transport;
+    using Transport.Msmq;
 
     /// <summary>
     /// Provides subscription storage using a msmq queue as the backing store.

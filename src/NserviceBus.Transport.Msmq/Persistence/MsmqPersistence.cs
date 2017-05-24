@@ -1,6 +1,8 @@
 ﻿namespace NServiceBus
 {
     using Features;
+    using Persistence;
+    using Persistence.Msmq;
 
     /// <summary>
     /// Used to enable Msmq persistence.

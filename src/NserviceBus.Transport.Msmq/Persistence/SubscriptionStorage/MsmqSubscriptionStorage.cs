@@ -7,6 +7,7 @@ namespace NServiceBus.Persistence.Msmq
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
+    using Transport.Msmq;
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
     using MessageType = Unicast.Subscriptions.MessageType;
 

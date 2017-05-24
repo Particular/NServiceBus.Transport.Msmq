@@ -2,8 +2,8 @@ namespace NServiceBus
 {
     using System;
     using Configuration.AdvancedExtensibility;
-    using Features;
     using Settings;
+    using Transport.Msmq;
 
     /// <summary>
     /// Allows configuring file-based instance mappings.
@@ -33,7 +33,8 @@ namespace NServiceBus
             {
                 throw new ArgumentOutOfRangeException(nameof(refreshInterval), "Value must be less than 1 day.");
             }
-            Settings.Set(InstanceMappingFileFeature.CheckIntervalSettingsKey, refreshInterval);
+
+            this.GetSettings().Set(InstanceMappingFileFeature.CheckIntervalSettingsKey, refreshInterval);
             return this;
         }
 
@@ -45,7 +46,7 @@ namespace NServiceBus
         {
             Guard.AgainstNullAndEmpty(nameof(filePath), filePath);
 
-            Settings.Set(InstanceMappingFileFeature.FilePathSettingsKey, filePath);
+            this.GetSettings().Set(InstanceMappingFileFeature.FilePathSettingsKey, filePath);
             return this;
         }
     }

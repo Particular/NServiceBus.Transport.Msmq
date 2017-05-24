@@ -2,6 +2,8 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.IO;
+    using Features;
+    using Routing;
 
     class InstanceMappingFileFeature : Feature
     {
@@ -25,7 +27,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
             var checkInterval = context.Settings.Get<TimeSpan>(CheckIntervalSettingsKey);
-            var endpointInstances = context.Routing.EndpointInstances;
+            var endpointInstances = context.Settings.Get<EndpointInstances>();
 
             var instanceMappingTable = new InstanceMappingFileMonitor(filePath, checkInterval, new AsyncTimer(), new InstanceMappingFileAccess(), endpointInstances);
             instanceMappingTable.ReloadData();

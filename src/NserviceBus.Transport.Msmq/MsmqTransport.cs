@@ -5,6 +5,7 @@ namespace NServiceBus
     using Routing;
     using Settings;
     using Transport;
+    using Transport.Msmq;
 
     /// <summary>
     /// Transport definition for MSMQ.
@@ -37,7 +38,7 @@ namespace NServiceBus
                 throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
             }
 
-            settings.EnableFeature(typeof(InstanceMappingFileFeature));
+            settings.Set(typeof(InstanceMappingFileFeature).FullName, FeatureState.Enabled);
 
             var msmqSettings = connectionString != null ? new MsmqConnectionStringBuilder(connectionString)
                 .RetrieveSettings() : new MsmqSettings();

@@ -1,6 +1,8 @@
 ﻿namespace NServiceBus
 {
+    using Configuration.AdvancedExtensibility;
     using Settings;
+    using Transport.Msmq;
 
     /// <summary>
     /// Provides configuration extensions when using <see cref="MsmqPersistence"/>.
@@ -17,7 +19,7 @@
             Guard.AgainstNull(nameof(persistenceExtensions), persistenceExtensions);
             Guard.AgainstNull(nameof(queue), queue);
 
-            persistenceExtensions.Settings.Set(msmqPersistenceQueueConfigurationKey, queue);
+            persistenceExtensions.GetSettings().Set(msmqPersistenceQueueConfigurationKey, queue);
         }
 
         internal static string GetConfiguredMsmqPersistenceSubscriptionQueue(this ReadOnlySettings settings)
