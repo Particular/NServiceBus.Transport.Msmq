@@ -4,6 +4,8 @@
     <TargetFramework>net452</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
+    <OutputPath>..\..\binaries\</OutputPath>
+    <DocumentationFile>$(OutputPath)net452\NserviceBus.Transport.Msmq.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
@@ -15,12 +17,35 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0012" PrivateAssets="All" />
     <PackageReference Include="NServiceBus" Version="7.0.0-remove-msmq0001" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Title>NserviceBus.Transport.Msmq</Title>
+    <Authors>NServiceBus Ltd</Authors>
+    <Company>NServiceBus Ltd</Company>
+    <Description>MSMQ support for NServicebus</Description>
+    <PackageLicenseUrl>http://particular.net/LicenseAgreement</PackageLicenseUrl>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Copyright>Copyright 2010-2017 NServiceBus. All rights reserved</Copyright>
+    <PackageTags>nservicebus servicebus msmq cqrs publish subscribe</PackageTags>
+    <PackageIconUrl>http://s3.amazonaws.com/nuget.images/NServiceBus_32.png</PackageIconUrl>
+    <PackageProjectUrl>http://particular.net/</PackageProjectUrl>
+    <PackageOutputPath>..\..\nugets</PackageOutputPath>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="$(OutputPath)$(AssemblyName).pdb">
+      <Pack>true</Pack>
+      <PackagePath>lib/net452</PackagePath>
+    </Content>
   </ItemGroup>
 
 </Project>
