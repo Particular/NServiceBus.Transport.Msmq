@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NserviceBus.Transport.Msmq\NserviceBus.Transport.Msmq.csproj" />
+    <ProjectReference Include="..\NServiceBus.Transport.Msmq\NServiceBus.Transport.Msmq.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
     <OutputPath>..\..\binaries\</OutputPath>
-    <DocumentationFile>$(OutputPath)net452\NserviceBus.Transport.Msmq.xml</DocumentationFile>
+    <DocumentationFile>$(OutputPath)net452\NServiceBus.Transport.Msmq.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Title>NserviceBus.Transport.Msmq</Title>
+    <Title>NServiceBus.Transport.Msmq</Title>
     <Authors>NServiceBus Ltd</Authors>
     <Company>NServiceBus Ltd</Company>
     <Description>MSMQ support for NServicebus</Description>
