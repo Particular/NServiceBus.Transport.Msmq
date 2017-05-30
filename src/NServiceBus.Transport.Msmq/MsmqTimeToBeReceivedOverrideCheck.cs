@@ -1,6 +1,5 @@
 ﻿namespace NServiceBus.Transport.Msmq
 {
-    using System;
     using ConsistencyGuarantees;
     using Features;
     using Settings;
@@ -23,9 +22,7 @@
             //var auditTTBROverridden = messageAuditingConfig?.TimeToBeReceived > TimeSpan.Zero;
 
             //AuditConfigReader.Result is not public, so have to set this to false for now
-            var auditTTBROverridden = false;
-
-            return TimeToBeReceivedOverrideChecker.Check(usingMsmq, isTransactional, outBoxRunning, auditTTBROverridden);
+            return TimeToBeReceivedOverrideChecker.Check(usingMsmq, isTransactional, outBoxRunning, false);
         }
 
         ReadOnlySettings settings;

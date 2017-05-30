@@ -11,7 +11,6 @@ namespace NServiceBus.Transport.Msmq
     using Logging;
     using Performance.TimeToBeReceived;
     using Transport;
-    using Transport.Msmq;
 
     class MsmqUtilities
     {

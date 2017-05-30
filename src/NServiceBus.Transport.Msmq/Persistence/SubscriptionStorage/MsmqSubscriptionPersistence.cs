@@ -5,19 +5,8 @@
     using Transport;
     using Transport.Msmq;
 
-    /// <summary>
-    /// Provides subscription storage using a msmq queue as the backing store.
-    /// </summary>
     class MsmqSubscriptionPersistence : Feature
     {
-        internal MsmqSubscriptionPersistence()
-        {
-        }
-
-        /// <summary>
-        /// Invoked if the feature is activated.
-        /// </summary>
-        /// <param name="context">The feature context.</param>
         protected override void Setup(FeatureConfigurationContext context)
         {
             var queueName = context.Settings.GetConfiguredMsmqPersistenceSubscriptionQueue();

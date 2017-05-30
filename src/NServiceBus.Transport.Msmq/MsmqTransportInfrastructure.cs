@@ -5,7 +5,6 @@ namespace NServiceBus.Transport.Msmq
     using System.Text;
     using System.Threading.Tasks;
     using System.Transactions;
-    using Features;
     using Performance.TimeToBeReceived;
     using Routing;
     using Settings;

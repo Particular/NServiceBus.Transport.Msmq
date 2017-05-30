@@ -1,9 +1,9 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System;
-    using NServiceBus.Features;
+    //using System;
+    //using NServiceBus.Features;
     using NUnit.Framework;
-    using Settings;
+    //using Settings;
 
     [TestFixture]
     public class InstanceMappingFileFeatureTests
