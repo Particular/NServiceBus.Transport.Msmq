@@ -5,10 +5,10 @@
     using System.Messaging;
     using DeliveryConstraints;
     using Extensibility;
-    using NServiceBus.Performance.TimeToBeReceived;
-    using NServiceBus.Routing;
-    using Transport;
     using NUnit.Framework;
+    using Performance.TimeToBeReceived;
+    using Routing;
+    using Transport;
 
     [TestFixture]
     public class MsmqMessageDispatcherTests

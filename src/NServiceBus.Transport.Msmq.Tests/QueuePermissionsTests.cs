@@ -4,7 +4,7 @@
     using System.Messaging;
     using System.Security.Principal;
     using System.Text;
-    using NServiceBus.Logging;
+    using Logging;
     using NUnit.Framework;
     using Testing;
 

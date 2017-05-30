@@ -25,7 +25,7 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
-            timer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            timer.Change(Timeout.Infinite, Timeout.Infinite);
             Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
         }
 

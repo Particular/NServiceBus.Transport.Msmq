@@ -17,7 +17,7 @@
         {
             var usingMsmq = settings.Get<TransportDefinition>() is MsmqTransport;
             var isTransactional = settings.GetRequiredTransactionModeForReceives() != TransportTransactionMode.None;
-            var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
+            var outBoxRunning = settings.IsFeatureActive(typeof(Outbox));
 
 
             //var messageAuditingConfig = settings.GetOrDefault<AuditConfigReader.Result>();

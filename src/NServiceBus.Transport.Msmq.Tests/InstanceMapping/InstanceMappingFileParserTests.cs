@@ -2,8 +2,8 @@
 {
     using System.Xml.Linq;
     using System.Xml.Schema;
-    using NServiceBus.Routing;
     using NUnit.Framework;
+    using Routing;
 
     [TestFixture]
     public class InstanceMappingFileParserTests

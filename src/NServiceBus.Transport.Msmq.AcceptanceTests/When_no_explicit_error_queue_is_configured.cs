@@ -2,8 +2,8 @@
 {
     using System;
     using AcceptanceTesting;
-    using NServiceBus.Transport.Msmq.AcceptanceTests;
     using NUnit.Framework;
+    using Transport.Msmq.AcceptanceTests;
 
     public class When_no_explicit_error_queue_is_configured : NServiceBusAcceptanceTest
     {

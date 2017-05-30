@@ -4,10 +4,10 @@
     using System.Collections.Generic;
     using System.Messaging;
     using DeliveryConstraints;
-    using NServiceBus.Performance.TimeToBeReceived;
-    using Transport;
     using NUnit.Framework;
+    using Performance.TimeToBeReceived;
     using Support;
+    using Transport;
 
     [TestFixture]
     public class MsmqUtilitiesTests
