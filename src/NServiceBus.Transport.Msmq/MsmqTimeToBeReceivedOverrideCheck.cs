@@ -19,19 +19,11 @@
             var isTransactional = settings.GetRequiredTransactionModeForReceives() != TransportTransactionMode.None;
             var outBoxRunning = settings.IsFeatureActive(typeof(Outbox));
 
-
             //var messageAuditingConfig = settings.GetOrDefault<AuditConfigReader.Result>();
             //var auditTTBROverridden = messageAuditingConfig?.TimeToBeReceived > TimeSpan.Zero;
 
-            //workaround for AuditConfigReader.Result not being accessible
+            //AuditConfigReader.Result is not public, so have to set this to false for now
             var auditTTBROverridden = false;
-            var auditConfigReaderResult = "NServiceBus.AuditConfigReader+Result";
-
-            if (settings.HasSetting(auditConfigReaderResult))
-            {
-                dynamic result = settings.Get(auditConfigReaderResult);
-                auditTTBROverridden = result?.TimeToBeReceived > TimeSpan.Zero;
-            }
 
             return TimeToBeReceivedOverrideChecker.Check(usingMsmq, isTransactional, outBoxRunning, auditTTBROverridden);
         }
