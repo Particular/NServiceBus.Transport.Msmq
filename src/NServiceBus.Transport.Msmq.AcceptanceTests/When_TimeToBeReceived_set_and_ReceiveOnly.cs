@@ -62,12 +62,12 @@
             }
         }
 
-        class StartMessage : ICommand
+        public class StartMessage : ICommand
         {
         }
 
         [TimeToBeReceived("00:00:15")]
-        class TtbrMessage : ICommand
+        public class TtbrMessage : ICommand
         {
         }
     }
