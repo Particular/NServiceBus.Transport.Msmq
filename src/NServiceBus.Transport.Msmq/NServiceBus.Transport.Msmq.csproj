@@ -27,7 +27,6 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <Title>NServiceBus.Transport.Msmq</Title>
     <Authors>NServiceBus Ltd</Authors>
     <Company>NServiceBus Ltd</Company>
     <Description>MSMQ support for NServicebus</Description>
