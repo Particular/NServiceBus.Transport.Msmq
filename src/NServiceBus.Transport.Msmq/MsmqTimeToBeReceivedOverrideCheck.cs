@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq
 {
+    using System;
     using ConsistencyGuarantees;
     using Features;
     using Settings;
@@ -18,11 +19,10 @@
             var isTransactional = settings.GetRequiredTransactionModeForReceives() != TransportTransactionMode.None;
             var outBoxRunning = settings.IsFeatureActive(typeof(Outbox));
 
-            //var messageAuditingConfig = settings.GetOrDefault<AuditConfigReader.Result>();
-            //var auditTTBROverridden = messageAuditingConfig?.TimeToBeReceived > TimeSpan.Zero;
+            settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
+            var auditTTBROverridden = auditMessageExpiration > TimeSpan.Zero;
 
-            //AuditConfigReader.Result is not public, so have to set this to false for now
-            return TimeToBeReceivedOverrideChecker.Check(usingMsmq, isTransactional, outBoxRunning, false);
+            return TimeToBeReceivedOverrideChecker.Check(usingMsmq, isTransactional, outBoxRunning, auditTTBROverridden);
         }
 
         ReadOnlySettings settings;
