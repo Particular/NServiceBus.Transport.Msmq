@@ -9,7 +9,7 @@
         public bool SupportsNativePubSub => false;
         public bool SupportsNativeDeferral => false;
         public bool SupportsOutbox => true;
-        public IConfigureEndpointTestExecution TransportConfiguration { get; } = new ConfigureEndpointMsmqTransport();
-        public IConfigureEndpointTestExecution PersistenceConfiguration { get; } = new ConfigureEndpointInMemoryPersistence();
+        public IConfigureEndpointTestExecution CreateTransportConfiguration() => new ConfigureEndpointMsmqTransport();
+        public IConfigureEndpointTestExecution CreatePersistenceConfiguration() => new ConfigureEndpointInMemoryPersistence();
     }
 }
