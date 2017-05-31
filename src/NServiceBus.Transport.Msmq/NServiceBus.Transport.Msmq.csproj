@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="GitVersionTask" Version="4.0.0-beta0012" PrivateAssets="All" />
-    <PackageReference Include="NServiceBus" Version="7.0.0-alpha0024" />
+    <PackageReference Include="NServiceBus" Version="7.0.0-alpha0029" />
   </ItemGroup>
 
   <ItemGroup>
