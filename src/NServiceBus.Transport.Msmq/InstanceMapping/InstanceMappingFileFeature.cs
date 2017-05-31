@@ -9,11 +9,14 @@ namespace NServiceBus.Transport.Msmq
     {
         public InstanceMappingFileFeature()
         {
+            EnableByDefault();
+
             Defaults(s =>
             {
                 s.SetDefault(CheckIntervalSettingsKey, TimeSpan.FromSeconds(30));
                 s.SetDefault(FilePathSettingsKey, DefaultInstanceMappingFileName);
             });
+
             Prerequisite(c => c.Settings.HasExplicitValue(FilePathSettingsKey) || File.Exists(GetRootedPath(DefaultInstanceMappingFileName)), "No explicit instance mapping file configuration and default file does not exist.");
         }
 
