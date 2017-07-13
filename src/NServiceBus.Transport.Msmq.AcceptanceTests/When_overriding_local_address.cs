@@ -35,6 +35,10 @@ $@"<endpoints>
         [Test]
         public async Task Should_use_provided_instance_mapping()
         {
+            // avoid exception thrown by InstanceMappingFileParser:
+            // https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/mitigation-deserialization-of-objects-across-app-domains
+            System.Configuration.ConfigurationManager.GetSection("system.xml/xmlReader");
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Sender>(e => e.When(c => c.Send(new Message())))
                 .WithEndpoint<Receiver>()

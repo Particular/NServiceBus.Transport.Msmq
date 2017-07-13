@@ -31,6 +31,10 @@
         [Test]
         public async Task Should_send_messages_to_logical_endpoint_address()
         {
+            // avoid exception thrown by InstanceMappingFileParser:
+            // https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/mitigation-deserialization-of-objects-across-app-domains
+            System.Configuration.ConfigurationManager.GetSection("system.xml/xmlReader");
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SenderWithEmptyMappingFile>(e => e.When(async c =>
                 {

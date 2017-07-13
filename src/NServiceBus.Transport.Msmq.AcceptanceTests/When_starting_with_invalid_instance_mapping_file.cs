@@ -32,6 +32,10 @@
         [Test]
         public void Should_throw_at_startup()
         {
+            // avoid exception thrown by InstanceMappingFileParser:
+            // https://docs.microsoft.com/en-us/dotnet/framework/migration-guide/mitigation-deserialization-of-objects-across-app-domains
+            System.Configuration.ConfigurationManager.GetSection("system.xml/xmlReader");
+
             var exception = Assert.ThrowsAsync<Exception>(() => Scenario.Define<ScenarioContext>()
                 .WithEndpoint<SenderWithInvalidMappingFile>()
                 .Done(c => c.EndpointsStarted)
