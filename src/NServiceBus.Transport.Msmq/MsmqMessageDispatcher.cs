@@ -24,7 +24,7 @@ namespace NServiceBus.Transport.Msmq
             this.messageLabelGenerator = messageLabelGenerator;
         }
 
-        public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
         {
             Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
 
@@ -33,15 +33,17 @@ namespace NServiceBus.Transport.Msmq
                 throw new Exception("The MSMQ transport only supports unicast transport operations.");
             }
 
-            await Task.Yield();
+            var transportOperationTasks = new List<Task>(outgoingMessages.UnicastTransportOperations.Count);
 
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation);
+                transportOperationTasks.Add(ExecuteTransportOperation(transaction, unicastTransportOperation));
             }
+
+            return Task.WhenAll(transportOperationTasks);
         }
 
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        async Task ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
 
@@ -76,6 +78,8 @@ namespace NServiceBus.Transport.Msmq
                         }
 
                         var label = GetLabel(message);
+
+                        await Task.Yield();
 
                         if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
                         {
