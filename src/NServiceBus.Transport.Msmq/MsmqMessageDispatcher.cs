@@ -40,7 +40,7 @@ namespace NServiceBus.Transport.Msmq
                 transportOperationTasks.Add(ExecuteTransportOperation(transaction, unicastTransportOperation));
             }
 
-            return Task.WhenAll(transportOperationTasks);
+            return transportOperationTasks.Count == 1 ? transportOperationTasks[0] : Task.WhenAll(transportOperationTasks);
         }
 
         async Task ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
