@@ -79,6 +79,13 @@ namespace NServiceBus.Transport.Msmq
         {
             new CheckMachineNameForComplianceWithDtcLimitation().Check();
 
+            // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name. 
+            var bindings = settings.Get<QueueBindings>();
+            foreach (var queue in bindings.ReceivingAddresses)
+            {
+                CheckEndpointNameComplianceForMsmq.Check(queue);
+            }
+
             MsmqScopeOptions scopeOptions;
 
             if (!settings.TryGet(out scopeOptions))
@@ -93,8 +100,6 @@ namespace NServiceBus.Transport.Msmq
                 () => new MsmqQueueCreator(msmqSettings.UseTransactionalQueues),
                 () =>
                 {
-                    var bindings = settings.Get<QueueBindings>();
-
                     foreach (var address in bindings.ReceivingAddresses)
                     {
                         QueuePermissions.CheckQueue(address);
