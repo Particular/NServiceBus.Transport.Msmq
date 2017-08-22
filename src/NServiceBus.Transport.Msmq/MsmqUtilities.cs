@@ -178,8 +178,9 @@ namespace NServiceBus.Transport.Msmq
 
         static void AssignMsmqNativeCorrelationId(OutgoingMessage message, Message result)
         {
+            string correlationIdHeader;
 
-            if (!message.Headers.TryGetValue(Headers.CorrelationId, out string correlationIdHeader))
+            if (!message.Headers.TryGetValue(Headers.CorrelationId, out correlationIdHeader))
             {
                 return;
             }
