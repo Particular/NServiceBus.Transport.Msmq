@@ -132,11 +132,11 @@
                 }
 
                 IntPtr pDacl;
-                bool daclDefaulted;
+
                 var success = GetSecurityDescriptorDacl(sdHandle.AddrOfPinnedObject(),
                     out bool _,
                     out pDacl,
-                    out daclDefaulted);
+                    out _);
 
                 if (!success)
                 {
