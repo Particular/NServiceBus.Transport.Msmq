@@ -178,9 +178,8 @@ namespace NServiceBus.Transport.Msmq
 
         static void AssignMsmqNativeCorrelationId(OutgoingMessage message, Message result)
         {
-            string correlationIdHeader;
 
-            if (!message.Headers.TryGetValue(Headers.CorrelationId, out correlationIdHeader))
+            if (!message.Headers.TryGetValue(Headers.CorrelationId, out string correlationIdHeader))
             {
                 return;
             }
@@ -190,9 +189,8 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
-            Guid correlationId;
 
-            if (Guid.TryParse(correlationIdHeader, out correlationId))
+            if (Guid.TryParse(correlationIdHeader, out Guid _))
             {
                 //msmq required the id's to be in the {guid}\{incrementing number} format so we need to fake a \0 at the end to make it compatible
                 result.CorrelationId = $"{correlationIdHeader}\\0";
@@ -205,10 +203,9 @@ namespace NServiceBus.Transport.Msmq
                 {
                     var parts = correlationIdHeader.Split('\\');
 
-                    int number;
 
-                    if (parts.Length == 2 && Guid.TryParse(parts.First(), out correlationId) &&
-                        int.TryParse(parts[1], out number))
+                    if (parts.Length == 2 && Guid.TryParse(parts.First(), out _) &&
+                        int.TryParse(parts[1], out int _))
                     {
                         result.CorrelationId = correlationIdHeader;
                     }
