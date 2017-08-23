@@ -9,15 +9,15 @@
         [Test]
         public void Should_throw_if_endpoint_name_is_too_long()
         {
-            const string endpointName = "ThisisaloooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee1234";
-            var ex = Assert.Throws<InvalidOperationException>(() => CheckEndpointNameComplianceForMsmq.Check(endpointName));
-            StringAssert.Contains(endpointName, ex.Message);
+            const string endpointNameGreaterThanOneHundredFiftyChars = "ThisisalooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee";
+            var ex = Assert.Throws<InvalidOperationException>(() => CheckEndpointNameComplianceForMsmq.Check(endpointNameGreaterThanOneHundredFiftyChars));
+            StringAssert.Contains(endpointNameGreaterThanOneHundredFiftyChars, ex.Message);
         }
 
         [Test]
         public void Should_not_throw_if_endpoint_name_is_compliant()
         {
-            const string endpointName = "ThisisaloooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee12";
+            const string endpointName = "short-decent-endpoint-name";
             Assert.DoesNotThrow(() => CheckEndpointNameComplianceForMsmq.Check(endpointName));
         }
     }
