@@ -137,10 +137,8 @@ namespace NServiceBus.Transport.Msmq
             {
                 return true;
             }
-
-            MessageQueueTransaction activeReceiveTransaction;
-
-            return TryGetNativeTransaction(transaction, out activeReceiveTransaction);
+            
+            return TryGetNativeTransaction(transaction, out MessageQueueTransaction _);
         }
 
         static bool TryGetNativeTransaction(TransportTransaction transportTransaction, out MessageQueueTransaction transaction)
