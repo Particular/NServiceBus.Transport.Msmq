@@ -17,7 +17,7 @@
         [Test]
         public void Should_not_throw_if_endpoint_name_is_compliant()
         {
-            const string endpointName = "ThisisaloooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee123";
+            const string endpointName = "ThisisaloooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee12";
             Assert.DoesNotThrow(() => CheckEndpointNameComplianceForMsmq.Check(endpointName));
         }
     }

@@ -9,7 +9,7 @@
             var formatName = $"DIRECT=OS:{Environment.MachineName}\\private$\\{endpointName}";
             if (formatName.Length > 123)
             {
-                throw new InvalidOperationException($"The specified endpoint name {endpointName} is too long. The format name for the endpoint:{formatName} needs to be 123 characters or less.");
+                throw new InvalidOperationException($"The specified endpoint name {endpointName} is too long. The fully formatted queue name for the endpoint:{formatName} must be 123 characters or less.");
             }
         }
     }
