@@ -83,8 +83,7 @@ namespace NServiceBus.Transport.Msmq
         {
             get
             {
-                IPAddress ipAddress;
-                if (IPAddress.TryParse(Machine, out ipAddress))
+                if (IPAddress.TryParse(Machine, out IPAddress _))
                 {
                     return PREFIX_TCP + PathWithoutPrefix;
                 }
