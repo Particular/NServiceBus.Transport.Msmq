@@ -6,7 +6,7 @@
     <PackageLicenseUrl>http://particular.net/LicenseAgreement</PackageLicenseUrl>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <Copyright>Copyright 2010-$([System.DateTime]::UtcNow.ToString(yyyy)) NServiceBus. All rights reserved</Copyright>
-    <PackageTags>nservicebus servicebus msmq cqrs publish subscribe</PackageTags>
+    <PackageTags>nservicebus transport msmq</PackageTags>
     <PackageIconUrl>http://s3.amazonaws.com/nuget.images/NServiceBus_32.png</PackageIconUrl>
     <PackageProjectUrl>https://docs.particular.net/nuget/$(PackageId)</PackageProjectUrl>
     <PackageOutputPath>..\..\nugets</PackageOutputPath>
