@@ -7,6 +7,8 @@
     <OutputPath>..\..\binaries\</OutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Description>MSMQ support for NServicebus</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,34 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0012" PrivateAssets="All" />
-    <PackageReference Include="NServiceBus" Version="7.0.0-alpharelease0036" />
+    <PackageReference Include="NServiceBus" Version="7.0.0-alpharelease0051" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <Authors>NServiceBus Ltd</Authors>
-    <Company>NServiceBus Ltd</Company>
-    <Description>MSMQ support for NServicebus</Description>
-    <PackageLicenseUrl>http://particular.net/LicenseAgreement</PackageLicenseUrl>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Copyright>Copyright 2010-$([System.DateTime]::UtcNow.ToString(yyyy)) NServiceBus. All rights reserved</Copyright>
-    <PackageTags>nservicebus servicebus msmq cqrs publish subscribe</PackageTags>
-    <PackageIconUrl>http://s3.amazonaws.com/nuget.images/NServiceBus_32.png</PackageIconUrl>
-    <PackageProjectUrl>http://particular.net/</PackageProjectUrl>
-    <PackageOutputPath>..\..\nugets</PackageOutputPath>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="$(OutputPath)$(AssemblyName).pdb">
-      <Pack>true</Pack>
-      <PackagePath>lib/net452</PackagePath>
-    </Content>
-  </ItemGroup>
-
 </Project>

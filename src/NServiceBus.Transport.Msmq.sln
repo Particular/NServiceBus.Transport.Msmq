@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Transport.Msmq", "NServiceBus.Transport.Msmq\NServiceBus.Transport.Msmq.csproj", "{A4E3F5C2-399E-4BB4-9048-842859A19DCD}"
 EndProject
@@ -10,6 +10,14 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Transport.Msmq.Tests", "NServiceBus.Transport.Msmq.Tests\NServiceBus.Transport.Msmq.Tests.csproj", "{DF6B659B-5C47-4164-A2B8-29E74A057E20}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Transport.Msmq.TransportTests", "NServiceBus.Transport.Msmq.TransportTests\NServiceBus.Transport.Msmq.TransportTests.csproj", "{D70B5703-DB59-4F1A-B145-1A8CFCD6B3D5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4FB7F8F2-1C6F-48E7-B29A-B5BA5880BFA3}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		..\GitVersion.yml = ..\GitVersion.yml
+		nuget.config = nuget.config
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +44,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C56C929D-9CAF-462C-A4EE-6F7BEC76AE91}
 	EndGlobalSection
 EndGlobal

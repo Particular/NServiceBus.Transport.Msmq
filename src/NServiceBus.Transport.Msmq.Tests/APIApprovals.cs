@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using ApprovalTests;
 using NServiceBus;
@@ -13,7 +15,10 @@ public class APIApprovals
     [MethodImpl(MethodImplOptions.NoInlining)]
     public void Approve()
     {
-        var publicApi = Filter(ApiGenerator.GeneratePublicApi(typeof(MsmqTransport).Assembly));
+        var combine = Path.Combine(TestContext.CurrentContext.TestDirectory, Path.GetFileName(typeof(MsmqTransport).Assembly.Location));
+        var assembly = Assembly.LoadFile(combine);
+        var publicApi = Filter(ApiGenerator.GeneratePublicApi(assembly));
+
         Approvals.Verify(publicApi);
     }
 
