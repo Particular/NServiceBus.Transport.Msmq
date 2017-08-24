@@ -77,7 +77,7 @@ namespace NServiceBus.Transport.Msmq
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            new CheckMachineNameForComplianceWithDtcLimitation().Check();
+            CheckMachineNameForComplianceWithDtcLimitation.Check();
 
             // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name. 
             var bindings = settings.Get<QueueBindings>();
@@ -110,7 +110,7 @@ namespace NServiceBus.Transport.Msmq
 
         public override TransportSendInfrastructure ConfigureSendInfrastructure()
         {
-            new CheckMachineNameForComplianceWithDtcLimitation().Check();
+            CheckMachineNameForComplianceWithDtcLimitation.Check();
 
             if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
             {
