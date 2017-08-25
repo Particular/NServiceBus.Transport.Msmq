@@ -1,18 +1,18 @@
 namespace NServiceBus.Transport.Msmq
 {
+    using System;
     using System.Runtime.InteropServices;
     using System.Text;
-    using Logging;
 
-    class CheckMachineNameForComplianceWithDtcLimitation
+    static class CheckMachineNameForCompliance
     {
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern bool GetComputerNameEx(COMPUTER_NAME_FORMAT nameType, [Out] StringBuilder lpBuffer, ref uint lpnSize);
 
         /// <summary>
-        /// Method invoked to run custom code.
+        /// Checks to see if the NetBios computer name exceeds 15 characters and if so throws an exception.
         /// </summary>
-        public void Check()
+        public static void Check()
         {
             uint capacity = 24;
             var buffer = new StringBuilder((int) capacity);
@@ -25,11 +25,8 @@ namespace NServiceBus.Transport.Msmq
             {
                 return;
             }
-
-            Logger.WarnFormat("NetBIOS name [{0}] is longer than 15 characters. Shorten it for DTC to work.", netbiosName);
+            throw new Exception($"The NetBIOS name {netbiosName} is longer than 15 characters. Shorten the machine name to 15 characters or less for MSMQ to deliver messages.");
         }
-
-        static ILog Logger = LogManager.GetLogger<CheckMachineNameForComplianceWithDtcLimitation>();
 
         enum COMPUTER_NAME_FORMAT
         {
