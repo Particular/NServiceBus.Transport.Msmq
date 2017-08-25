@@ -10,7 +10,7 @@ namespace NServiceBus.Transport.Msmq
         static extern bool GetComputerNameEx(COMPUTER_NAME_FORMAT nameType, [Out] StringBuilder lpBuffer, ref uint lpnSize);
 
         /// <summary>
-        /// Method invoked to run custom code.
+        /// Checks to see if the NetBios computer name exceeds 15 characters and if so throws an exception.
         /// </summary>
         public static void Check()
         {
@@ -25,7 +25,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 return;
             }
-            throw new InvalidOperationException($"The NetBIOS name {netbiosName} is longer than 15 characters. Shorten the machine name to 15 characters or less for MSMQ to deliver messages.");
+            throw new Exception($"The NetBIOS name {netbiosName} is longer than 15 characters. Shorten the machine name to 15 characters or less for MSMQ to deliver messages.");
         }
 
         enum COMPUTER_NAME_FORMAT
