@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NServiceBus" Version="7.0.0-alpharelease0051" />
+    <PackageReference Include="NServiceBus" Version="7.0.0-beta0001" />
     <PackageReference Include="NServiceBus.Testing.Fakes.Sources" Version="7.0.0-alpharelease0051" />
     <PackageReference Include="ApprovalTests" Version="3.0.13" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
