@@ -47,28 +47,25 @@ namespace NServiceBus.Transport.Msmq
         public static Dictionary<string, string> ExtractHeaders(Message msmqMessage)
         {
             var headers = DeserializeMessageHeaders(msmqMessage);
-
+            
             //note: we can drop this line when we no longer support interop btw v3 + v4
-            if (msmqMessage.ResponseQueue != null)
+            if (msmqMessage.ResponseQueue != null && headers.TryGetValue(Headers.ReplyToAddress, out var _) == false)
             {
                 headers[Headers.ReplyToAddress] = GetIndependentAddressForQueue(msmqMessage.ResponseQueue).ToString();
             }
 
-            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific))
+            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific) && headers.TryGetValue(Headers.MessageIntent, out var _) == false)
             {
                 headers[Headers.MessageIntent] = ((MessageIntentEnum)msmqMessage.AppSpecific).ToString();
             }
 
             headers[Headers.CorrelationId] = GetCorrelationId(msmqMessage, headers);
-
             return headers;
         }
-
+        
         static string GetCorrelationId(Message message, Dictionary<string, string> headers)
         {
-            string correlationId;
-
-            if (headers.TryGetValue(Headers.CorrelationId, out correlationId))
+            if (headers.TryGetValue(Headers.CorrelationId, out var correlationId))
             {
                 return correlationId;
             }
