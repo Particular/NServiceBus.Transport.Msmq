@@ -19,7 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fody" Version="2.1.2" />
     <PackageReference Include="NServiceBus" Version="7.0.0-*" />
+    <PackageReference Include="Obsolete.Fody" Version="4.3.2" />
   </ItemGroup>
 
   <ItemGroup>
