@@ -49,12 +49,12 @@ namespace NServiceBus.Transport.Msmq
             var headers = DeserializeMessageHeaders(msmqMessage);
             
             //note: we can drop this line when we no longer support interop btw v3 + v4
-            if (msmqMessage.ResponseQueue != null && headers.ContainsKey(Headers.ReplyToAddress) == false)
+            if (msmqMessage.ResponseQueue != null && !headers.ContainsKey(Headers.ReplyToAddress))
             {
                 headers[Headers.ReplyToAddress] = GetIndependentAddressForQueue(msmqMessage.ResponseQueue).ToString();
             }
 
-            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific) && headers.ContainsKey(Headers.MessageIntent) == false)
+            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific) && !headers.ContainsKey(Headers.MessageIntent))
             {
                 headers[Headers.MessageIntent] = ((MessageIntentEnum)msmqMessage.AppSpecific).ToString();
             }
