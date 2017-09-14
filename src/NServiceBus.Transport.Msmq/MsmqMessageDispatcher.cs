@@ -33,15 +33,17 @@ namespace NServiceBus.Transport.Msmq
                 throw new Exception("The MSMQ transport only supports unicast transport operations.");
             }
 
+            var transportOperationTasks = new List<Task>(outgoingMessages.UnicastTransportOperations.Count);
+
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation);
+                transportOperationTasks.Add(ExecuteTransportOperation(transaction, unicastTransportOperation));
             }
 
-            return TaskEx.CompletedTask;
+            return transportOperationTasks.Count == 1 ? transportOperationTasks[0] : Task.WhenAll(transportOperationTasks);
         }
 
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        async Task ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
 
@@ -68,29 +70,30 @@ namespace NServiceBus.Transport.Msmq
                         toSend.UseJournalQueue = settings.UseJournalQueue;
                         toSend.TimeToReachQueue = settings.TimeToReachQueue;
 
-                        string replyToAddress;
-
-                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out replyToAddress))
+                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
                         {
                             toSend.ResponseQueue = new MessageQueue(MsmqAddress.Parse(replyToAddress).FullPath);
                         }
 
                         var label = GetLabel(message);
 
-                        if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                        await Task.Run(() =>
                         {
-                            q.Send(toSend, label, GetIsolatedTransactionType());
-                            return;
-                        }
 
-                        MessageQueueTransaction activeTransaction;
-                        if (TryGetNativeTransaction(transaction, out activeTransaction))
-                        {
-                            q.Send(toSend, label, activeTransaction);
-                            return;
-                        }
+                            if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                            {
+                                q.Send(toSend, label, GetIsolatedTransactionType());
+                                return;
+                            }
 
-                        q.Send(toSend, label, GetTransactionTypeForSend());
+                            if (TryGetNativeTransaction(transaction, out var activeTransaction))
+                            {
+                                q.Send(toSend, label, activeTransaction);
+                                return;
+                            }
+
+                            q.Send(toSend, label, GetTransactionTypeForSend());
+                        }).ConfigureAwait(false);
                     }
                 }
             }
