@@ -70,31 +70,30 @@ namespace NServiceBus.Transport.Msmq
                         toSend.UseJournalQueue = settings.UseJournalQueue;
                         toSend.TimeToReachQueue = settings.TimeToReachQueue;
 
-                        string replyToAddress;
-
-                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out replyToAddress))
+                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
                         {
                             toSend.ResponseQueue = new MessageQueue(MsmqAddress.Parse(replyToAddress).FullPath);
                         }
 
                         var label = GetLabel(message);
 
-                        await Task.Yield();
-
-                        if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                        await Task.Run(() =>
                         {
-                            q.Send(toSend, label, GetIsolatedTransactionType());
-                            return;
-                        }
 
-                        MessageQueueTransaction activeTransaction;
-                        if (TryGetNativeTransaction(transaction, out activeTransaction))
-                        {
-                            q.Send(toSend, label, activeTransaction);
-                            return;
-                        }
+                            if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                            {
+                                q.Send(toSend, label, GetIsolatedTransactionType());
+                                return;
+                            }
 
-                        q.Send(toSend, label, GetTransactionTypeForSend());
+                            if (TryGetNativeTransaction(transaction, out var activeTransaction))
+                            {
+                                q.Send(toSend, label, activeTransaction);
+                                return;
+                            }
+
+                            q.Send(toSend, label, GetTransactionTypeForSend());
+                        }).ConfigureAwait(false);
                     }
                 }
             }
