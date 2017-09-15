@@ -34,6 +34,25 @@ namespace NServiceBus
         public override NServiceBus.Transport.TransportInfrastructure Initialize(NServiceBus.Settings.SettingsHolder settings, string connectionString) { }
     }
 }
+namespace NServiceBus.Persistence.Legacy
+{
+    [System.ObsoleteAttribute("The classes under the NServiceBus.Persistence.Legacy namespace have been moved. U" +
+        "se NServiceBus.MsmqPersistence instead. Will be removed in version 2.0.0.", true)]
+    public class MsmqPersistence : NServiceBus.Persistence.PersistenceDefinition
+    {
+        public MsmqPersistence() { }
+    }
+    [System.ObsoleteAttribute("The classes under the NServiceBus.Persistence.Legacy namespace have been moved. P" +
+        "lease use NServiceBus.MsmqSubscriptionStorageConfigurationExtensions instead. Wi" +
+        "ll be removed in version 2.0.0.", true)]
+    public class static MsmqSubscriptionStorageConfigurationExtensions
+    {
+        [System.ObsoleteAttribute("The classes under the NServiceBus.Persistence.Legacy namespace have been moved. P" +
+            "lease use NServiceBus.MsmqPersistence.SubscriptionQueue() instead. The member cu" +
+            "rrently throws a NotImplementedException. Will be removed in version 2.0.0.", true)]
+        public static void SubscriptionQueue(this NServiceBus.PersistenceExtensions<NServiceBus.Persistence.Legacy.MsmqPersistence> persistenceExtensions, string queue) { }
+    }
+}
 namespace NServiceBus.Transport.Msmq
 {
     public class HeaderInfo
