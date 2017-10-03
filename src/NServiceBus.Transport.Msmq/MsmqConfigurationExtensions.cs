@@ -81,10 +81,10 @@ namespace NServiceBus
         /// Disables the automatic queue creation when EnableInstallers is set.
         /// </summary>
         /// <remarks>
-        /// If EnableInstallers() is called during endpoint configuration, the endpoint will create the queues required automatically. However, 
-        /// if the queue creation is controlled during Ops by running deployment scripts, it makes sense to disable the running of the queue creation.
-        /// Call this function to disable queue creation. 
-        /// `ReadCommited`.
+        /// If EnableInstallers() is called during endpoint configuration, the endpoint will create the queues required automatically. 
+        /// It's a much better scenario to create the queues once by running the included powershell scripts to create the queues instead of 
+        /// calling EnableInstallers every time on startup. However the EnableInstallers might be used to run other installation code. 
+        /// Call this API to not create the queues when the endpoint is starting explicitly.
         /// </remarks>
         public static void DoNotCreateQueuesOnInstall(this TransportExtensions<MsmqTransport> config)
         {
