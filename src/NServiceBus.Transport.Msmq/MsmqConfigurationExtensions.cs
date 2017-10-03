@@ -46,7 +46,7 @@ namespace NServiceBus
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
-
+        
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
@@ -75,6 +75,21 @@ namespace NServiceBus
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set(MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived, true);
+        }
+
+        /// <summary>
+        /// Disables the automatic queue creation when EnableInstallers is set.
+        /// </summary>
+        /// <remarks>
+        /// If EnableInstallers() is called during endpoint configuration, the endpoint will create the queues required automatically. However, 
+        /// if the queue creation is controlled during Ops by running deployment scripts, it makes sense to disable the running of the queue creation.
+        /// Call this function to disable queue creation. 
+        /// `ReadCommited`.
+        /// </remarks>
+        public static void DoNotCreateQueuesOnInstall(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set(MsmqTransport.DoNotCreateQueuesDuringInstall, true);
         }
     }
 }

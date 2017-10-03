@@ -42,6 +42,20 @@
         }
 
         [Test]
+        public void Should_not_create_queue_when_configured_to_not_create_queues_on_install()
+        {
+            var remoteQueueName = $"{testQueueNameForReceiving}";
+            var creator = new MsmqQueueCreator(true, true);
+            var bindings = new QueueBindings();
+
+            bindings.BindSending(remoteQueueName);
+
+            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+
+            Assert.False(QueueExists(testQueueNameForReceiving));
+        }
+
+        [Test]
         public void Should_not_create_queue_when_a_remote_queue_is_provided()
         {
             var remoteQueueName = $"{testQueueNameForReceiving}@some-machine";
