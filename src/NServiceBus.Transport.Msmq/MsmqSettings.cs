@@ -25,6 +25,6 @@ namespace NServiceBus.Transport.Msmq
 
         public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
         
-        public bool DoNotCreateQueuesDuringInstall { get; set; }
+        public bool DisableInstaller { get; set; }
     }
 }

@@ -1,10 +1,7 @@
 # USAGE:
 
-# To create the endpoint and all the subqueues, for NServiceBus Versions 6 and above, use:
+# To create the endpoint and all the subqueues, use:
 # CreateQueuesForEndpoint -EndpointName "myendpoint" -Account $env:USERNAME
-
-# To create the endpoint and all the subqueues, for NServiceBus Versions 5 and below, use:
-# CreateQueuesForEndpoint -EndpointName "myendpoint" -Account $env:USERNAME -IncludeRetries
 
 # To create a common queue for all endpoints such as Audit or Error, use:
 # CreateQueue -QueueName "error" -Account $env:USERNAME
@@ -98,10 +95,7 @@ Function CreateQueuesForEndpoint
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
         [ValidateScript({ValidateAccount -Account $_})]
-        [string] $Account,
-
-        [Parameter(HelpMessage="Only required for NSB Versions 5 and below")]
-        [Switch] $IncludeRetries
+        [string] $Account
     )
 
     # main queue
@@ -112,9 +106,4 @@ Function CreateQueuesForEndpoint
 
     # timeout dispatcher queue
     CreateQueue -QueueName "$EndpointName.timeoutsdispatcher" -Account $Account
-
-    # retries queue
-    if ($IncludeRetries) {
-        CreateQueue -QueueName "$EndpointName.retries" -Account $Account
-    }
 }
