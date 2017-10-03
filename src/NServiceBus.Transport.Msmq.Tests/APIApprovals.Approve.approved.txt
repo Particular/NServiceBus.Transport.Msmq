@@ -16,7 +16,7 @@ namespace NServiceBus
     public class static MsmqConfigurationExtensions
     {
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ApplyLabelToMessages(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
-        public static void DoNotCreateQueuesOnInstall(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        public static void DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TransactionScopeOptions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.Nullable<System.TimeSpan> timeout = null, System.Nullable<System.Transactions.IsolationLevel> isolationLevel = null) { }
