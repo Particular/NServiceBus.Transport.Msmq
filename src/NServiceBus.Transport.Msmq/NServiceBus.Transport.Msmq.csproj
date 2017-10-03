@@ -26,4 +26,19 @@
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Scripts\">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Folder>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Scripts\CreateQueues.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\DeleteQueues.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
