@@ -4,7 +4,7 @@
 # DeleteQueuesForEndpoint -EndpointName "myendpoint" 
 
 # To delete a single queue such as Audit or Error, use:
-# DeleteQueue -QueueName -QueueName "error"
+# DeleteQueue -QueueName "error"
 
 Set-StrictMode -Version 2.0
 

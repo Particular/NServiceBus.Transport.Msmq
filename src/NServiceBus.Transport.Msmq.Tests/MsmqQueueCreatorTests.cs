@@ -44,11 +44,11 @@
         [Test]
         public void Should_not_create_queue_when_configured_to_not_create_queues_on_install()
         {
-            var remoteQueueName = $"{testQueueNameForReceiving}";
+            var queueName = $"{testQueueNameForReceiving}";
             var creator = new MsmqQueueCreator(true, true);
             var bindings = new QueueBindings();
 
-            bindings.BindSending(remoteQueueName);
+            bindings.BindSending(queueName);
 
             creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
