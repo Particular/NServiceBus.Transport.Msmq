@@ -40,7 +40,7 @@ namespace NServiceBus
                 .RetrieveSettings() : new MsmqSettings();
 
             msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetOrDefault<bool>(UseDeadLetterQueueForMessagesWithTimeToBeReceived);
-            msmqSettings.DoNotCreateQueuesDuringInstall = settings.GetOrDefault<bool>(DoNotCreateQueuesDuringInstall);
+            msmqSettings.DisableInstaller = settings.GetOrDefault<bool>(DisableInstaller);
 
             settings.Set<MsmqSettings>(msmqSettings);
 
@@ -49,6 +49,6 @@ namespace NServiceBus
 
         internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
 
-        internal const string DoNotCreateQueuesDuringInstall = "DoNotCreateQueuesDuringInstall";
+        internal const string DisableInstaller = "DisableInstaller";
     }
 }

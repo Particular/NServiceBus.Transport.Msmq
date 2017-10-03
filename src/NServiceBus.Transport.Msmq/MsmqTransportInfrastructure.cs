@@ -97,7 +97,7 @@ namespace NServiceBus.Transport.Msmq
 
             return new TransportReceiveInfrastructure(
                 () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, scopeOptions.TransactionOptions)),
-                () => new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.DoNotCreateQueuesDuringInstall),
+                () => new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.DisableInstaller),
                 () =>
                 {
                     foreach (var address in bindings.ReceivingAddresses)
