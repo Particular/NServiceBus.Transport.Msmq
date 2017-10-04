@@ -45,7 +45,7 @@
         public void Should_not_create_queue_when_configured_to_not_create_queues_on_install()
         {
             var queueName = $"{testQueueNameForReceiving}";
-            var creator = new MsmqQueueCreator(true, true);
+            var creator = new MsmqQueueCreator(true, false);
             var bindings = new QueueBindings();
 
             bindings.BindSending(queueName);
