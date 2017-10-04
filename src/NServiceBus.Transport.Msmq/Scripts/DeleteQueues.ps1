@@ -26,9 +26,9 @@ Function DeleteQueuesForEndpoint
     # timeout dispatcher queue
     DeleteQueue ($endpointName + ".timeoutsdispatcher")
 
-    # retries queue
-    # TODO: Only required in Versions 5 and below
-    DeleteQueue ($endpointName + ".retries")
+	# Msmq storage persistence queue. When using endpointConfiguration.UsePersistence<MsmqPersistence, StorageType.Subscriptions>() in your code, uncomment the following queue or replace it with the configured value.
+    # DeleteQueue ($endpointName + ".subscriptions")
+
 }
 
 Function DeleteQueue
