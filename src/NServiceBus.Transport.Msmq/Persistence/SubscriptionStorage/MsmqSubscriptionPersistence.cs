@@ -13,6 +13,8 @@
         {
             var configuredQueueName = context.Settings.GetConfiguredMsmqPersistenceSubscriptionQueue();
 
+            ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
+
             if (string.IsNullOrEmpty(configuredQueueName))
             {
                 if (DoesOldDefaultQueueExists())
@@ -45,7 +47,21 @@
             }, DependencyLifecycle.SingleInstance);
         }
 
-        bool DoesOldDefaultQueueExists()
+        internal void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
+        {
+            if (string.IsNullOrEmpty(configuredQueueName))
+            {
+                if (DoesOldDefaultQueueExists())
+                {
+                    // The user has not configured the subscriptions queue to be "NServiceBus.Subscriptions" but there's a local queue. 
+                    // Indicates that the endoint was using old default queue name.
+                    throw new Exception(
+                        "Detected the presence of an old default queue named `NServiceBus.Subscriptions`. The new default is now `[Your endpointname].Subscriptions`. Move the relevant subscription messages to the new queue or configure the subscriptions queue name.");
+                }
+            }
+        }
+
+        internal bool DoesOldDefaultQueueExists()
         {
             const string oldDefaultSubscriptionsQueue = "NServiceBus.Subscriptions";
             var path = MsmqAddress.Parse(oldDefaultSubscriptionsQueue).PathWithoutPrefix;
