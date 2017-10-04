@@ -13,7 +13,7 @@
 
             if (string.IsNullOrEmpty(queueName))
             {
-                queueName = "NServiceBus.Subscriptions";
+                queueName = $"{context.Settings.EndpointName()}.Subscriptions";
                 Logger.Warn($"The queue used to store subscriptions has not been configured, so the default '{queueName}' will be used.");
             }
 
