@@ -26,7 +26,7 @@
                 }
 
                 var defaultQueueName = $"{context.Settings.EndpointName()}.Subscriptions";
-                Logger.Warn($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
+                Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
                 configuredQueueName = defaultQueueName;
             }
 
@@ -56,7 +56,7 @@
                     // The user has not configured the subscriptions queue to be "NServiceBus.Subscriptions" but there's a local queue. 
                     // Indicates that the endoint was using old default queue name.
                     throw new Exception(
-                        "Detected the presence of an old default queue named `NServiceBus.Subscriptions`. The new default is now `[Your endpointname].Subscriptions`. Move the relevant subscription messages to the new queue or configure the subscriptions queue name.");
+                        "Detected the presence of an old default queue named NServiceBus.Subscriptions. Either migrate the subscriptions to the new default queue [Your endpointname].Subscriptions, see our documentation for more details, or explicitly configure the subscriptions queue name to `NServiceBus.Subscriptions` if you want to use the existing queue.");
                 }
             }
         }
