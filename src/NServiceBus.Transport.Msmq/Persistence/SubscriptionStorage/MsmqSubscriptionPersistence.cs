@@ -29,15 +29,15 @@
         {
             var configuredQueueName = settings.GetConfiguredMsmqPersistenceSubscriptionQueue();
 
-            if (string.IsNullOrEmpty(configuredQueueName))
+            if (!string.IsNullOrEmpty(configuredQueueName))
             {
-                ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
-
-                var defaultQueueName = $"{settings.EndpointName()}.Subscriptions";
-                Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
-                configuredQueueName = defaultQueueName;
+                return configuredQueueName;
             }
-            return configuredQueueName;
+            ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
+
+            var defaultQueueName = $"{settings.EndpointName()}.Subscriptions";
+            Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
+            return defaultQueueName;
         }
 
         static void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
