@@ -13,9 +13,13 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings)
+        public MsmqTransportInfrastructure(SettingsHolder settings, MsmqSettings msmqSettings, QueueBindings queueBindings, MsmqScopeOptions scopeOptions, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator)
         {
             this.settings = settings;
+            this.msmqSettings = msmqSettings;
+            this.queueBindings = queueBindings;
+            this.scopeOptions = scopeOptions;
+            this.messageLabelGenerator = messageLabelGenerator;
         }
 
         public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
@@ -65,7 +69,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 queue.Append("." + logicalAddress.Qualifier);
             }
-            return queue + "@" + machine;
+            return $"{queue}@{machine}";
         }
 
         public override string MakeCanonicalForm(string transportAddress)
@@ -83,13 +87,6 @@ namespace NServiceBus.Transport.Msmq
             {
                 CheckEndpointNameComplianceForMsmq.Check(queue);
             }
-
-            if (!settings.TryGet(out MsmqScopeOptions scopeOptions))
-            {
-                scopeOptions = new MsmqScopeOptions();
-            }
-
-            var msmqSettings = settings.Get<MsmqSettings>();
 
             return new TransportReceiveInfrastructure(
                 () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, scopeOptions.TransactionOptions)),
@@ -115,20 +112,11 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
-            if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
-            {
-                messageLabelGenerator = headers => string.Empty;
-            }
-
-            var msmqSettings = settings.Get<MsmqSettings>();
-
             return new TransportSendInfrastructure(
                 () => new MsmqMessageDispatcher(msmqSettings, messageLabelGenerator),
                 () =>
                 {
-                    var bindings = settings.Get<QueueBindings>();
-
-                    foreach (var address in bindings.SendingAddresses)
+                    foreach (var address in queueBindings.SendingAddresses)
                     {
                         QueuePermissions.CheckQueue(address);
                     }
@@ -144,5 +132,9 @@ namespace NServiceBus.Transport.Msmq
         }
 
         ReadOnlySettings settings;
+        MsmqSettings msmqSettings;
+        QueueBindings queueBindings;
+        MsmqScopeOptions scopeOptions;
+        Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator;
     }
 }

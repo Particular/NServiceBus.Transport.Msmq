@@ -1,6 +1,7 @@
 namespace NServiceBus
 {
     using System;
+    using System.Collections.Generic;
     using Routing;
     using Settings;
     using Transport;
@@ -52,7 +53,20 @@ namespace NServiceBus
 
             settings.Set<MsmqSettings>(msmqSettings);
 
-            return new MsmqTransportInfrastructure(settings);
+
+            if (!settings.TryGet(out MsmqScopeOptions scopeOptions))
+            {
+                scopeOptions = new MsmqScopeOptions();
+            }
+
+
+
+            if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
+            {
+                messageLabelGenerator = headers => string.Empty;
+            }
+
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), scopeOptions, messageLabelGenerator);
         }
 
         internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
