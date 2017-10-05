@@ -27,7 +27,7 @@ namespace NServiceBus.Persistence.Msmq
         {
             var messages = storageQueue.GetAllMessages()
                 .OrderByDescending(m => m.ArrivedTime)
-                .ThenBy(x => x.Id) // ensure same order of messages with same timestamp accross all endpoints
+                .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
                 .ToArray();
 
             try
