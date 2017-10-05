@@ -17,9 +17,6 @@ namespace NServiceBus.Transport.Msmq
     {
         public MsmqMessageDispatcher(MsmqSettings settings, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator)
         {
-            Guard.AgainstNull(nameof(settings), settings);
-            Guard.AgainstNull(nameof(messageLabelGenerator), messageLabelGenerator);
-
             this.settings = settings;
             this.messageLabelGenerator = messageLabelGenerator;
         }
