@@ -19,14 +19,14 @@
             Guard.AgainstNull(nameof(persistenceExtensions), persistenceExtensions);
             Guard.AgainstNull(nameof(queue), queue);
 
-            persistenceExtensions.GetSettings().Set(msmqPersistenceQueueConfigurationKey, queue);
+            persistenceExtensions.GetSettings().Set(MsmqPersistenceQueueConfigurationKey, queue);
         }
 
         internal static string GetConfiguredMsmqPersistenceSubscriptionQueue(this ReadOnlySettings settings)
         {
-            return settings.GetOrDefault<string>(msmqPersistenceQueueConfigurationKey);
+            return settings.GetOrDefault<string>(MsmqPersistenceQueueConfigurationKey);
         }
 
-        const string msmqPersistenceQueueConfigurationKey = "MsmqSubscriptionPersistence.QueueName";
+        internal const string MsmqPersistenceQueueConfigurationKey = "MsmqSubscriptionPersistence.QueueName";
     }
 }
