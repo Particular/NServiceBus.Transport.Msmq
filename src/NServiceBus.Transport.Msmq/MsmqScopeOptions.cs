@@ -40,18 +40,16 @@ namespace NServiceBus.Transport.Msmq
 
         static TimeSpan GetMaxTimeout()
         {
-            //default is always 10 minutes
-            var maxTimeout = TimeSpan.FromMinutes(10);
-
             var systemTransactionsGroup = ConfigurationManager.OpenMachineConfiguration()
                 .GetSectionGroup("system.transactions");
 
             if (systemTransactionsGroup?.Sections.Get("machineSettings") is MachineSettingsSection machineSettings)
             {
-                maxTimeout = machineSettings.MaxTimeout;
+                return machineSettings.MaxTimeout;
             }
 
-            return maxTimeout;
+            //default is always 10 minutes
+            return TimeSpan.FromMinutes(10);
         }
     }
 }
