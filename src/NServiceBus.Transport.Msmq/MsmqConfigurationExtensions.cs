@@ -37,7 +37,7 @@ namespace NServiceBus
         /// </summary>
         /// <remarks>
         /// If not specified the default transaction timeout of the machine will be used and the isolation level will be set to
-        /// `ReadCommited`.
+        /// `ReadCommitted`.
         /// </remarks>
         public static TransportExtensions<MsmqTransport> TransactionScopeOptions(this TransportExtensions<MsmqTransport> transportExtensions, TimeSpan? timeout = null, IsolationLevel? isolationLevel = null)
         {
