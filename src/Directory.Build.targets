@@ -16,6 +16,7 @@
   <Target Name="IncludePDBsInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
     <ItemGroup>
       <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).pdb" PackagePath="lib/$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="$(ProjectDir)\Scripts\*.*" PackagePath="lib/$(TargetFramework)/Scripts" />
     </ItemGroup>
   </Target>
 

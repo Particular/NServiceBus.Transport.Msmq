@@ -40,6 +40,15 @@ namespace NServiceBus
                 .RetrieveSettings() : new MsmqSettings();
 
             msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetOrDefault<bool>(UseDeadLetterQueueForMessagesWithTimeToBeReceived);
+            if (settings.TryGet<bool>(ExecuteInstaller, out var executeInstaller))
+            {
+                msmqSettings.ExecuteInstaller = executeInstaller;
+            }
+            else
+            {
+                msmqSettings.ExecuteInstaller = true;
+            }
+
 
             settings.Set<MsmqSettings>(msmqSettings);
 
@@ -47,5 +56,7 @@ namespace NServiceBus
         }
 
         internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
+
+        internal const string ExecuteInstaller = "ExecuteInstaller";
     }
 }

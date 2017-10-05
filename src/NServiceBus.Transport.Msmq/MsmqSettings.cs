@@ -24,5 +24,7 @@ namespace NServiceBus.Transport.Msmq
         public TimeSpan TimeToReachQueue { get; set; }
 
         public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
+
+        public bool ExecuteInstaller { get; set; }
     }
 }

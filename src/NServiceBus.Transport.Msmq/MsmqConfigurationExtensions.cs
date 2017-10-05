@@ -76,5 +76,20 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set(MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived, true);
         }
+
+        /// <summary>
+        /// Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
+        /// </summary>
+        /// <remarks>
+        /// With installers enabled, required queues will be created automatically at startup.While this may be convenient for development,
+        /// we instead recommend that queues are created as part of deployment using the CreateQueues.ps1 script included in the NuGet package.
+        /// The installers might still need to be enabled to fulfill the installation needs of other components, but this method allows
+        /// scripts to be used for queue creation instead.
+        /// </remarks>
+        public static void DisableInstaller(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set(MsmqTransport.ExecuteInstaller, false);
+        }
     }
 }
