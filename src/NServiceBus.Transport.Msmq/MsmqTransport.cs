@@ -1,7 +1,6 @@
 namespace NServiceBus
 {
     using System;
-    using System.Collections.Generic;
     using Features;
     using Routing;
     using Settings;
@@ -40,37 +39,18 @@ namespace NServiceBus
 
             var msmqSettings = connectionString != null ? new MsmqConnectionStringBuilder(connectionString)
                 .RetrieveSettings() : new MsmqSettings();
+            msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived();
+            msmqSettings.ExecuteInstaller = settings.GetShouldExecuteInstaller();
 
-            msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetOrDefault<bool>(UseDeadLetterQueueForMessagesWithTimeToBeReceived);
-            if (settings.TryGet<bool>(ExecuteInstaller, out var executeInstaller))
-            {
-                msmqSettings.ExecuteInstaller = executeInstaller;
-            }
-            else
-            {
-                msmqSettings.ExecuteInstaller = true;
-            }
-
-
-            settings.Set<MsmqSettings>(msmqSettings);
-
-
-            if (!settings.TryGet(out MsmqScopeOptions scopeOptions))
-            {
-                scopeOptions = new MsmqScopeOptions();
-            }
-
-            if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
-            {
-                messageLabelGenerator = headers => string.Empty;
-            }
+            // Need to pass UseTransactionalQueues via settings since this is used by the msmq subscription persistence
+            settings.SetUseTransactionalQueues(msmqSettings.UseTransactionalQueues);
 
             var isTransactional = IsTransactional(settings);
             var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), scopeOptions, messageLabelGenerator, isTransactional, outBoxRunning, auditMessageExpiration);
+            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), settings.GetMsmqScopeOptions(), settings.GetMsmqLabelGenerator(), isTransactional, outBoxRunning, auditMessageExpiration);
         }
 
 
@@ -84,9 +64,5 @@ namespace NServiceBus
             //otherwise use msmq default which is transactional
             return true;
         }
-
-        internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
-
-        internal const string ExecuteInstaller = "ExecuteInstaller";
     }
 }

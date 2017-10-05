@@ -6,6 +6,7 @@ namespace NServiceBus
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
     using Routing;
+    using Settings;
     using Transport.Msmq;
 
     /// <summary>
@@ -32,6 +33,15 @@ namespace NServiceBus
             return transportExtensions;
         }
 
+        internal static Func<IReadOnlyDictionary<string, string>, string> GetMsmqLabelGenerator(this SettingsHolder settings)
+        {
+            if (settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
+            {
+                return messageLabelGenerator;
+            }
+            return headers => string.Empty;
+        }
+
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
@@ -45,6 +55,30 @@ namespace NServiceBus
             Guard.AgainstNegativeAndZero(nameof(timeout), timeout);
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
+        }
+
+        internal static MsmqScopeOptions GetMsmqScopeOptions(this SettingsHolder settings)
+        {
+            if (settings.TryGet(out MsmqScopeOptions scopeOptions))
+            {
+                return scopeOptions;
+            }
+            return new MsmqScopeOptions();
+        }
+
+
+        internal static void SetUseTransactionalQueues(this SettingsHolder settings, bool useTransactionalQueues)
+        {
+            settings.Set("UseTransactionalQueues", useTransactionalQueues);
+        }
+
+        internal static bool GetUseTransactionalQueues(this ReadOnlySettings settings)
+        {
+            if (settings.TryGet<bool>("UseTransactionalQueues", out var useTransactionalQueues))
+            {
+                return useTransactionalQueues;
+            }
+            return true;
         }
 
         /// <summary>
@@ -74,7 +108,12 @@ namespace NServiceBus
         public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
-            config.GetSettings().Set(MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived, true);
+            config.GetSettings().Set("UseDeadLetterQueueForMessagesWithTimeToBeReceived", true);
+        }
+
+        internal static bool GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<bool>("UseDeadLetterQueueForMessagesWithTimeToBeReceived");
         }
 
         /// <summary>
@@ -89,7 +128,16 @@ namespace NServiceBus
         public static void DisableInstaller(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
-            config.GetSettings().Set(MsmqTransport.ExecuteInstaller, false);
+            config.GetSettings().Set("ExecuteInstaller", false);
+        }
+
+        internal static bool GetShouldExecuteInstaller(this SettingsHolder settings)
+        {
+            if (settings.TryGet<bool>("ExecuteInstaller", out var executeInstaller))
+            {
+                return executeInstaller;
+            }
+            return true;
         }
     }
 }

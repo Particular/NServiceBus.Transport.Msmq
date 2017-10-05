@@ -16,12 +16,7 @@
 
             context.Settings.Get<QueueBindings>().BindSending(configuredQueueName);
 
-            var useTransactionalStorageQueue = true;
-
-            if (context.Settings.TryGet<MsmqSettings>(out var msmqSettings))
-            {
-                useTransactionalStorageQueue = msmqSettings.UseTransactionalQueues;
-            }
+            var useTransactionalStorageQueue = context.Settings.GetUseTransactionalQueues();
 
             context.Container.ConfigureComponent(b =>
             {
