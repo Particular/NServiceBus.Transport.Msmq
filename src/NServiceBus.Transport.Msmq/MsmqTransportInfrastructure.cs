@@ -79,7 +79,7 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
-            // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name. 
+            // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
             var bindings = settings.Get<QueueBindings>();
             foreach (var queue in bindings.ReceivingAddresses)
             {
@@ -97,7 +97,14 @@ namespace NServiceBus.Transport.Msmq
 
             return new TransportReceiveInfrastructure(
                 () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, scopeOptions.TransactionOptions)),
-                () => new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.DisableInstaller),
+                () =>
+                {
+                    if (msmqSettings.ExecuteInstaller)
+                    {
+                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues);
+                    }
+                    return new NullQueueCreator();
+                },
                 () =>
                 {
                     foreach (var address in bindings.ReceivingAddresses)
