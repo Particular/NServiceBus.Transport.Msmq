@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <PackageReference Include="Terrajobst.PlatformCompat.Analyzers" Version="0.0.95-alpha" PrivateAssets="All" />
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>latest</LangVersion>
   </ItemGroup>
 
   <!-- Workaround for GitVersion 4.0 not creating GitVersionInformation by default -->
