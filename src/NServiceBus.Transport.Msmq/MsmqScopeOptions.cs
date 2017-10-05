@@ -46,9 +46,7 @@ namespace NServiceBus.Transport.Msmq
             var systemTransactionsGroup = ConfigurationManager.OpenMachineConfiguration()
                 .GetSectionGroup("system.transactions");
 
-            var machineSettings = systemTransactionsGroup?.Sections.Get("machineSettings") as MachineSettingsSection;
-
-            if (machineSettings != null)
+            if (systemTransactionsGroup?.Sections.Get("machineSettings") is MachineSettingsSection machineSettings)
             {
                 maxTimeout = machineSettings.MaxTimeout;
             }
