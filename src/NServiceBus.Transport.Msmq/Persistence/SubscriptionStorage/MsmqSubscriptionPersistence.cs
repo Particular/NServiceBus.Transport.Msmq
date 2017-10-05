@@ -45,18 +45,18 @@
             return configuredQueueName;
         }
 
-        internal static void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
+        static void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
         {
             if (DoesOldDefaultQueueExists())
             {
                 // The user has not configured the subscriptions queue to be "NServiceBus.Subscriptions" but there's a local queue.
                 // Indicates that the endpoint was using old default queue name.
                 throw new Exception(
-                    "Detected the presence of an old default queue named NServiceBus.Subscriptions. Either migrate the subscriptions to the new default queue `[Your endpoint name].Subscriptions`, see our documentation for more details, or explicitly configure the subscriptions queue name to `NServiceBus.Subscriptions` if you want to use the existing queue.");
+                    "Detected the presence of an old default queue named `NServiceBus.Subscriptions`. Either migrate the subscriptions to the new default queue `[Your endpoint name].Subscriptions`, see our documentation for more details, or explicitly configure the subscriptions queue name to `NServiceBus.Subscriptions` if you want to use the existing queue.");
             }
         }
 
-        internal static bool DoesOldDefaultQueueExists()
+        static bool DoesOldDefaultQueueExists()
         {
             const string oldDefaultSubscriptionsQueue = "NServiceBus.Subscriptions";
             var path = MsmqAddress.Parse(oldDefaultSubscriptionsQueue).PathWithoutPrefix;

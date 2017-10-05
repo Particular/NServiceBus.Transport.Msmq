@@ -8,20 +8,17 @@
     [TestFixture]
     public class MsmqSubscriptionPersistenceTests
     {
-        const string oldDefaultQueue = "NServiceBus.Subscriptions";
-
         [SetUp]
         public void Setup()
         {
             // Create queue "NServiceBus.Subscriptions" to simulate the presence of the old default queue.
-            var queuePath = MsmqAddress.Parse(oldDefaultQueue).PathWithoutPrefix;
+            queuePath = MsmqAddress.Parse(oldDefaultQueue).PathWithoutPrefix;
             MsmqHelpers.CreateQueue(queuePath);
         }
 
         [TearDown]
         public void TearDown()
         {
-            var queuePath = MsmqAddress.Parse(oldDefaultQueue).PathWithoutPrefix;
             // Delete the queue
             MsmqHelpers.DeleteQueue(queuePath);
         }
@@ -40,7 +37,17 @@
             Assert.AreEqual(customStorageQueue, MsmqSubscriptionPersistence.DetermineStorageQueueName(PrepareSettings(configuredStorageQueueName: customStorageQueue)));
         }
 
-        static ReadOnlySettings PrepareSettings(string endpointName = "MyEndpoint", string configuredStorageQueueName = null)
+        [Test]
+        public void ShouldDefaultStorageQueueIfNotConfiguredAndNoOldLegacyQueueIsPresent()
+        {
+            const string endpointName = "MyEndpoint";
+
+            MsmqHelpers.DeleteQueue(queuePath);
+
+            Assert.AreEqual($"{endpointName}.Subscriptions", MsmqSubscriptionPersistence.DetermineStorageQueueName(PrepareSettings(endpointName)));
+        }
+
+        static ReadOnlySettings PrepareSettings(string endpointName = "DefaultEndpoint", string configuredStorageQueueName = null)
         {
             var settings = new SettingsHolder();
 
@@ -48,11 +55,13 @@
 
             if (!string.IsNullOrEmpty(configuredStorageQueueName))
             {
-
                 settings.Set(MsmqSubscriptionStorageConfigurationExtensions.MsmqPersistenceQueueConfigurationKey, configuredStorageQueueName);
             }
 
             return settings;
         }
+
+        string queuePath;
+        const string oldDefaultQueue = "NServiceBus.Subscriptions";
     }
 }
