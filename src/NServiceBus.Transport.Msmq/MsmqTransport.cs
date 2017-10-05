@@ -2,6 +2,7 @@ namespace NServiceBus
 {
     using System;
     using System.Collections.Generic;
+    using Features;
     using Routing;
     using Settings;
     using Transport;
@@ -59,14 +60,29 @@ namespace NServiceBus
                 scopeOptions = new MsmqScopeOptions();
             }
 
-
-
             if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
             {
                 messageLabelGenerator = headers => string.Empty;
             }
 
-            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), scopeOptions, messageLabelGenerator);
+            var isTransactional = IsTransactional(settings);
+            var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
+
+            settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
+
+            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), scopeOptions, messageLabelGenerator, isTransactional, outBoxRunning, auditMessageExpiration);
+        }
+
+
+        static bool IsTransactional(ReadOnlySettings settings)
+        {
+            //if user has asked for a explicit level infer IsTransactional from that setting
+            if (settings.TryGet(out TransportTransactionMode requestedTransportTransactionMode))
+            {
+                return requestedTransportTransactionMode != TransportTransactionMode.None;
+            }
+            //otherwise use msmq default which is transactional
+            return true;
         }
 
         internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
