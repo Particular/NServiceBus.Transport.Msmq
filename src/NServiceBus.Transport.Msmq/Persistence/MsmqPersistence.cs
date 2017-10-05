@@ -16,7 +16,5 @@
                 s.EnableFeatureByDefault<MsmqSubscriptionPersistence>();
             });
         }
-
-
     }
 }
