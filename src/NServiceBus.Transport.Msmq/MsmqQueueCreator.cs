@@ -8,15 +8,15 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqQueueCreator : ICreateQueues
     {
-        public MsmqQueueCreator(bool useTransactionalQueues, bool enableQueueCreation = true)
+        public MsmqQueueCreator(bool useTransactionalQueues, bool disableQueueCreation = false)
         {
             this.useTransactionalQueues = useTransactionalQueues;
-            this.enableQueueCreation = enableQueueCreation;
+            this.disableQueueCreation = disableQueueCreation;
         }
 
         public Task CreateQueueIfNecessary(QueueBindings queueBindings, string identity)
         {
-            if (!enableQueueCreation)
+            if (disableQueueCreation)
             {
                 return TaskEx.CompletedTask;
             }
@@ -81,7 +81,7 @@ namespace NServiceBus.Transport.Msmq
         }
 
         bool useTransactionalQueues;
-        bool enableQueueCreation;
+        bool disableQueueCreation;
 
         static readonly string LocalAdministratorsGroupName = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Translate(typeof(NTAccount)).ToString();
         static ILog Logger = LogManager.GetLogger<MsmqQueueCreator>();
