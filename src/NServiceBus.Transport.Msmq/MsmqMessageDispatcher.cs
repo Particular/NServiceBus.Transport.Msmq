@@ -68,9 +68,7 @@ namespace NServiceBus.Transport.Msmq
                         toSend.UseJournalQueue = settings.UseJournalQueue;
                         toSend.TimeToReachQueue = settings.TimeToReachQueue;
 
-                        string replyToAddress;
-
-                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out replyToAddress))
+                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
                         {
                             toSend.ResponseQueue = new MessageQueue(MsmqAddress.Parse(replyToAddress).FullPath);
                         }
@@ -83,8 +81,7 @@ namespace NServiceBus.Transport.Msmq
                             return;
                         }
 
-                        MessageQueueTransaction activeTransaction;
-                        if (TryGetNativeTransaction(transaction, out activeTransaction))
+                        if (TryGetNativeTransaction(transaction, out var activeTransaction))
                         {
                             q.Send(toSend, label, activeTransaction);
                             return;
@@ -125,8 +122,7 @@ namespace NServiceBus.Transport.Msmq
                 return false;
             }
 
-            DiscardIfNotReceivedBefore discardIfNotReceivedBefore;
-            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
+            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
 
             if (!timeToBeReceivedRequested)
             {

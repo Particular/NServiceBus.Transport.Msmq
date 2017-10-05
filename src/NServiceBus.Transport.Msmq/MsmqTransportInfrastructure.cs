@@ -48,13 +48,11 @@ namespace NServiceBus.Transport.Msmq
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)
         {
-            string machine;
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("machine", out machine))
+            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("machine", out var machine))
             {
                 machine = RuntimeEnvironment.MachineName;
             }
-            string queueName;
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("queue", out queueName))
+            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("queue", out var queueName))
             {
                 queueName = logicalAddress.EndpointInstance.Endpoint;
             }
@@ -86,9 +84,7 @@ namespace NServiceBus.Transport.Msmq
                 CheckEndpointNameComplianceForMsmq.Check(queue);
             }
 
-            MsmqScopeOptions scopeOptions;
-
-            if (!settings.TryGet(out scopeOptions))
+            if (!settings.TryGet(out MsmqScopeOptions scopeOptions))
             {
                 scopeOptions = new MsmqScopeOptions();
             }

@@ -128,9 +128,7 @@ namespace NServiceBus.Transport.Msmq
             AssignMsmqNativeCorrelationId(message, result);
             result.Recoverable = !deliveryConstraints.Any(c => c is NonDurableDelivery);
 
-            DiscardIfNotReceivedBefore timeToBeReceived;
-
-            if (deliveryConstraints.TryGet(out timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
+            if (deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
             {
                 result.TimeToBeReceived = timeToBeReceived.MaxTime;
             }
@@ -160,9 +158,7 @@ namespace NServiceBus.Transport.Msmq
 
             var messageIntent = default(MessageIntentEnum);
 
-            string messageIntentString;
-
-            if (message.Headers.TryGetValue(Headers.MessageIntent, out messageIntentString))
+            if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
             {
                 Enum.TryParse(messageIntentString, true, out messageIntent);
             }
@@ -175,9 +171,7 @@ namespace NServiceBus.Transport.Msmq
 
         static void AssignMsmqNativeCorrelationId(OutgoingMessage message, Message result)
         {
-            string correlationIdHeader;
-
-            if (!message.Headers.TryGetValue(Headers.CorrelationId, out correlationIdHeader))
+            if (!message.Headers.TryGetValue(Headers.CorrelationId, out var correlationIdHeader))
             {
                 return;
             }
