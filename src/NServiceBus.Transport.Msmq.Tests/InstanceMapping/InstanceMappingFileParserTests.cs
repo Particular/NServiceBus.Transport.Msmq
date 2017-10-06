@@ -6,6 +6,7 @@
     using Routing;
 
     [TestFixture]
+    [SetUICulture("en-US")]
     public class InstanceMappingFileParserTests
     {
         [Test]

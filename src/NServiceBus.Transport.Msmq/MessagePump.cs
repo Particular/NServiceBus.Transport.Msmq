@@ -159,11 +159,13 @@ namespace NServiceBus.Transport.Msmq
                     // antecedent task is aborted the continuation will be scheduled. But in this case we don't need to await
                     // the continuation to complete because only really care about the receive operations. The final operation
                     // when shutting down is a clear of the running tasks anyway.
-                    receiveTask.ContinueWith((t, state) =>
+
+                    void RemoveReceiveTask(Task task)
                     {
-                        var receiveTasks = (ConcurrentDictionary<Task, Task>) state;
-                        receiveTasks.TryRemove(t, out Task _);
-                    }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously)
+                        runningReceiveTasks.TryRemove(task, out Task _);
+                    }
+
+                    receiveTask.ContinueWith(RemoveReceiveTask, TaskContinuationOptions.ExecuteSynchronously)
                         .Ignore();
                 }
             }
