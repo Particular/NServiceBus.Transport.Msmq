@@ -3,6 +3,11 @@
   <ItemGroup>
     <PackageReference Include="Terrajobst.PlatformCompat.Analyzers" Version="0.0.95-alpha" PrivateAssets="All" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
 
   <!-- Workaround for GitVersion 4.0 not creating GitVersionInformation by default -->
   <PropertyGroup>

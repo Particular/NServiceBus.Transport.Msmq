@@ -8,15 +8,11 @@ namespace NServiceBus.Transport.Msmq
     {
         public XDocument Load(string path)
         {
-            XDocument doc;
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var reader = XmlReader.Create(file))
             {
-                using (var reader = XmlReader.Create(file))
-                {
-                    doc = XDocument.Load(reader);
-                }
+                return XDocument.Load(reader);
             }
-            return doc;
         }
     }
 }

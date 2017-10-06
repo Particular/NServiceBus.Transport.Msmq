@@ -4,13 +4,8 @@
 
     class TimeToBeReceivedOverrideChecker
     {
-        public static StartupCheckResult Check(bool usingMsmq, bool isTransactional, bool outBoxRunning, bool auditTTBROverridden)
+        public static StartupCheckResult Check(bool isTransactional, bool outBoxRunning, bool auditTTBROverridden)
         {
-            if (!usingMsmq)
-            {
-                return StartupCheckResult.Success;
-            }
-
             if (!isTransactional)
             {
                 return StartupCheckResult.Success;

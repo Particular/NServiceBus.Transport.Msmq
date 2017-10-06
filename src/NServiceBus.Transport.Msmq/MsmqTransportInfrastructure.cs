@@ -7,15 +7,20 @@ namespace NServiceBus.Transport.Msmq
     using System.Transactions;
     using Performance.TimeToBeReceived;
     using Routing;
-    using Settings;
     using Support;
     using Transport;
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings)
+        public MsmqTransportInfrastructure(MsmqSettings msmqSettings, QueueBindings queueBindings, MsmqScopeOptions scopeOptions, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
         {
-            this.settings = settings;
+            this.msmqSettings = msmqSettings;
+            this.queueBindings = queueBindings;
+            this.scopeOptions = scopeOptions;
+            this.messageLabelGenerator = messageLabelGenerator;
+            this.isTransactional = isTransactional;
+            this.outBoxRunning = outBoxRunning;
+            this.auditMessageExpiration = auditMessageExpiration;
         }
 
         public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
@@ -48,13 +53,11 @@ namespace NServiceBus.Transport.Msmq
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)
         {
-            string machine;
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("machine", out machine))
+            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("machine", out var machine))
             {
                 machine = RuntimeEnvironment.MachineName;
             }
-            string queueName;
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("queue", out queueName))
+            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("queue", out var queueName))
             {
                 queueName = logicalAddress.EndpointInstance.Endpoint;
             }
@@ -67,7 +70,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 queue.Append("." + logicalAddress.Qualifier);
             }
-            return queue + "@" + machine;
+            return $"{queue}@{machine}";
         }
 
         public override string MakeCanonicalForm(string transportAddress)
@@ -80,20 +83,10 @@ namespace NServiceBus.Transport.Msmq
             CheckMachineNameForCompliance.Check();
 
             // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
-            var bindings = settings.Get<QueueBindings>();
-            foreach (var queue in bindings.ReceivingAddresses)
+            foreach (var queue in queueBindings.ReceivingAddresses)
             {
                 CheckEndpointNameComplianceForMsmq.Check(queue);
             }
-
-            MsmqScopeOptions scopeOptions;
-
-            if (!settings.TryGet(out scopeOptions))
-            {
-                scopeOptions = new MsmqScopeOptions();
-            }
-
-            var msmqSettings = settings.Get<MsmqSettings>();
 
             return new TransportReceiveInfrastructure(
                 () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, scopeOptions.TransactionOptions)),
@@ -107,7 +100,7 @@ namespace NServiceBus.Transport.Msmq
                 },
                 () =>
                 {
-                    foreach (var address in bindings.ReceivingAddresses)
+                    foreach (var address in queueBindings.ReceivingAddresses)
                     {
                         QueuePermissions.CheckQueue(address);
                     }
@@ -119,25 +112,17 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
-            if (!settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
-            {
-                messageLabelGenerator = headers => string.Empty;
-            }
-
-            var msmqSettings = settings.Get<MsmqSettings>();
-
             return new TransportSendInfrastructure(
                 () => new MsmqMessageDispatcher(msmqSettings, messageLabelGenerator),
                 () =>
                 {
-                    var bindings = settings.Get<QueueBindings>();
-
-                    foreach (var address in bindings.SendingAddresses)
+                    foreach (var address in queueBindings.SendingAddresses)
                     {
                         QueuePermissions.CheckQueue(address);
                     }
 
-                    var result = new MsmqTimeToBeReceivedOverrideCheck(settings).CheckTimeToBeReceivedOverrides();
+                    var auditTTBROverridden = auditMessageExpiration > TimeSpan.Zero;
+                    var result = TimeToBeReceivedOverrideChecker.Check(isTransactional, outBoxRunning, auditTTBROverridden);
                     return Task.FromResult(result);
                 });
         }
@@ -147,6 +132,12 @@ namespace NServiceBus.Transport.Msmq
             throw new NotImplementedException("MSMQ does not support native pub/sub.");
         }
 
-        ReadOnlySettings settings;
+        MsmqSettings msmqSettings;
+        QueueBindings queueBindings;
+        MsmqScopeOptions scopeOptions;
+        Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator;
+        bool isTransactional;
+        bool outBoxRunning;
+        TimeSpan auditMessageExpiration;
     }
 }

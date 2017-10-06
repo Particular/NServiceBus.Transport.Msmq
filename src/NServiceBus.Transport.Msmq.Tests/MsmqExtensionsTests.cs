@@ -36,9 +36,7 @@
         public void GetPermissions_returns_queue_access_rights(AccessControlEntryType providedAccessType)
         {
             queue.SetPermissions(LocalEveryoneGroupName, MessageQueueAccessRights.WriteMessage | MessageQueueAccessRights.ReceiveMessage, providedAccessType);
-            MessageQueueAccessRights? rights;
-            AccessControlEntryType? accessType;
-            if (!queue.TryGetPermissions(LocalEveryoneGroupName, out rights, out accessType))
+            if (!queue.TryGetPermissions(LocalEveryoneGroupName, out var rights, out var accessType))
             {
                 Assert.Fail($"Unable to read permissions for queue: {queue.QueueName}");
             }

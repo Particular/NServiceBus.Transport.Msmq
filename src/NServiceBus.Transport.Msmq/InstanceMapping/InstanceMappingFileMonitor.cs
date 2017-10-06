@@ -61,8 +61,7 @@ namespace NServiceBus.Transport.Msmq
 
             foreach (var endpoint in instancesPerEndpoint)
             {
-                EndpointInstance[] existingInstances;
-                if (previousInstances.TryGetValue(endpoint.Key, out existingInstances))
+                if (previousInstances.TryGetValue(endpoint.Key, out var existingInstances))
                 {
                     var newInstances = endpoint.Value.Except(existingInstances).Count();
                     var removedInstances = existingInstances.Except(endpoint.Value).Count();

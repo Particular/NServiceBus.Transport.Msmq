@@ -11,8 +11,6 @@ namespace NServiceBus.Persistence.Msmq
         public MsmqSubscriptionStorageQueue(MsmqAddress queueAddress, bool useTransactionalQueue)
         {
             transactionTypeToUseForSend = useTransactionalQueue ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None;
-            queue = new MessageQueue(queueAddress.FullPath);
-
             var messageReadPropertyFilter = new MessagePropertyFilter
             {
                 Id = true,
@@ -20,13 +18,14 @@ namespace NServiceBus.Persistence.Msmq
                 Label = true,
                 ArrivedTime = true
             };
-
-            queue.Formatter = new XmlMessageFormatter(new[]
+            queue = new MessageQueue(queueAddress.FullPath)
             {
-                typeof(string)
-            });
-
-            queue.MessageReadPropertyFilter = messageReadPropertyFilter;
+                Formatter = new XmlMessageFormatter(new[]
+                {
+                    typeof(string)
+                }),
+                MessageReadPropertyFilter = messageReadPropertyFilter
+            };
         }
 
         public IEnumerable<MsmqSubscriptionMessage> GetAllMessages()

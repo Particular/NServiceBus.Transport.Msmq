@@ -16,12 +16,7 @@
 
             context.Settings.Get<QueueBindings>().BindSending(configuredQueueName);
 
-            var useTransactionalStorageQueue = true;
-
-            if (context.Settings.TryGet<MsmqSettings>(out var msmqSettings))
-            {
-                useTransactionalStorageQueue = msmqSettings.UseTransactionalQueues;
-            }
+            var useTransactionalStorageQueue = context.Settings.GetUseTransactionalQueues();
 
             context.Container.ConfigureComponent(b =>
             {
@@ -34,15 +29,15 @@
         {
             var configuredQueueName = settings.GetConfiguredMsmqPersistenceSubscriptionQueue();
 
-            if (string.IsNullOrEmpty(configuredQueueName))
+            if (!string.IsNullOrEmpty(configuredQueueName))
             {
-                ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
-
-                var defaultQueueName = $"{settings.EndpointName()}.Subscriptions";
-                Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
-                configuredQueueName = defaultQueueName;
+                return configuredQueueName;
             }
-            return configuredQueueName;
+            ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
+
+            var defaultQueueName = $"{settings.EndpointName()}.Subscriptions";
+            Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
+            return defaultQueueName;
         }
 
         static void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
