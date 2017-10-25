@@ -2,15 +2,55 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Messaging;
+    using Settings;
+
 
     class MsmqSettings
     {
-        public MsmqSettings()
+        public MsmqSettings(ReadOnlySettings settings)
         {
+            ExecuteInstaller = true;
             UseDeadLetterQueue = true;
             UseConnectionCache = true;
             UseTransactionalQueues = true;
+            UseJournalQueue = false;
+            UseDeadLetterQueueForMessagesWithTimeToBeReceived = false;
             TimeToReachQueue = Message.InfiniteTimeout;
+
+            if (settings == null)
+            {
+                return;
+            }
+
+            if (settings.TryGet<bool>("ExecuteInstaller", out var executeInstaller))
+            {
+                ExecuteInstaller = executeInstaller;
+            }
+
+            if (settings.TryGet<bool>("UseDeadLetterQueue", out var useDeadLetterQueue))
+            {
+                UseDeadLetterQueue = useDeadLetterQueue;
+            }
+
+            if (settings.TryGet<bool>("UseConnectionCache", out var useConnectionCache))
+            {
+                UseConnectionCache = useConnectionCache;
+            }
+
+            if (settings.TryGet<bool>("UseTransactionalQueues", out var useTransactionalQueues))
+            {
+                UseTransactionalQueues = useTransactionalQueues;
+            }
+
+            if (settings.TryGet<TimeSpan>("TimeToReachQueue", out var timeToReachQueue))
+            {
+                TimeToReachQueue = timeToReachQueue;
+            }
+
+            if (settings.TryGet<bool>("UseDeadLetterQueueForMessagesWithTimeToBeReceived", out var useDeadLetterQueueForMessagesWithTimeToBeReceived))
+            {
+                UseDeadLetterQueueForMessagesWithTimeToBeReceived = useDeadLetterQueueForMessagesWithTimeToBeReceived;
+            }
         }
 
         public bool UseDeadLetterQueue { get; set; }

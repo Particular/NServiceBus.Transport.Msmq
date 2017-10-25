@@ -6,6 +6,7 @@ namespace NServiceBus
     using Settings;
     using Transport;
     using Transport.Msmq;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Transport definition for MSMQ.
@@ -63,26 +64,18 @@ transport.TimeToReachQueue(timespanValue);";
                 throw new Exception(error);
             }
 
-            var msmqSettings = new MsmqSettings
-            {
-                UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(),
-                TimeToReachQueue = settings.GetTimeToReachQueue(),
-                UseConnectionCache = settings.GetUseConnectionCache(),
-                UseDeadLetterQueue = settings.GetUseDeadLetterQueue(),
-                UseJournalQueue = settings.GetUseJournalQueue(),
-                UseTransactionalQueues = settings.GetUseTransactionalQueues(),
-                ExecuteInstaller = settings.GetShouldExecuteInstaller()
-            };
-
-            // Need to pass UseTransactionalQueues via settings since this is used by the msmq subscription persistence
-            settings.SetUseTransactionalQueues(msmqSettings.UseTransactionalQueues);
-
+            var msmqSettings = new MsmqSettings(settings);
+            
             var isTransactional = IsTransactional(settings);
             var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), settings.GetMsmqScopeOptions(), settings.GetMsmqLabelGenerator(), isTransactional, outBoxRunning, auditMessageExpiration);
+            var scopeOptions = settings.TryGet<MsmqScopeOptions>(out var options) ? options : new MsmqScopeOptions();
+
+            var labelGenerator = settings.TryGet<Func<IReadOnlyDictionary<string, string>, string>>("msmqLabelGenerator", out var generator) ? generator : (headers => string.Empty);
+
+            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), scopeOptions, labelGenerator, isTransactional, outBoxRunning, auditMessageExpiration);
         }
 
 

@@ -6,7 +6,6 @@ namespace NServiceBus
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
     using Routing;
-    using Settings;
     using Transport.Msmq;
 
     /// <summary>
@@ -33,15 +32,6 @@ namespace NServiceBus
             return transportExtensions;
         }
 
-        internal static Func<IReadOnlyDictionary<string, string>, string> GetMsmqLabelGenerator(this SettingsHolder settings)
-        {
-            if (settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
-            {
-                return messageLabelGenerator;
-            }
-            return headers => string.Empty;
-        }
-
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
@@ -56,31 +46,7 @@ namespace NServiceBus
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
-
-        internal static MsmqScopeOptions GetMsmqScopeOptions(this SettingsHolder settings)
-        {
-            if (settings.TryGet(out MsmqScopeOptions scopeOptions))
-            {
-                return scopeOptions;
-            }
-            return new MsmqScopeOptions();
-        }
-
-
-        internal static void SetUseTransactionalQueues(this SettingsHolder settings, bool useTransactionalQueues)
-        {
-            settings.Set("UseTransactionalQueues", useTransactionalQueues);
-        }
-
-        internal static bool GetUseTransactionalQueues(this ReadOnlySettings settings)
-        {
-            if (settings.TryGet<bool>("UseTransactionalQueues", out var useTransactionalQueues))
-            {
-                return useTransactionalQueues;
-            }
-            return true;
-        }
-
+        
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
@@ -110,12 +76,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueueForMessagesWithTimeToBeReceived", true);
         }
-
-        internal static bool GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseDeadLetterQueueForMessagesWithTimeToBeReceived");
-        }
-
+       
         /// <summary>
         /// Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
@@ -130,16 +91,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("ExecuteInstaller", false);
         }
-
-        internal static bool GetShouldExecuteInstaller(this SettingsHolder settings)
-        {
-            if (settings.TryGet<bool>("ExecuteInstaller", out var executeInstaller))
-            {
-                return executeInstaller;
-            }
-            return true;
-        }
-
+        
         /// <summary>
         /// Disables the storing of undeliverable messages in the dead letter queue
         /// </summary>
@@ -148,12 +100,7 @@ namespace NServiceBus
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueue", false);
-        }
-
-        internal static bool GetUseDeadLetterQueue(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseDeadLetterQueue");
-        }
+        }       
 
         /// <summary>
         /// Does not cache connections. 
@@ -164,12 +111,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseConnectionCache", false);
         }
-
-        internal static bool GetUseConnectionCache(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseConnectionCache");
-        }
-
+        
         /// <summary>
         /// This setting should be used with caution. As the queues are not transactional, any message that has
         /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
@@ -180,11 +122,6 @@ namespace NServiceBus
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseTransactionalQueues", false);
-        }
-
-        internal static bool GetUseTransactionalQueues(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseTransactionalQueues");
         }
 
         /// <summary>
@@ -198,13 +135,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseJournalQueue", true);
         }
-
-        internal static bool GetUseJournalQueue(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseJournalQueue");
-        }
-
-
+        
         /// <summary>
         /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
         /// </summary>
@@ -215,10 +146,6 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
             config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
-        }
-        internal static TimeSpan GetTimeToReachQueue(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<TimeSpan>("TimeToReachQueue");
-        }
+        }       
     }
 }
