@@ -39,7 +39,7 @@ namespace NServiceBus
 
             if (connectionString != null)
             {
-                var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Please use code level API. For example:
+                var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
 To turn off dead letter queuing, use: 
 var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.DoNotUseDeadLetterQueue();
