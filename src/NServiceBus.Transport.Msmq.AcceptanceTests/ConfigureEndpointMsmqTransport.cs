@@ -15,7 +15,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         queueBindings = configuration.GetSettings().Get<QueueBindings>();
      
         var transportConfig = configuration.UseTransport<MsmqTransport>();
-        transportConfig.DoNotCacheConnections();
+        transportConfig.DisableConnectionCachingForSends();
         
         var routingConfig = transportConfig.Routing();
 

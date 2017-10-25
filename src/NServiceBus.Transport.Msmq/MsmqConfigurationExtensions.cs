@@ -111,7 +111,7 @@ namespace NServiceBus
         /// most scenerios.
         /// </summary>
         /// <param name="config"></param>
-        public static void DoNotCacheConnections(this TransportExtensions<MsmqTransport> config)
+        public static void DisableConnectionCachingForSends(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseConnectionCache", false);

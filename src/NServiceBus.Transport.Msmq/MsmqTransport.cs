@@ -47,7 +47,7 @@ transport.DisableDeadLetterQueueing()
 
 To stop caching connections, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
-transport.DoNotCacheConnections();
+transport.DisableConnectionCachingForSends();
 
 To use non-transactional queues, use:
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
