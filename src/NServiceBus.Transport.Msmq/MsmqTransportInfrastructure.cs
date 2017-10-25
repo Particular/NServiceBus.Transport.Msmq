@@ -157,7 +157,7 @@ namespace NServiceBus.Transport.Msmq
             throw new NotImplementedException("MSMQ does not support native pub/sub.");
         }
 
-        readonly ReadOnlySettings settings;
+        ReadOnlySettings settings;
         MsmqSettings msmqSettings;
         QueueBindings queueBindings;
         bool isTransactional;
