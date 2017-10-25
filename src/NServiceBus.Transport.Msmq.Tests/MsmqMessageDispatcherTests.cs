@@ -16,7 +16,7 @@
         [Test]
         public void Should_set_label_when_convention_configured()
         {
-            var dispatchedMessage = DispatchMessage("labelTest", new MsmqSettings(), messageLabelGenerator: _ => "mylabel");
+            var dispatchedMessage = DispatchMessage("labelTest", new MsmqSettings(null), messageLabelGenerator: _ => "mylabel");
 
             Assert.AreEqual("mylabel", dispatchedMessage.Label);
         }
@@ -32,7 +32,7 @@
         [Test]
         public void Should_allow_optin_for_dlq_on_ttbr_messages()
         {
-            var settings = new MsmqSettings
+            var settings = new MsmqSettings(null)
             {
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived = true
             };
@@ -54,13 +54,15 @@
         {
             if (settings == null)
             {
-                settings = new MsmqSettings();
+                settings = new MsmqSettings(null);
             }
 
             if (messageLabelGenerator == null)
             {
                 messageLabelGenerator = _ => string.Empty;
             }
+
+            settings.LabelGenerator = messageLabelGenerator;
 
             var path = $@".\private$\{queueName}";
 
@@ -69,7 +71,7 @@
                 MsmqHelpers.DeleteQueue(path);
                 MsmqHelpers.CreateQueue(path);
 
-                var messageSender = new MsmqMessageDispatcher(settings, messageLabelGenerator);
+                var messageSender = new MsmqMessageDispatcher(settings);
 
                 var bytes = new byte[]
                 {
@@ -99,5 +101,5 @@
                 MsmqHelpers.DeleteQueue(path);
             }
         }
-    }
+    }    
 }

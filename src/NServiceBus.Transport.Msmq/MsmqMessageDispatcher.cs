@@ -15,10 +15,9 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqMessageDispatcher : IDispatchMessages
     {
-        public MsmqMessageDispatcher(MsmqSettings settings, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator)
+        public MsmqMessageDispatcher(MsmqSettings settings)
         {
             this.settings = settings;
-            this.messageLabelGenerator = messageLabelGenerator;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
@@ -147,7 +146,7 @@ namespace NServiceBus.Transport.Msmq
 
         string GetLabel(OutgoingMessage message)
         {
-            var messageLabel = messageLabelGenerator(new ReadOnlyDictionary<string, string>(message.Headers));
+            var messageLabel = settings.LabelGenerator(new ReadOnlyDictionary<string, string>(message.Headers));
             if (messageLabel == null)
             {
                 throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
@@ -180,9 +179,7 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
-
-        Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator;
-
+        
         MsmqSettings settings;
     }
 }

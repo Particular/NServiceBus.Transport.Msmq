@@ -6,7 +6,6 @@ namespace NServiceBus
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
     using Routing;
-    using Settings;
     using Transport.Msmq;
 
     /// <summary>
@@ -33,15 +32,6 @@ namespace NServiceBus
             return transportExtensions;
         }
 
-        internal static Func<IReadOnlyDictionary<string, string>, string> GetMsmqLabelGenerator(this SettingsHolder settings)
-        {
-            if (settings.TryGet("msmqLabelGenerator", out Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator))
-            {
-                return messageLabelGenerator;
-            }
-            return headers => string.Empty;
-        }
-
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
@@ -56,31 +46,7 @@ namespace NServiceBus
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
-
-        internal static MsmqScopeOptions GetMsmqScopeOptions(this SettingsHolder settings)
-        {
-            if (settings.TryGet(out MsmqScopeOptions scopeOptions))
-            {
-                return scopeOptions;
-            }
-            return new MsmqScopeOptions();
-        }
-
-
-        internal static void SetUseTransactionalQueues(this SettingsHolder settings, bool useTransactionalQueues)
-        {
-            settings.Set("UseTransactionalQueues", useTransactionalQueues);
-        }
-
-        internal static bool GetUseTransactionalQueues(this ReadOnlySettings settings)
-        {
-            if (settings.TryGet<bool>("UseTransactionalQueues", out var useTransactionalQueues))
-            {
-                return useTransactionalQueues;
-            }
-            return true;
-        }
-
+        
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
@@ -110,12 +76,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueueForMessagesWithTimeToBeReceived", true);
         }
-
-        internal static bool GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(this SettingsHolder settings)
-        {
-            return settings.GetOrDefault<bool>("UseDeadLetterQueueForMessagesWithTimeToBeReceived");
-        }
-
+       
         /// <summary>
         /// Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
@@ -131,13 +92,65 @@ namespace NServiceBus
             config.GetSettings().Set("ExecuteInstaller", false);
         }
 
-        internal static bool GetShouldExecuteInstaller(this SettingsHolder settings)
+        /// <summary>
+        /// This setting should be used with caution. It disables the storing of undeliverable messages
+        /// in the dead letter queue. Therefore this setting must only be used where loss of messages 
+        /// is an acceptable scenario. 
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableDeadLetterQueueing(this TransportExtensions<MsmqTransport> config)
         {
-            if (settings.TryGet<bool>("ExecuteInstaller", out var executeInstaller))
-            {
-                return executeInstaller;
-            }
-            return true;
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseDeadLetterQueue", false);
         }
+
+        /// <summary>
+        /// Instructs MSMQ to cache connections to a remote queue and re-use them
+        /// as needed instead of creating new connections for each message. 
+        /// Turning connection caching off will negatively impact the message throughput in 
+        /// most scenarios.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableConnectionCachingForSends(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseConnectionCache", false);
+        }
+        
+        /// <summary>
+        /// This setting should be used with caution. As the queues are not transactional, any message that has
+        /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
+        /// be used where loss of messages is an acceptable scenario.  
+        /// </summary>
+        /// <param name="config"></param>
+        public static void UseNonTransactionalQueues(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseTransactionalQueues", false);
+        }
+
+        /// <summary>
+        /// Enables the use of journaling messages. Stores a copy of every message received in the journal queue. 
+        /// Should be used ONLY when debugging as it can 
+        /// potentially use up the MSMQ journal storage quota based on the message volume.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void EnableJournaling(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseJournalQueue", true);
+        }
+        
+        /// <summary>
+        /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="timeToReachQueue">Timespan for the TTRQ</param>
+        public static void TimeToReachQueue(this TransportExtensions<MsmqTransport> config, TimeSpan timeToReachQueue)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
+            config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
+        }       
     }
 }

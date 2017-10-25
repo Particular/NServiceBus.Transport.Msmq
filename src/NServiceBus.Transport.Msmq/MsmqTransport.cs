@@ -37,22 +37,41 @@ namespace NServiceBus
                 throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
             }
 
-            var msmqSettings = connectionString != null ? new MsmqConnectionStringBuilder(connectionString)
-                .RetrieveSettings() : new MsmqSettings();
-            msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived();
-            msmqSettings.ExecuteInstaller = settings.GetShouldExecuteInstaller();
+            if (connectionString != null)
+            {
+                var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
+To turn off dead letter queuing, use: 
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DisableDeadLetterQueueing();
 
-            // Need to pass UseTransactionalQueues via settings since this is used by the msmq subscription persistence
-            settings.SetUseTransactionalQueues(msmqSettings.UseTransactionalQueues);
+To stop caching connections, use: 
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DisableConnectionCachingForSends();
+
+To use non-transactional queues, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.UseNonTransactionalQueues();
+
+To enable message journaling, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.EnableJournaling();
+
+To override the value of TTRQ, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.TimeToReachQueue(timespanValue);";
+
+                throw new Exception(error);
+            }
+
+            var msmqSettings = new MsmqSettings(settings);
 
             var isTransactional = IsTransactional(settings);
             var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), settings.GetMsmqScopeOptions(), settings.GetMsmqLabelGenerator(), isTransactional, outBoxRunning, auditMessageExpiration);
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
         }
-
 
         static bool IsTransactional(ReadOnlySettings settings)
         {

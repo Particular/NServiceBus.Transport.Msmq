@@ -16,11 +16,11 @@
 
             context.Settings.Get<QueueBindings>().BindSending(configuredQueueName);
 
-            var useTransactionalStorageQueue = context.Settings.GetUseTransactionalQueues();
+            var msmqSettings = new MsmqSettings(context.Settings);
 
             context.Container.ConfigureComponent(b =>
             {
-                var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), useTransactionalStorageQueue);
+                var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), msmqSettings.UseTransactionalQueues);
                 return new MsmqSubscriptionStorage(queue);
             }, DependencyLifecycle.SingleInstance);
         }

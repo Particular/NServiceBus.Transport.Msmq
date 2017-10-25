@@ -16,7 +16,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         settingsHolder = settings;
         return new TransportConfigurationResult
         {
-            TransportInfrastructure = msmqTransportDefinition.Initialize(settingsHolder, ""),
+            TransportInfrastructure = msmqTransportDefinition.Initialize(settingsHolder, null),
             PurgeInputQueueOnStartup = true
         };
     }
