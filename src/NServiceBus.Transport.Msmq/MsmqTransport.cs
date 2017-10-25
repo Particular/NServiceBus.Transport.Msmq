@@ -1,7 +1,6 @@
 namespace NServiceBus
 {
     using System;
-    using System.Messaging;
     using Features;
     using Routing;
     using Settings;
@@ -43,7 +42,8 @@ namespace NServiceBus
                 var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
 To turn off dead letter queuing, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
-transport.DoNotUseDeadLetterQueue();
+transport.DoNotUseDeadLetterQueue()
+;
 
 To stop caching connections, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
@@ -65,31 +65,14 @@ transport.TimeToReachQueue(timespanValue);";
             }
 
             var msmqSettings = new MsmqSettings(settings);
-            settings.AddStartupDiagnosticsSection("NServiceBus.Transport.MSMQ", new
-            {
-                msmqSettings.ExecuteInstaller,
-                msmqSettings.UseDeadLetterQueue,
-                msmqSettings.UseConnectionCache,
-                msmqSettings.UseTransactionalQueues,
-                msmqSettings.UseJournalQueue,
-                msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived,
-                TimeToReachQueue = GetFormattedTimeToReachQueue(msmqSettings.TimeToReachQueue)
-            });
 
             var isTransactional = IsTransactional(settings);
             var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
         }
-
-        static string GetFormattedTimeToReachQueue(TimeSpan timeToReachQueue)
-        {
-            return timeToReachQueue == Message.InfiniteTimeout ? "Infinite" 
-                : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
-        }
-
 
         static bool IsTransactional(ReadOnlySettings settings)
         {

@@ -2,18 +2,21 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
+    using System.Messaging;
     using System.Text;
     using System.Threading.Tasks;
     using System.Transactions;
     using Performance.TimeToBeReceived;
     using Routing;
+    using Settings;
     using Support;
     using Transport;
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
+        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
         {
+            this.settings = settings;
             this.msmqSettings = msmqSettings;
             this.queueBindings = queueBindings;
             this.isTransactional = isTransactional;
@@ -125,11 +128,36 @@ namespace NServiceBus.Transport.Msmq
                 });
         }
 
+        public override Task Start()
+        {
+            settings.AddStartupDiagnosticsSection("NServiceBus.Transport.MSMQ", new
+            {
+                msmqSettings.ExecuteInstaller,
+                msmqSettings.UseDeadLetterQueue,
+                msmqSettings.UseConnectionCache,
+                msmqSettings.UseTransactionalQueues,
+                msmqSettings.UseJournalQueue,
+                msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived,
+                TimeToReachQueue = GetFormattedTimeToReachQueue(msmqSettings.TimeToReachQueue)
+            });
+
+            return Task.FromResult(0);
+        }
+
+        static string GetFormattedTimeToReachQueue(TimeSpan timeToReachQueue)
+        {
+            return timeToReachQueue == Message.InfiniteTimeout ? "Infinite"
+                : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
+        }
+
+
+
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
             throw new NotImplementedException("MSMQ does not support native pub/sub.");
         }
 
+        readonly ReadOnlySettings settings;
         MsmqSettings msmqSettings;
         QueueBindings queueBindings;
         bool isTransactional;
