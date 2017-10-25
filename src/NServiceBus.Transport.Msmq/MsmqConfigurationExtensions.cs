@@ -150,7 +150,7 @@ namespace NServiceBus
             config.GetSettings().Set("UseDeadLetterQueue", false);
         }
 
-        internal static bool GetDoNotUseDeadLetterQueue(this SettingsHolder settings)
+        internal static bool GetUseDeadLetterQueue(this SettingsHolder settings)
         {
             return settings.GetOrDefault<bool>("UseDeadLetterQueue");
         }
@@ -165,7 +165,7 @@ namespace NServiceBus
             config.GetSettings().Set("UseConnectionCache", false);
         }
 
-        internal static bool GetDoNotCacheConnections(this SettingsHolder settings)
+        internal static bool GetUseConnectionCache(this SettingsHolder settings)
         {
             return settings.GetOrDefault<bool>("UseConnectionCache");
         }
@@ -176,13 +176,13 @@ namespace NServiceBus
         /// be used where loss of messages is an acceptable scenario.  
         /// </summary>
         /// <param name="config"></param>
-        public static void DoNotUseTransactionQueues(this TransportExtensions<MsmqTransport> config)
+        public static void DoNotUseTransactionalQueues(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseTransactionalQueues", false);
         }
 
-        internal static bool GetDoNotUseTransactionQueues(this SettingsHolder settings)
+        internal static bool GetUseTransactionalQueues(this SettingsHolder settings)
         {
             return settings.GetOrDefault<bool>("UseTransactionalQueues");
         }
@@ -199,7 +199,7 @@ namespace NServiceBus
             config.GetSettings().Set("UseJournalQueue", true);
         }
 
-        internal static bool GetEnableJournaling(this SettingsHolder settings)
+        internal static bool GetUseJournalQueue(this SettingsHolder settings)
         {
             return settings.GetOrDefault<bool>("UseJournalQueue");
         }

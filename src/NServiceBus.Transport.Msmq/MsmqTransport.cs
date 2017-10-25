@@ -41,23 +41,23 @@ namespace NServiceBus
             {
                 var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
 To turn off dead letter queuing, use: 
-var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.DoNotUseDeadLetterQueue();
 
 To stop caching connections, use: 
-var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.DoNotCacheConnections();
 
 To use non-transactional queues, use:
-var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
-transport.DoNotUseTransactionQueues();
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DoNotUseTransactionalQueues();
 
 To enable message journaling, use:
-var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.EnableJournaling();
 
 To override the value of TTRQ, use:
-var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.TimeToReachQueue(timespanValue);";
 
                 throw new Exception(error);
@@ -67,9 +67,9 @@ transport.TimeToReachQueue(timespanValue);";
             {
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(),
                 TimeToReachQueue = settings.GetTimeToReachQueue(),
-                UseConnectionCache = settings.GetDoNotCacheConnections(),
-                UseDeadLetterQueue = settings.GetDoNotUseDeadLetterQueue(),
-                UseJournalQueue = settings.GetEnableJournaling(),
+                UseConnectionCache = settings.GetUseConnectionCache(),
+                UseDeadLetterQueue = settings.GetUseDeadLetterQueue(),
+                UseJournalQueue = settings.GetUseJournalQueue(),
                 UseTransactionalQueues = settings.GetUseTransactionalQueues(),
                 ExecuteInstaller = settings.GetShouldExecuteInstaller()
             };
