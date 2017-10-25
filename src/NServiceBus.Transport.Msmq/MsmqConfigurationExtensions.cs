@@ -108,7 +108,7 @@ namespace NServiceBus
         /// Instructs MSMQ to cache connections to a remote queue and re-use them
         /// as needed instead of creating new connections for each message. 
         /// Turning connection caching off will negatively impact the message throughput in 
-        /// most scenerios.
+        /// most scenarios.
         /// </summary>
         /// <param name="config"></param>
         public static void DisableConnectionCachingForSends(this TransportExtensions<MsmqTransport> config)
