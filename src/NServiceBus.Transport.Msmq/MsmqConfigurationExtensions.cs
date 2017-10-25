@@ -91,19 +91,24 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("ExecuteInstaller", false);
         }
-        
+
         /// <summary>
-        /// Disables the storing of undeliverable messages in the dead letter queue
+        /// This setting should be used with caution. It disables the storing of undeliverable messages
+        /// in the dead letter queue. Therefore this setting must only be used where loss of messages 
+        /// is an acceptable scenario. 
         /// </summary>
         /// <param name="config"></param>
         public static void DoNotUseDeadLetterQueue(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueue", false);
-        }       
+        }
 
         /// <summary>
-        /// Does not cache connections. 
+        /// Instructs MSMQ to cache connections to a remote queue and re-use them
+        /// as needed instead of creating new connections for each message. 
+        /// Turning connection caching off will negatively impact the message throughput in 
+        /// most scenerios.
         /// </summary>
         /// <param name="config"></param>
         public static void DoNotCacheConnections(this TransportExtensions<MsmqTransport> config)
@@ -127,7 +132,7 @@ namespace NServiceBus
         /// <summary>
         /// Enables the use of journaling messages. Stores a copy of every message received in the journal queue. 
         /// Should be used ONLY when debugging as it can 
-        /// potentially use up the disk storage quota based on the message volume.
+        /// potentially use up the MSMQ journal storage quota based on the message volume.
         /// </summary>
         /// <param name="config"></param>
         public static void EnableJournaling(this TransportExtensions<MsmqTransport> config)
