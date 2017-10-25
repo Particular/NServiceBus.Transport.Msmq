@@ -62,6 +62,8 @@
                 messageLabelGenerator = _ => string.Empty;
             }
 
+            settings.LabelGenerator = messageLabelGenerator;
+
             var path = $@".\private$\{queueName}";
 
             try
@@ -69,7 +71,7 @@
                 MsmqHelpers.DeleteQueue(path);
                 MsmqHelpers.CreateQueue(path);
 
-                var messageSender = new MsmqMessageDispatcher(settings, messageLabelGenerator);
+                var messageSender = new MsmqMessageDispatcher(settings);
 
                 var bytes = new byte[]
                 {

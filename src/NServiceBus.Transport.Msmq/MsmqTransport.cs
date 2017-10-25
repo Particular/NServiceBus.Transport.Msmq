@@ -71,11 +71,7 @@ transport.TimeToReachQueue(timespanValue);";
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            var scopeOptions = settings.TryGet<MsmqScopeOptions>(out var options) ? options : new MsmqScopeOptions();
-
-            var labelGenerator = settings.TryGet<Func<IReadOnlyDictionary<string, string>, string>>("msmqLabelGenerator", out var generator) ? generator : (headers => string.Empty);
-
-            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), scopeOptions, labelGenerator, isTransactional, outBoxRunning, auditMessageExpiration);
+            return new MsmqTransportInfrastructure(msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
         }
 
 

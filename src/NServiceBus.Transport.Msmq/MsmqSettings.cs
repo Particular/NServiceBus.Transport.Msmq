@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Collections.Generic;
     using System.Messaging;
     using Settings;
 
@@ -16,6 +17,8 @@ namespace NServiceBus.Transport.Msmq
             UseJournalQueue = false;
             UseDeadLetterQueueForMessagesWithTimeToBeReceived = false;
             TimeToReachQueue = Message.InfiniteTimeout;
+            ScopeOptions = new MsmqScopeOptions();
+            LabelGenerator = (headers => string.Empty);
 
             if (settings == null)
             {
@@ -51,6 +54,16 @@ namespace NServiceBus.Transport.Msmq
             {
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived = useDeadLetterQueueForMessagesWithTimeToBeReceived;
             }
+
+            if (settings.TryGet<MsmqScopeOptions>(out var options))
+            {
+                ScopeOptions = options;
+            }
+
+            if (settings.TryGet<Func<IReadOnlyDictionary<string, string>, string>>("msmqLabelGenerator", out var generator))
+            {
+                LabelGenerator = generator;
+            }
         }
 
         public bool UseDeadLetterQueue { get; set; }
@@ -66,5 +79,9 @@ namespace NServiceBus.Transport.Msmq
         public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
 
         public bool ExecuteInstaller { get; set; }
+
+        public MsmqScopeOptions ScopeOptions { get; set; }
+
+        public Func<IReadOnlyDictionary<string, string>, string> LabelGenerator { get; set; }
     }
 }
