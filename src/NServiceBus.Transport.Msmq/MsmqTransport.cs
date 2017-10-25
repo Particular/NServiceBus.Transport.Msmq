@@ -37,10 +37,42 @@ namespace NServiceBus
                 throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
             }
 
-            var msmqSettings = connectionString != null ? new MsmqConnectionStringBuilder(connectionString)
-                .RetrieveSettings() : new MsmqSettings();
-            msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived();
-            msmqSettings.ExecuteInstaller = settings.GetShouldExecuteInstaller();
+            if (connectionString != null)
+            {
+                var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Please use code level API. For example:
+To turn off dead letter queuing, use: 
+var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DoNotUseDeadLetterQueue();
+
+To stop caching connections, use: 
+var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DoNotCacheConnections();
+
+To use non-transactional queues, use:
+var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DoNotUseTransactionQueues();
+
+To enable message journaling, use:
+var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.EnableJournaling();
+
+To override the value of TTRQ, use:
+var transport = var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.TimeToReachQueue(timespanValue);";
+
+                throw new Exception(error);
+            }
+
+            var msmqSettings = new MsmqSettings
+            {
+                UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetUseDeadLetterQueueForMessagesWithTimeToBeReceived(),
+                TimeToReachQueue = settings.GetTimeToReachQueue(),
+                UseConnectionCache = settings.GetDoNotCacheConnections(),
+                UseDeadLetterQueue = settings.GetDoNotUseDeadLetterQueue(),
+                UseJournalQueue = settings.GetEnableJournaling(),
+                UseTransactionalQueues = settings.GetUseTransactionalQueues(),
+                ExecuteInstaller = settings.GetShouldExecuteInstaller()
+            };
 
             // Need to pass UseTransactionalQueues via settings since this is used by the msmq subscription persistence
             settings.SetUseTransactionalQueues(msmqSettings.UseTransactionalQueues);

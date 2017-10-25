@@ -139,5 +139,86 @@ namespace NServiceBus
             }
             return true;
         }
+
+        /// <summary>
+        /// Disables the storing of undeliverable messages in the dead letter queue
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DoNotUseDeadLetterQueue(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseDeadLetterQueue", false);
+        }
+
+        internal static bool GetDoNotUseDeadLetterQueue(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<bool>("UseDeadLetterQueue");
+        }
+
+        /// <summary>
+        /// Does not cache connections. 
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DoNotCacheConnections(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseConnectionCache", false);
+        }
+
+        internal static bool GetDoNotCacheConnections(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<bool>("UseConnectionCache");
+        }
+
+        /// <summary>
+        /// This setting should be used with caution. As the queues are not transactional, any message that has
+        /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
+        /// be used where loss of messages is an acceptable scenario.  
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DoNotUseTransactionQueues(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseTransactionalQueues", false);
+        }
+
+        internal static bool GetDoNotUseTransactionQueues(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<bool>("UseTransactionalQueues");
+        }
+
+        /// <summary>
+        /// Enables the use of journaling messages. Stores a copy of every message received in the journal queue. 
+        /// Should be used ONLY when debugging as it can 
+        /// potentially use up the disk storage quota based on the message volume.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void EnableJournaling(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseJournalQueue", true);
+        }
+
+        internal static bool GetEnableJournaling(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<bool>("UseJournalQueue");
+        }
+
+
+        /// <summary>
+        /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="timeToReachQueue">Timespan for the TTRQ</param>
+        public static void TimeToReachQueue(this TransportExtensions<MsmqTransport> config, TimeSpan timeToReachQueue)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
+            config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
+        }
+        internal static TimeSpan GetTimeToReachQueue(this SettingsHolder settings)
+        {
+            return settings.GetOrDefault<TimeSpan>("TimeToReachQueue");
+        }
     }
 }
