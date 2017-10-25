@@ -51,7 +51,7 @@ transport.DisableConnectionCachingForSends();
 
 To use non-transactional queues, use:
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
-transport.DoNotUseTransactionalQueues();
+transport.UseNonTransactionalQueues();
 
 To enable message journaling, use:
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();

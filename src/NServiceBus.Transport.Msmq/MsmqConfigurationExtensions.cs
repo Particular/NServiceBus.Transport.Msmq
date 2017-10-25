@@ -123,7 +123,7 @@ namespace NServiceBus
         /// be used where loss of messages is an acceptable scenario.  
         /// </summary>
         /// <param name="config"></param>
-        public static void DoNotUseTransactionalQueues(this TransportExtensions<MsmqTransport> config)
+        public static void UseNonTransactionalQueues(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseTransactionalQueues", false);

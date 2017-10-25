@@ -63,7 +63,7 @@
                     b.UsePersistence<MsmqPersistence>().SubscriptionQueue(StorageQueueName);
                     b.UseTransport<MsmqTransport>()
                         .Transactions(TransportTransactionMode.None)
-                        .DoNotUseTransactionalQueues();
+                        .UseNonTransactionalQueues();
                 });
             }
         }
@@ -77,7 +77,7 @@
                     c.DisableFeature<AutoSubscribe>();
                     c.UseTransport<MsmqTransport>()
                         .Transactions(TransportTransactionMode.None)
-                        .DoNotUseTransactionalQueues();
+                        .UseNonTransactionalQueues();
                 }, metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
