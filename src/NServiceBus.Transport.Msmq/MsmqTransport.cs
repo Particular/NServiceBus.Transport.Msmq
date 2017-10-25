@@ -43,7 +43,6 @@ namespace NServiceBus
 To turn off dead letter queuing, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
 transport.DisableDeadLetterQueueing();
-;
 
 To stop caching connections, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
