@@ -42,7 +42,7 @@ namespace NServiceBus
                 var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
 To turn off dead letter queuing, use: 
 var transport = endpointConfiguration.UseTransport<MsmqTransport>();
-transport.DoNotUseDeadLetterQueue()
+transport.DisableDeadLetterQueueing()
 ;
 
 To stop caching connections, use: 

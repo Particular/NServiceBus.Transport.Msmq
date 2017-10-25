@@ -98,7 +98,7 @@ namespace NServiceBus
         /// is an acceptable scenario. 
         /// </summary>
         /// <param name="config"></param>
-        public static void DoNotUseDeadLetterQueue(this TransportExtensions<MsmqTransport> config)
+        public static void DisableDeadLetterQueueing(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueue", false);
