@@ -13,10 +13,21 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludePDBsInPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="$(ProjectDir)\Scripts\*.targets">     
+    <PackagePath>build</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(ProjectDir)\Scripts\*.ps1">     
+    <PackagePath>build/Scripts</PackagePath>
+    </Content>
+  </ItemGroup>
+
   <Target Name="IncludePDBsInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).pdb" PackagePath="lib/$(TargetFramework)" />
-      <TfmSpecificPackageFile Include="$(ProjectDir)\Scripts\*.*" PackagePath="lib/$(TargetFramework)/Scripts" />
+      <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).pdb" PackagePath="lib/$(TargetFramework)" />      
     </ItemGroup>
   </Target>
 
