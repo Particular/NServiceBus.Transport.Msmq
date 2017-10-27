@@ -9,10 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Configuration" />
     <Reference Include="System.Messaging" />
-    <Reference Include="System.Transactions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,24 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Scripts\">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Folder>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Scripts\CreateQueues.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Scripts\DeleteQueues.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="$(ProjectDir)\Scripts\*.*">
-      <PackagePath>build</PackagePath>
-    </Content>
+    <None Update="Scripts\*.*" Pack="true" PackagePath="build\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
