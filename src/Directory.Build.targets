@@ -14,16 +14,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="$(ProjectDir)\Scripts\*.targets">     
+    <Content Include="$(ProjectDir)\Scripts\*.*">     
     <PackagePath>build</PackagePath>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="$(ProjectDir)\Scripts\*.ps1">     
-    <PackagePath>build/Scripts</PackagePath>
-    </Content>
-  </ItemGroup>
+  </ItemGroup>  
 
   <Target Name="IncludePDBsInPackage" Condition="'$(IncludeBuildOutput)' != 'false'">
     <ItemGroup>
