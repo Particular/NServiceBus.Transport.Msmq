@@ -4,16 +4,9 @@
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)\*.ps1">
-      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <Visible>false</Visible>
-    </None>
+    <ContentWithTargetPath Include="$(MSBuildThisFileDirectory)\*.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>NServiceBus.Transport.Msmq\%(Filename)%(Extension)</TargetPath>
+    </ContentWithTargetPath>
   </ItemGroup>
-  <Target Name="CopyLinkedFiles" BeforeTargets="Build">
-    <Copy SourceFiles="%(None.Identity)"
-          DestinationFolder="$(OutputPath)\NServiceBus.Transport.Msmq"
-          SkipUnchangedFiles='true'
-          OverwriteReadOnlyFiles='true'
-          Condition="'%(None.Link)' != ''" />
-  </Target>
 </Project>
