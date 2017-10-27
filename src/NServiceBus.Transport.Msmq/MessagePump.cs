@@ -206,7 +206,7 @@ namespace NServiceBus.Transport.Msmq
                 var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
                 {
-                    error = $"The queue {inputQueue.Path} does not exist. Run the /Scripts/CreateQueues.ps1 script included in the NServiceBus.Transports.Msmq NuGet package, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
+                    error = $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
                 }
                 throw new Exception(error, msmqEx);
             }
