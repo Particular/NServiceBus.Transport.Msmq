@@ -83,7 +83,7 @@ Function SetDefaultPermissionsForQueue
     $Queue.SetPermissions($Account, "PeekMessage", "Allow")
 }
 
-# Function to create all the queues for the endpoint. 
+# Function to create all the queues for the endpoint.
 
 Function CreateQueuesForEndpoint
 {
@@ -107,6 +107,6 @@ Function CreateQueuesForEndpoint
     # timeout dispatcher queue
     CreateQueue -QueueName "$EndpointName.timeoutsdispatcher" -Account $Account
 
-	# Msmq storage persistence queue. When using endpointConfiguration.UsePersistence<MsmqPersistence, StorageType.Subscriptions>() in your code, uncomment the following queue or replace it with the configured value.
+    # Msmq storage persistence queue. When using endpointConfiguration.UsePersistence<MsmqPersistence, StorageType.Subscriptions>() in your code, uncomment the following queue or replace it with the configured value.
     # CreateQueue -QueueName "$EndpointName.Subscriptions" -Account $Account
 }
