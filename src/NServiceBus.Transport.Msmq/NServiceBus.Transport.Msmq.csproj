@@ -5,9 +5,7 @@
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
     <OutputPath>..\..\binaries\</OutputPath>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Description>MSMQ support for NServicebus</Description>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Description>MSMQ support for NServiceBus</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="NServiceBus" Version="7.0.0-*" />
+    <PackageReference Include="Particular.Packaging" Version="0.1.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,4 +39,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(ProjectDir)\Scripts\*.*">
+      <PackagePath>build</PackagePath>
+    </Content>
+  </ItemGroup>
+
 </Project>
