@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="SourceLink.Create.GitHub" Version="2.5.0" PrivateAssets="All" />
+    <DotNetCliToolReference Include="dotnet-sourcelink-git" Version="2.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
   </ItemGroup>
