@@ -1,7 +1,7 @@
 # USAGE:
 
 # To delete the endpoint and all the subqueues, use:
-# DeleteQueuesForEndpoint -EndpointName "myendpoint" 
+# DeleteQueuesForEndpoint -EndpointName "myendpoint"
 
 # To delete a single queue such as Audit or Error, use:
 # DeleteQueue -QueueName "error"
@@ -26,7 +26,7 @@ Function DeleteQueuesForEndpoint
     # timeout dispatcher queue
     DeleteQueue ($endpointName + ".timeoutsdispatcher")
 
-	# Msmq storage persistence queue. When using endpointConfiguration.UsePersistence<MsmqPersistence, StorageType.Subscriptions>() in your code, uncomment the following queue or replace it with the configured value.
+    # Msmq storage persistence queue. When using endpointConfiguration.UsePersistence<MsmqPersistence, StorageType.Subscriptions>() in your code, uncomment the following queue or replace it with the configured value.
     # DeleteQueue ($endpointName + ".subscriptions")
 
 }
