@@ -182,7 +182,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
 
-            if (Guid.TryParse(correlationIdHeader, out Guid _))
+            if (Guid.TryParse(correlationIdHeader, out _))
             {
                 //msmq required the id's to be in the {guid}\{incrementing number} format so we need to fake a \0 at the end to make it compatible
                 result.CorrelationId = $"{correlationIdHeader}\\0";
