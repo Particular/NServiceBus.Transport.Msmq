@@ -27,9 +27,7 @@ namespace NServiceBus.Transport.Msmq
                         return;
                     }
 
-                    Dictionary<string, string> headers;
-
-                    if (!TryExtractHeaders(message, out headers))
+                    if (!TryExtractHeaders(message, out var headers))
                     {
                         MovePoisonMessageToErrorQueue(message, MessageQueueTransactionType.Automatic);
 
@@ -67,9 +65,7 @@ namespace NServiceBus.Transport.Msmq
             var transportTransaction = new TransportTransaction();
             transportTransaction.Set(Transaction.Current);
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-
-            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out failureInfo))
+            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
             {
                 var errorHandleResult = await HandleError(message, headers, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
 

@@ -1,6 +1,7 @@
 namespace NServiceBus
 {
     using System;
+    using Features;
     using Routing;
     using Settings;
     using Transport;
@@ -31,21 +32,56 @@ namespace NServiceBus
         {
             Guard.AgainstNull(nameof(settings), settings);
 
-            if (!settings.GetOrDefault<bool>("Endpoint.SendOnly") && !settings.TryGetExplicitlyConfiguredErrorQueueAddress(out string _))
+            if (!settings.GetOrDefault<bool>("Endpoint.SendOnly") && !settings.TryGetExplicitlyConfiguredErrorQueueAddress(out _))
             {
                 throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
             }
 
-            var msmqSettings = connectionString != null ? new MsmqConnectionStringBuilder(connectionString)
-                .RetrieveSettings() : new MsmqSettings();
+            if (connectionString != null)
+            {
+                var error = @"Passing in MSMQ settings such as DeadLetterQueue, Journaling etc via a connection string is no longer supported.  Use code level API. For example:
+To turn off dead letter queuing, use: 
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DisableDeadLetterQueueing();
 
-            msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = settings.GetOrDefault<bool>(UseDeadLetterQueueForMessagesWithTimeToBeReceived);
+To stop caching connections, use: 
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.DisableConnectionCachingForSends();
 
-            settings.Set<MsmqSettings>(msmqSettings);
+To use non-transactional queues, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.UseNonTransactionalQueues();
 
-            return new MsmqTransportInfrastructure(settings);
+To enable message journaling, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.EnableJournaling();
+
+To override the value of TTRQ, use:
+var transport = endpointConfiguration.UseTransport<MsmqTransport>();
+transport.TimeToReachQueue(timespanValue);";
+
+                throw new Exception(error);
+            }
+
+            var msmqSettings = new MsmqSettings(settings);
+
+            var isTransactional = IsTransactional(settings);
+            var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
+
+            settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
+
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
         }
 
-        internal const string UseDeadLetterQueueForMessagesWithTimeToBeReceived = "UseDeadLetterQueueForMessagesWithTimeToBeReceived";
+        static bool IsTransactional(ReadOnlySettings settings)
+        {
+            //if user has asked for a explicit level infer IsTransactional from that setting
+            if (settings.TryGet(out TransportTransactionMode requestedTransportTransactionMode))
+            {
+                return requestedTransportTransactionMode != TransportTransactionMode.None;
+            }
+            //otherwise use msmq default which is transactional
+            return true;
+        }
     }
 }

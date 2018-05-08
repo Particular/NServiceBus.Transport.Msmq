@@ -107,12 +107,11 @@
             var sdHandle = GCHandle.Alloc(SecurityDescriptor, GCHandleType.Pinned);
             try
             {
-                int lengthNeeded;
                 var mqResult = MQGetQueueSecurity(formatName,
                     DACL_SECURITY_INFORMATION,
                     sdHandle.AddrOfPinnedObject(),
                     SecurityDescriptor.Length,
-                    out lengthNeeded);
+                    out var lengthNeeded);
 
                 if (mqResult == MQ_ERROR_SECURITY_DESCRIPTOR_TOO_SMALL)
                 {
@@ -131,11 +130,9 @@
                     throw new Exception($"Unable to read the security descriptor of queue [{formatName}]");
                 }
 
-                IntPtr pDacl;
-
                 var success = GetSecurityDescriptorDacl(sdHandle.AddrOfPinnedObject(),
-                    out bool _,
-                    out pDacl,
+                    out _,
+                    out var pDacl,
                     out _);
 
                 if (!success)
@@ -188,15 +185,13 @@
 
             for (var i = 0; i < AclSize.AceCount; i++)
             {
-                IntPtr pAce;
-                GetAce(pDacl, i, out pAce);
+                GetAce(pDacl, i, out var pAce);
                 var ace = (ACCESS_ALLOWED_ACE) Marshal.PtrToStructure(pAce, typeof(ACCESS_ALLOWED_ACE));
                 var iter = (IntPtr) ((long) pAce + (long) Marshal.OffsetOf(typeof(ACCESS_ALLOWED_ACE), "SidStart"));
                 var size = GetLengthSid(iter);
                 var bSID = new byte[size];
                 Marshal.Copy(iter, bSID, 0, size);
-                IntPtr ptrSid;
-                ConvertSidToStringSid(bSID, out ptrSid);
+                ConvertSidToStringSid(bSID, out var ptrSid);
 
                 var strSID = Marshal.PtrToStringAuto(ptrSid);
 

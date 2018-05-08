@@ -95,7 +95,7 @@ Added endpoint 'A' with 2 instances"));
         {
             var fileData = new Queue<string>();
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>");
-            fileData.Enqueue(@"<endpoints></endpoints>");
+            fileData.Enqueue("<endpoints></endpoints>");
             var fileAccess = new FakeFileAccess(() => XDocument.Parse(fileData.Dequeue()));
             var monitor = new InstanceMappingFileMonitor("filepath", TimeSpan.Zero, new FakeTimer(), fileAccess, new EndpointInstances());
 

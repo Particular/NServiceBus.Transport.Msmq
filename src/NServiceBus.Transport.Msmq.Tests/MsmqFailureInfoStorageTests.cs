@@ -16,8 +16,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.RecordFailureInfoForMessage(messageId, exception);
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-            storage.TryGetFailureInfoForMessage(messageId, out failureInfo);
+            storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
             Assert.NotNull(failureInfo);
             Assert.AreEqual(1, failureInfo.NumberOfProcessingAttempts);
@@ -35,8 +34,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             storage.RecordFailureInfoForMessage(messageId, new Exception());
             storage.RecordFailureInfoForMessage(messageId, secondException);
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-            storage.TryGetFailureInfoForMessage(messageId, out failureInfo);
+            storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
             Assert.NotNull(failureInfo);
             Assert.AreEqual(2, failureInfo.NumberOfProcessingAttempts);
@@ -52,9 +50,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.RecordFailureInfoForMessage(messageId, new Exception());
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-
-            storage.TryGetFailureInfoForMessage(messageId, out failureInfo);
+            storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
             Assert.NotNull(failureInfo);
 
             storage.ClearFailureInfoForMessage(messageId);
@@ -81,8 +77,7 @@ namespace NServiceBus.Transport.Msmq.Tests
                 storage.RecordFailureInfoForMessage(messageId, exception);
             }
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-            storage.TryGetFailureInfoForMessage(lruMessageId, out failureInfo);
+            storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
 
             Assert.IsNull(failureInfo);
         }
@@ -112,8 +107,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.RecordFailureInfoForMessage(messageIds[MaxElements - 1], new Exception());
 
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-            storage.TryGetFailureInfoForMessage(lruMessageId, out failureInfo);
+            storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
 
             Assert.IsNotNull(failureInfo);
         }

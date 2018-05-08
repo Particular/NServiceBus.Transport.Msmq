@@ -61,6 +61,52 @@
         }
 
         [Test]
+        public void Should_not_override_replyToAddress()
+        {
+            var message = MsmqUtilities.Convert(
+                new OutgoingMessage("message id", new Dictionary<string, string>
+                    {
+                        {Headers.ReplyToAddress, "SomeAddress"}
+                    }, new byte[0]),
+                new List<DeliveryConstraint>());
+
+            message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
+            var headers = MsmqUtilities.ExtractHeaders(message);
+            
+            Assert.AreEqual("SomeAddress", headers[Headers.ReplyToAddress]);
+        }
+
+        [Test]
+        public void Should_not_override_messageIntent()
+        {
+            var message = MsmqUtilities.Convert(
+                new OutgoingMessage("message id", new Dictionary<string, string>
+                {
+                    {Headers.MessageIntent, MessageIntentEnum.Send.ToString()}
+                }, new byte[0]),
+                new List<DeliveryConstraint>());
+
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            var headers = MsmqUtilities.ExtractHeaders(message);
+
+            Assert.AreEqual("Send", headers[Headers.MessageIntent]);
+        }
+
+        [Test]
+        public void Should_set_messageIntent_if_header_not_present()
+        {
+            var message = MsmqUtilities.Convert(
+                new OutgoingMessage("message id", new Dictionary<string, string>
+                (), new byte[0]),
+                new List<DeliveryConstraint>());
+
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            var headers = MsmqUtilities.ExtractHeaders(message);
+
+            Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
+        }
+
+        [Test]
         public void Should_use_the_TTBR_in_the_send_options_if_set()
         {
             var deliveryConstraints = new List<DeliveryConstraint>

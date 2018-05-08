@@ -28,9 +28,7 @@
                         return;
                     }
 
-                    Dictionary<string, string> headers;
-
-                    if (!TryExtractHeaders(message, out headers))
+                    if (!TryExtractHeaders(message, out var headers))
                     {
                         MovePoisonMessageToErrorQueue(message, IsQueuesTransactional ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None);
 
@@ -66,9 +64,7 @@
 
         async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers)
         {
-            MsmqFailureInfoStorage.ProcessingFailureInfo failureInfo;
-
-            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out failureInfo))
+            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
             {
                 var errorHandleResult = await HandleError(message, headers, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
 

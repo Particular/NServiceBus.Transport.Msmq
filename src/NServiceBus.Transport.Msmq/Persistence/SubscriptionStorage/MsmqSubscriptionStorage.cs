@@ -27,7 +27,7 @@ namespace NServiceBus.Persistence.Msmq
         {
             var messages = storageQueue.GetAllMessages()
                 .OrderByDescending(m => m.ArrivedTime)
-                .ThenBy(x => x.Id) // ensure same order of messages with same timestamp accross all endpoints
+                .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
                 .ToArray();
 
             try
@@ -40,8 +40,7 @@ namespace NServiceBus.Persistence.Msmq
                     var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
                     var subscriber = Deserialize(m.Label);
 
-                    Dictionary<MessageType, string> endpointSubscriptions;
-                    if (!lookup.TryGetValue(subscriber, out endpointSubscriptions))
+                    if (!lookup.TryGetValue(subscriber, out var endpointSubscriptions))
                     {
                         lookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
                     }
@@ -77,7 +76,7 @@ namespace NServiceBus.Persistence.Msmq
                 {
                     foreach (var messageType in messagelist)
                     {
-                        if (subscribers.Value.TryGetValue(messageType, out string _))
+                        if (subscribers.Value.TryGetValue(messageType, out _))
                         {
                             result.Add(subscribers.Key);
                         }
@@ -146,8 +145,7 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
 
-                Dictionary<MessageType, string> dictionary;
-                if (!lookup.TryGetValue(subscriber, out dictionary))
+                if (!lookup.TryGetValue(subscriber, out var dictionary))
                 {
                     dictionary = new Dictionary<MessageType, string>();
                 }
@@ -173,11 +171,9 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
 
-                Dictionary<MessageType, string> subscriptions;
-                if (lookup.TryGetValue(subscriber, out subscriptions))
+                if (lookup.TryGetValue(subscriber, out var subscriptions))
                 {
-                    string messageId;
-                    if (subscriptions.TryGetValue(typeName, out messageId))
+                    if (subscriptions.TryGetValue(typeName, out var messageId))
                     {
                         subscriptions.Remove(typeName);
                         if (subscriptions.Count == 0)

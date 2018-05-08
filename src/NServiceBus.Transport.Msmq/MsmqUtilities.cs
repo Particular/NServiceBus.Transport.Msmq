@@ -47,28 +47,25 @@ namespace NServiceBus.Transport.Msmq
         public static Dictionary<string, string> ExtractHeaders(Message msmqMessage)
         {
             var headers = DeserializeMessageHeaders(msmqMessage);
-
+            
             //note: we can drop this line when we no longer support interop btw v3 + v4
-            if (msmqMessage.ResponseQueue != null)
+            if (msmqMessage.ResponseQueue != null && !headers.ContainsKey(Headers.ReplyToAddress))
             {
                 headers[Headers.ReplyToAddress] = GetIndependentAddressForQueue(msmqMessage.ResponseQueue).ToString();
             }
 
-            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific))
+            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific) && !headers.ContainsKey(Headers.MessageIntent))
             {
                 headers[Headers.MessageIntent] = ((MessageIntentEnum)msmqMessage.AppSpecific).ToString();
             }
 
             headers[Headers.CorrelationId] = GetCorrelationId(msmqMessage, headers);
-
             return headers;
         }
-
+        
         static string GetCorrelationId(Message message, Dictionary<string, string> headers)
         {
-            string correlationId;
-
-            if (headers.TryGetValue(Headers.CorrelationId, out correlationId))
+            if (headers.TryGetValue(Headers.CorrelationId, out var correlationId))
             {
                 return correlationId;
             }
@@ -131,9 +128,7 @@ namespace NServiceBus.Transport.Msmq
             AssignMsmqNativeCorrelationId(message, result);
             result.Recoverable = !deliveryConstraints.Any(c => c is NonDurableDelivery);
 
-            DiscardIfNotReceivedBefore timeToBeReceived;
-
-            if (deliveryConstraints.TryGet(out timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
+            if (deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
             {
                 result.TimeToBeReceived = timeToBeReceived.MaxTime;
             }
@@ -163,9 +158,7 @@ namespace NServiceBus.Transport.Msmq
 
             var messageIntent = default(MessageIntentEnum);
 
-            string messageIntentString;
-
-            if (message.Headers.TryGetValue(Headers.MessageIntent, out messageIntentString))
+            if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
             {
                 Enum.TryParse(messageIntentString, true, out messageIntent);
             }
@@ -178,9 +171,7 @@ namespace NServiceBus.Transport.Msmq
 
         static void AssignMsmqNativeCorrelationId(OutgoingMessage message, Message result)
         {
-            string correlationIdHeader;
-
-            if (!message.Headers.TryGetValue(Headers.CorrelationId, out correlationIdHeader))
+            if (!message.Headers.TryGetValue(Headers.CorrelationId, out var correlationIdHeader))
             {
                 return;
             }
@@ -191,7 +182,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
 
-            if (Guid.TryParse(correlationIdHeader, out Guid _))
+            if (Guid.TryParse(correlationIdHeader, out _))
             {
                 //msmq required the id's to be in the {guid}\{incrementing number} format so we need to fake a \0 at the end to make it compatible
                 result.CorrelationId = $"{correlationIdHeader}\\0";
@@ -206,7 +197,7 @@ namespace NServiceBus.Transport.Msmq
 
 
                     if (parts.Length == 2 && Guid.TryParse(parts.First(), out _) &&
-                        int.TryParse(parts[1], out int _))
+                        int.TryParse(parts[1], out _))
                     {
                         result.CorrelationId = correlationIdHeader;
                     }

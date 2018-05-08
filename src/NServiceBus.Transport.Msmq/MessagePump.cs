@@ -23,7 +23,6 @@ namespace NServiceBus.Transport.Msmq
             // Injected
         }
 
-
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
         {
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30), ex => criticalError.Raise("Failed to peek " + settings.InputQueue, ex));
@@ -162,7 +161,7 @@ namespace NServiceBus.Transport.Msmq
                     receiveTask.ContinueWith((t, state) =>
                     {
                         var receiveTasks = (ConcurrentDictionary<Task, Task>) state;
-                        receiveTasks.TryRemove(t, out Task _);
+                        receiveTasks.TryRemove(t, out _);
                     }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously)
                         .Ignore();
                 }
@@ -202,10 +201,19 @@ namespace NServiceBus.Transport.Msmq
             {
                 return inputQueue.Transactional;
             }
+            catch (MessageQueueException msmqEx)
+            {
+                var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+                if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
+                {
+                    error = $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
+                }
+                throw new Exception(error, msmqEx);
+            }
             catch (Exception ex)
             {
                 var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
-                throw new InvalidOperationException(error, ex);
+                throw new Exception(error, ex);
             }
         }
 

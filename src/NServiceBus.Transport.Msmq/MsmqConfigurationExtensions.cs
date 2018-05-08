@@ -37,7 +37,7 @@ namespace NServiceBus
         /// </summary>
         /// <remarks>
         /// If not specified the default transaction timeout of the machine will be used and the isolation level will be set to
-        /// `ReadCommited`.
+        /// <see cref="IsolationLevel.ReadCommitted"/>.
         /// </remarks>
         public static TransportExtensions<MsmqTransport> TransactionScopeOptions(this TransportExtensions<MsmqTransport> transportExtensions, TimeSpan? timeout = null, IsolationLevel? isolationLevel = null)
         {
@@ -46,7 +46,7 @@ namespace NServiceBus
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
-
+        
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
@@ -74,7 +74,83 @@ namespace NServiceBus
         public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
-            config.GetSettings().Set(MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived, true);
+            config.GetSettings().Set("UseDeadLetterQueueForMessagesWithTimeToBeReceived", true);
         }
+       
+        /// <summary>
+        /// Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
+        /// </summary>
+        /// <remarks>
+        /// With installers enabled, required queues will be created automatically at startup.While this may be convenient for development,
+        /// we instead recommend that queues are created as part of deployment using the CreateQueues.ps1 script included in the NuGet package.
+        /// The installers might still need to be enabled to fulfill the installation needs of other components, but this method allows
+        /// scripts to be used for queue creation instead.
+        /// </remarks>
+        public static void DisableInstaller(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("ExecuteInstaller", false);
+        }
+
+        /// <summary>
+        /// This setting should be used with caution. It disables the storing of undeliverable messages
+        /// in the dead letter queue. Therefore this setting must only be used where loss of messages 
+        /// is an acceptable scenario. 
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableDeadLetterQueueing(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseDeadLetterQueue", false);
+        }
+
+        /// <summary>
+        /// Instructs MSMQ to cache connections to a remote queue and re-use them
+        /// as needed instead of creating new connections for each message. 
+        /// Turning connection caching off will negatively impact the message throughput in 
+        /// most scenarios.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableConnectionCachingForSends(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseConnectionCache", false);
+        }
+        
+        /// <summary>
+        /// This setting should be used with caution. As the queues are not transactional, any message that has
+        /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
+        /// be used where loss of messages is an acceptable scenario.  
+        /// </summary>
+        /// <param name="config"></param>
+        public static void UseNonTransactionalQueues(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseTransactionalQueues", false);
+        }
+
+        /// <summary>
+        /// Enables the use of journaling messages. Stores a copy of every message received in the journal queue. 
+        /// Should be used ONLY when debugging as it can 
+        /// potentially use up the MSMQ journal storage quota based on the message volume.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void EnableJournaling(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("UseJournalQueue", true);
+        }
+        
+        /// <summary>
+        /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="timeToReachQueue">Timespan for the TTRQ</param>
+        public static void TimeToReachQueue(this TransportExtensions<MsmqTransport> config, TimeSpan timeToReachQueue)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
+            config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
+        }       
     }
 }

@@ -1,7 +1,6 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Collections.Generic;
     using System.Messaging;
     using System.Threading.Tasks;
     using Transport;
@@ -10,16 +9,12 @@ namespace NServiceBus.Transport.Msmq
     {
         public override async Task ReceiveMessage()
         {
-            Message message;
-
-            if (!TryReceive(MessageQueueTransactionType.None, out message))
+            if (!TryReceive(MessageQueueTransactionType.None, out var message))
             {
                 return;
             }
 
-            Dictionary<string, string> headers;
-
-            if (!TryExtractHeaders(message, out headers))
+            if (!TryExtractHeaders(message, out var headers))
             {
                 MovePoisonMessageToErrorQueue(message, IsQueuesTransactional ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None);
                 return;

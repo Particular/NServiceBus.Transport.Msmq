@@ -15,13 +15,9 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqMessageDispatcher : IDispatchMessages
     {
-        public MsmqMessageDispatcher(MsmqSettings settings, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator)
+        public MsmqMessageDispatcher(MsmqSettings settings)
         {
-            Guard.AgainstNull(nameof(settings), settings);
-            Guard.AgainstNull(nameof(messageLabelGenerator), messageLabelGenerator);
-
             this.settings = settings;
-            this.messageLabelGenerator = messageLabelGenerator;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
@@ -68,9 +64,7 @@ namespace NServiceBus.Transport.Msmq
                         toSend.UseJournalQueue = settings.UseJournalQueue;
                         toSend.TimeToReachQueue = settings.TimeToReachQueue;
 
-                        string replyToAddress;
-
-                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out replyToAddress))
+                        if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
                         {
                             toSend.ResponseQueue = new MessageQueue(MsmqAddress.Parse(replyToAddress).FullPath);
                         }
@@ -83,8 +77,7 @@ namespace NServiceBus.Transport.Msmq
                             return;
                         }
 
-                        MessageQueueTransaction activeTransaction;
-                        if (TryGetNativeTransaction(transaction, out activeTransaction))
+                        if (TryGetNativeTransaction(transaction, out var activeTransaction))
                         {
                             q.Send(toSend, label, activeTransaction);
                             return;
@@ -125,8 +118,7 @@ namespace NServiceBus.Transport.Msmq
                 return false;
             }
 
-            DiscardIfNotReceivedBefore discardIfNotReceivedBefore;
-            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
+            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
 
             if (!timeToBeReceivedRequested)
             {
@@ -139,7 +131,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
 
-            return TryGetNativeTransaction(transaction, out MessageQueueTransaction _);
+            return TryGetNativeTransaction(transaction, out _);
         }
 
         static bool TryGetNativeTransaction(TransportTransaction transportTransaction, out MessageQueueTransaction transaction)
@@ -154,7 +146,7 @@ namespace NServiceBus.Transport.Msmq
 
         string GetLabel(OutgoingMessage message)
         {
-            var messageLabel = messageLabelGenerator(new ReadOnlyDictionary<string, string>(message.Headers));
+            var messageLabel = settings.LabelGenerator(new ReadOnlyDictionary<string, string>(message.Headers));
             if (messageLabel == null)
             {
                 throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
@@ -187,9 +179,7 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
-
-        Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator;
-
+        
         MsmqSettings settings;
     }
 }

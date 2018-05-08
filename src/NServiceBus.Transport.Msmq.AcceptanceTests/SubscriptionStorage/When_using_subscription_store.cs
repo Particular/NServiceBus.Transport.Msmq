@@ -57,7 +57,8 @@
                         context.AddTrace("Subscriber1 is now subscribed");
                     });
                     b.DisableFeature<AutoSubscribe>();
-                    b.UsePersistence<MsmqPersistence>();
+                    var subscriptionsQueue = AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)) + ".Subscriptions";
+                    b.UsePersistence<MsmqPersistence>().SubscriptionQueue(subscriptionsQueue);
                 });
             }
         }
