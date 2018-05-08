@@ -76,7 +76,7 @@ namespace NServiceBus.Persistence.Msmq
                 {
                     foreach (var messageType in messagelist)
                     {
-                        if (subscribers.Value.TryGetValue(messageType, out string _))
+                        if (subscribers.Value.TryGetValue(messageType, out _))
                         {
                             result.Add(subscribers.Key);
                         }

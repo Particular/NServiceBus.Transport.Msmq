@@ -197,7 +197,7 @@ namespace NServiceBus.Transport.Msmq
 
 
                     if (parts.Length == 2 && Guid.TryParse(parts.First(), out _) &&
-                        int.TryParse(parts[1], out int _))
+                        int.TryParse(parts[1], out _))
                     {
                         result.CorrelationId = correlationIdHeader;
                     }

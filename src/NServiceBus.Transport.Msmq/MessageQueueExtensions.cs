@@ -131,7 +131,7 @@
                 }
 
                 var success = GetSecurityDescriptorDacl(sdHandle.AddrOfPinnedObject(),
-                    out bool _,
+                    out _,
                     out var pDacl,
                     out _);
 
