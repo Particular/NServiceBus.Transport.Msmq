@@ -71,7 +71,7 @@ namespace NServiceBus.Transport.Msmq
 
         public MsmqAddress MakeCompatibleWith(MsmqAddress other, Func<string, string> ipLookup)
         {
-            if (IPAddress.TryParse(other.Machine, out IPAddress _) && !IPAddress.TryParse(Machine, out _))
+            if (IPAddress.TryParse(other.Machine, out _) && !IPAddress.TryParse(Machine, out _))
             {
                 return new MsmqAddress(Queue, ipLookup(Machine));
             }
@@ -82,7 +82,7 @@ namespace NServiceBus.Transport.Msmq
         {
             get
             {
-                if (IPAddress.TryParse(Machine, out IPAddress _))
+                if (IPAddress.TryParse(Machine, out _))
                 {
                     return PREFIX_TCP + PathWithoutPrefix;
                 }

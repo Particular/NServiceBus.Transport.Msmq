@@ -161,7 +161,7 @@ namespace NServiceBus.Transport.Msmq
                     receiveTask.ContinueWith((t, state) =>
                     {
                         var receiveTasks = (ConcurrentDictionary<Task, Task>) state;
-                        receiveTasks.TryRemove(t, out Task _);
+                        receiveTasks.TryRemove(t, out _);
                     }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously)
                         .Ignore();
                 }
