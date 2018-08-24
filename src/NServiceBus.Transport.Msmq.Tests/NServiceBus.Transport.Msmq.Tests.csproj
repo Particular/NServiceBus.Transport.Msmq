@@ -17,10 +17,10 @@
   <ItemGroup>
     <PackageReference Include="ApprovalTests" Version="3.0.13" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
-    <PackageReference Include="NServiceBus.Testing.Fakes.Sources" Version="7.0.0" />
-    <PackageReference Include="NUnit" Version="3.7.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.8.0-alpha1" />
-    <PackageReference Include="PublicApiGenerator" Version="6.4.0" />
+    <PackageReference Include="NServiceBus.Testing.Fakes.Sources" Version="7.1.0" />
+    <PackageReference Include="NUnit" Version="3.10.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+    <PackageReference Include="PublicApiGenerator" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
