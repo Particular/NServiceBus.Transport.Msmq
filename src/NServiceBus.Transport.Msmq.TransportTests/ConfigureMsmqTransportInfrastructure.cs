@@ -14,6 +14,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
     {
         var msmqTransportDefinition = new MsmqTransport();
         settingsHolder = settings;
+        settingsHolder.Set("MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
         return new TransportConfigurationResult
         {
             TransportInfrastructure = msmqTransportDefinition.Initialize(settingsHolder, null),
