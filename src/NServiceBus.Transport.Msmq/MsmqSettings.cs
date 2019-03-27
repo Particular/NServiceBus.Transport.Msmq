@@ -51,7 +51,7 @@ namespace NServiceBus.Transport.Msmq
                 TimeToReachQueue = timeToReachQueue;
             }
 
-            if (settings.TryGet<TimeSpan>("MessageEnumeratorTimeout", out var messageEnumeratorTimeout))
+            if (settings.TryGet<TimeSpan>("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", out var messageEnumeratorTimeout))
             {
                 MessageEnumeratorTimeout = messageEnumeratorTimeout;
             }
