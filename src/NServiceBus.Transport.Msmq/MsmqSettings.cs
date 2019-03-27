@@ -19,6 +19,7 @@ namespace NServiceBus.Transport.Msmq
             TimeToReachQueue = Message.InfiniteTimeout;
             ScopeOptions = new MsmqScopeOptions();
             LabelGenerator = (headers => string.Empty);
+            MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(500);
 
             if (settings == null)
             {
@@ -48,6 +49,11 @@ namespace NServiceBus.Transport.Msmq
             if (settings.TryGet<TimeSpan>("TimeToReachQueue", out var timeToReachQueue))
             {
                 TimeToReachQueue = timeToReachQueue;
+            }
+
+            if (settings.TryGet<TimeSpan>("MessageEnumeratorTimeout", out var messageEnumeratorTimeout))
+            {
+                MessageEnumeratorTimeout = messageEnumeratorTimeout;
             }
 
             if (settings.TryGet<bool>("UseDeadLetterQueueForMessagesWithTimeToBeReceived", out var useDeadLetterQueueForMessagesWithTimeToBeReceived))
@@ -83,5 +89,7 @@ namespace NServiceBus.Transport.Msmq
         public MsmqScopeOptions ScopeOptions { get; set; }
 
         public Func<IReadOnlyDictionary<string, string>, string> LabelGenerator { get; set; }
+
+        public TimeSpan MessageEnumeratorTimeout { get; set; }
     }
 }
