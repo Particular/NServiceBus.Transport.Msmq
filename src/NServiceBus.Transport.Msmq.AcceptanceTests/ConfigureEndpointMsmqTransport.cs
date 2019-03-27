@@ -13,10 +13,11 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
         queueBindings = configuration.GetSettings().Get<QueueBindings>();
-     
+
         var transportConfig = configuration.UseTransport<MsmqTransport>();
         transportConfig.DisableConnectionCachingForSends();
-        
+        configuration.GetSettings().Set("MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
+
         var routingConfig = transportConfig.Routing();
 
         foreach (var publisher in publisherMetadata.Publishers)
