@@ -19,7 +19,7 @@ namespace NServiceBus.Transport.Msmq
             TimeToReachQueue = Message.InfiniteTimeout;
             ScopeOptions = new MsmqScopeOptions();
             LabelGenerator = (headers => string.Empty);
-            MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(500);
+            MessageEnumeratorTimeout = TimeSpan.FromSeconds(1); //with a 1s timeout a graceful shutdown will take on average 500ms which is acceptable
 
             if (settings == null)
             {
