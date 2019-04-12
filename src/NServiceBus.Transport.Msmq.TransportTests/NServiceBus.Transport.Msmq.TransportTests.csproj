@@ -21,12 +21,9 @@
 
   <!-- Replaces transport tests/classes as of 7.1.6. See KTLO issue 218 , can removed once a core 7.2 version is released -->
   <ItemGroup>
-    <Compile Remove="$(PkgNServiceBus_TransportTests_Sources)\**\When_on_error_throws.cs" />
-    <Compile Remove="$(PkgNServiceBus_TransportTests_Sources)\**\NServiceBusTransportTest.cs" />
-    <Compile Remove="$(PkgNServiceBus_TransportTests_Sources)\**\TransportTestLoggerFactory.cs" />
-    <Compile Include="NServiceBusTransportTest.cs" />
-    <Compile Include="TransportTestLoggerFactory.cs" />
-    <Compile Include="When_on_error_throws.cs" />
+    <Compile Remove="\**\NServiceBus.TransportTests.Sources\**\When_on_error_throws.cs" />
+    <Compile Remove="\**\NServiceBus.TransportTests.Sources\**\NServiceBusTransportTest.cs" />
+    <Compile Remove="\**\NServiceBus.TransportTests.Sources\**\TransportTestLoggerFactory.cs" />
   </ItemGroup>
 
 </Project>
