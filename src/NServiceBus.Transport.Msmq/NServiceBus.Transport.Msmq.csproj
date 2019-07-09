@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
     <OutputPath>..\..\binaries\</OutputPath>
@@ -11,17 +11,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="System.Messaging" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="NServiceBus" Version="[7.0.0, 8.0.0)" />
     <PackageReference Include="Particular.Packaging" Version="0.2.1" PrivateAssets="All" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="4.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\System.Messaging\System.Messaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

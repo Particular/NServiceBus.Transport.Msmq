@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
@@ -10,9 +10,6 @@
     <ProjectReference Include="..\NServiceBus.Transport.Msmq\NServiceBus.Transport.Msmq.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="System.Messaging" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />

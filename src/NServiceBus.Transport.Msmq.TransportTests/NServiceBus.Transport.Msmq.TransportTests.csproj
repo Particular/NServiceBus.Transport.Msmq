@@ -1,15 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
+    <AutoGenerateBindingRedirects>True</AutoGenerateBindingRedirects>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NServiceBus.Transport.Msmq\NServiceBus.Transport.Msmq.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.Messaging" />
   </ItemGroup>
 
   <ItemGroup>
