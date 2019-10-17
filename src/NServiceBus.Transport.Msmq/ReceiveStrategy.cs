@@ -117,7 +117,7 @@ namespace NServiceBus.Transport.Msmq
             try
             {
                 var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
-                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts);
+                var errorContext = new ErrorContext(exception, new Dictionary<string, string>(headers), message.Id, body, transportTransaction, processingAttempts);
 
                 return await onError(errorContext).ConfigureAwait(false);
             }
@@ -133,7 +133,7 @@ namespace NServiceBus.Transport.Msmq
         static async Task<byte[]> ReadStream(Stream bodyStream)
         {
             bodyStream.Seek(0, SeekOrigin.Begin);
-            var length = (int) bodyStream.Length;
+            var length = (int)bodyStream.Length;
             var body = new byte[length];
             await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
             return body;
