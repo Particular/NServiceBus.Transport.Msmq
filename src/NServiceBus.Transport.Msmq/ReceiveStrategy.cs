@@ -112,12 +112,14 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        protected async Task<ErrorHandleResult> HandleError(Message message, Dictionary<string, string> headers, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
+        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
         {
             try
             {
                 var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
-                var errorContext = new ErrorContext(exception, new Dictionary<string, string>(headers), message.Id, body, transportTransaction, processingAttempts);
+                var headers = MsmqUtilities.ExtractHeaders(message);
+
+                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts);
 
                 return await onError(errorContext).ConfigureAwait(false);
             }

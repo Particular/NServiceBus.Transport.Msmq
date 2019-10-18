@@ -70,7 +70,7 @@ namespace NServiceBus.Transport.Msmq
 
             if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
             {
-                var errorHandleResult = await HandleError(message, headers, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
+                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
 
                 if (errorHandleResult == ErrorHandleResult.Handled)
                 {
