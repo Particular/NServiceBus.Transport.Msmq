@@ -29,15 +29,17 @@ namespace NServiceBus.Transport.Msmq
                 throw new Exception("The MSMQ transport only supports unicast transport operations.");
             }
 
+            var dispatchTasks = new List<Task>(outgoingMessages.UnicastTransportOperations.Count);
+            // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation);
+                dispatchTasks.Add(ExecuteTransportOperation(transaction, unicastTransportOperation));
             }
 
-            return TaskEx.CompletedTask;
+            return Task.WhenAll(dispatchTasks);
         }
 
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        async Task ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
 
@@ -73,17 +75,17 @@ namespace NServiceBus.Transport.Msmq
 
                         if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
                         {
-                            q.Send(toSend, label, GetIsolatedTransactionType());
+                            await Task.Run(() => q.Send(toSend, label, GetIsolatedTransactionType()));
                             return;
                         }
 
                         if (TryGetNativeTransaction(transaction, out var activeTransaction))
                         {
-                            q.Send(toSend, label, activeTransaction);
+                            await Task.Run(() =>  q.Send(toSend, label, activeTransaction));
                             return;
                         }
 
-                        q.Send(toSend, label, GetTransactionTypeForSend());
+                        await Task.Run(() =>  q.Send(toSend, label, GetTransactionTypeForSend()));
                     }
                 }
             }
@@ -179,7 +181,7 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
-        
+
         MsmqSettings settings;
     }
 }
