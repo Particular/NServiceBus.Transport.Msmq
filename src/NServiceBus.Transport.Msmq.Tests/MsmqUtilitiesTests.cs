@@ -132,5 +132,31 @@
             Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), nonDurableDeliveryConstraint).Recoverable);
             Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), durableDeliveryConstraint).Recoverable);
         }
+
+        [Test]
+        public void Should_deserialize_if_trailing_bogus_data()
+        {
+            var expected = "Hello World";
+
+            Console.Out.WriteLine(sizeof(char));
+            var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
+            {
+                {"NServiceBus.ExceptionInfo.Message", expected}
+            }, new byte[0]), new List<DeliveryConstraint>());
+
+
+            var r = new Random();
+
+            var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
+            r.NextBytes(bufferWithNulls);
+
+            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
+
+            message.Extension = bufferWithNulls;
+
+            var headers = MsmqUtilities.ExtractHeaders(message);
+
+            Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
+        }
     }
 }
