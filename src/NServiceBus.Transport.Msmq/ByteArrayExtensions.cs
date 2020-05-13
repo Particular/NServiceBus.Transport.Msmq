@@ -8,11 +8,11 @@ static class ByteArrayExtensions
         if (pattern == null) throw new ArgumentNullException(nameof(pattern));
         if (pattern.Length > data.Length) return -1;
 
-        int cycles = data.Length - pattern.Length + 1;
-        int patternIndex;
-        for (int dataIndex = cycles; dataIndex > 0; dataIndex--)
+        var cycles = data.Length - pattern.Length + 1;
+        for (var dataIndex = cycles; dataIndex > 0; dataIndex--)
         {
             if (data[dataIndex] != pattern[0]) continue;
+            int patternIndex;
             for (patternIndex = pattern.Length - 1; patternIndex >= 1; patternIndex--) if (data[dataIndex + patternIndex] != pattern[patternIndex]) break;
             if (patternIndex == 0) return dataIndex;
         }
