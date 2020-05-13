@@ -91,9 +91,10 @@ namespace NServiceBus.Transport.Msmq
 
             //This is to make us compatible with v3 messages that are affected by this bug:
             //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
-            var extension = Encoding.UTF8.GetString(m.Extension).TrimEnd('\0');
+            var data = m.Extension;
+            var xmlLength = data.LastIndexOf(EndTag) + EndTag.Length; // Ignore any data after last </ArrayOfHeaderInfo>
             object o;
-            using (var stream = new StringReader(extension))
+            using (var stream = new MemoryStream(buffer: data, index: 0, count: xmlLength, writable: false, publiclyVisible: true))
             {
                 using (var reader = XmlReader.Create(stream, new XmlReaderSettings
                 {
@@ -215,5 +216,6 @@ namespace NServiceBus.Transport.Msmq
 
         static System.Xml.Serialization.XmlSerializer headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
         static ILog Logger = LogManager.GetLogger<MsmqUtilities>();
+        static byte[] EndTag = Encoding.UTF8.GetBytes("</ArrayOfHeaderInfo>");
     }
 }
