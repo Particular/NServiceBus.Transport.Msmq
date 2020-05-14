@@ -138,12 +138,10 @@
         {
             var expected = "Hello World";
 
-            Console.Out.WriteLine(sizeof(char));
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
             }, new byte[0]), new List<DeliveryConstraint>());
-
 
             var r = new Random();
 
