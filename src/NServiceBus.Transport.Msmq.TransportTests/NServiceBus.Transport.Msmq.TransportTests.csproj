@@ -19,4 +19,8 @@
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="\**\NServiceBusTransportTest.cs" />
+  </ItemGroup>
+
 </Project>

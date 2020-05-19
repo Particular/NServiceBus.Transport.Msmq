@@ -12,8 +12,6 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
 {
     public TransportConfigurationResult Configure(SettingsHolder settings, TransportTransactionMode transactionMode)
     {
-        CreateStartupDiagnostics(settings);
-
         var msmqTransportDefinition = new MsmqTransport();
         settingsHolder = settings;
         settingsHolder.Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
@@ -68,14 +66,5 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         return Task.FromResult(0);
     }
 
-    static void CreateStartupDiagnostics(SettingsHolder settings)
-    {
-        var ctor = hostingSettingsType.GetConstructors()[0];
-        var hostingSettings = ctor.Invoke(new object[] {settings});
-        settings.Set(hostingSettingsType.FullName, hostingSettings);
-    }
-
     SettingsHolder settingsHolder;
-
-    static Type hostingSettingsType = typeof(IEndpointInstance).Assembly.GetType("NServiceBus.HostingComponent+Settings", true);
 }
