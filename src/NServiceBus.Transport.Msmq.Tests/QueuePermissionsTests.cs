@@ -99,7 +99,7 @@
         }
 
         // MSMQ Access Rights are defined here: https://msdn.microsoft.com/en-us/library/system.messaging.messagequeueaccessrights(v=vs.110).aspx
-        // FullControl, GenericWrite, GenericRead, ReceiveJournalMessage and ReceiveMessage are combination of rights. See above doco.
+        // FullControl, GenericWrite, GenericRead, ReceiveJournalMessage and ReceiveMessage are combination of rights. See above docs.
         [TestCase(MessageQueueAccessRights.ChangeQueuePermissions, WellKnownSidType.WorldSid)]
         [TestCase(MessageQueueAccessRights.DeleteQueue, WellKnownSidType.WorldSid)]
         [TestCase(MessageQueueAccessRights.FullControl, WellKnownSidType.WorldSid)]
