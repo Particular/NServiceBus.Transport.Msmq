@@ -39,6 +39,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
                     {
                         ra = ra.Substring(0, indexOfAt);
                     }
+
                     return messageQueue.QueueName.StartsWith(@"private$\" + ra, StringComparison.OrdinalIgnoreCase);
                 }))
                 {
