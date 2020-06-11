@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
+    using System;
     using System.Threading.Tasks;
     using System.Transactions;
     using AcceptanceTesting;
@@ -10,17 +11,53 @@
     public class When_customizing_scope_isolation_level : NServiceBusAcceptanceTest
     {
         [Test]
-        public async Task Should_honor_configured_level()
+        [TestCase(IsolationLevel.Chaos)]
+        [TestCase(IsolationLevel.ReadCommitted)]
+        [TestCase(IsolationLevel.ReadUncommitted)]
+        [TestCase(IsolationLevel.RepeatableRead)]
+        [TestCase(IsolationLevel.Serializable)]
+        public async Task Should_honor_configured_level(IsolationLevel isolationLevel)
         {
             var context = await Scenario.Define<Context>()
-                    .WithEndpoint<ScopeEndpoint>(g => g.When(b => b.SendLocal(new MyMessage())))
+                    .WithEndpoint<ScopeEndpoint>(g =>
+                    {
+                        g.CustomConfig(c =>
+                        {
+                            c.UseTransport<MsmqTransport>()
+                                .Transactions(TransportTransactionMode.TransactionScope)
+                                .TransactionScopeOptions(isolationLevel: isolationLevel);
+                        });
+                        g.When(b => b.SendLocal(new MyMessage()));
+                    })
                     .Done(c => c.Done)
                     .Run();
 
             Assert.True(context.AmbientTransactionPresent, "There should be a ambient transaction present");
-            Assert.AreEqual(context.IsolationLevel, IsolationLevel.RepeatableRead, "There should be a ambient transaction present");
+            Assert.AreEqual(context.IsolationLevel, isolationLevel, "There should be a ambient transaction present");
         }
 
+        [Test]
+        public void Should_fail_for_snapshot()
+        {
+            var ex = Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                var context = await Scenario.Define<Context>()
+                        .WithEndpoint<ScopeEndpoint>(g =>
+                        {
+                            g.CustomConfig(c =>
+                            {
+                                c.UseTransport<MsmqTransport>()
+                                    .Transactions(TransportTransactionMode.TransactionScope)
+                                    .TransactionScopeOptions(isolationLevel: IsolationLevel.Snapshot);
+                            });
+                            g.When(b => b.SendLocal(new MyMessage()));
+                        })
+                        .Done(c => c.Done)
+                        .Run();
+            });
+
+            StringAssert.Contains("Isolation level `Snapshot` is unsupport by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", ex.Message);
+        }
         public class Context : ScenarioContext
         {
             public bool Done { get; set; }
@@ -34,9 +71,9 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.TransactionScope)
-                        .TransactionScopeOptions(isolationLevel: IsolationLevel.RepeatableRead);
+                    c.UseTransport<MsmqTransport>();
+                    //.Transactions(TransportTransactionMode.TransactionScope)
+                    //.TransactionScopeOptions(isolationLevel: isolationLevel);
                 });
             }
 
