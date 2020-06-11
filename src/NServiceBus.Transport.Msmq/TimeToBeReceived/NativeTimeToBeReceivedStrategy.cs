@@ -9,9 +9,9 @@
 
     class NativeTimeToBeReceivedStrategy : TimeToBeReceivedStrategy
     {
-        private readonly bool isTransactional;
-        private readonly bool outBoxRunning;
-        private readonly bool auditTTBROverridden;
+        readonly bool isTransactional;
+        readonly bool outBoxRunning;
+        readonly bool auditTTBROverridden;
 
         public NativeTimeToBeReceivedStrategy(bool isTransactional, bool outBoxRunning, bool auditTTBROverridden)
         {
