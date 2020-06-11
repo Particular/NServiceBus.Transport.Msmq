@@ -59,6 +59,7 @@ namespace NServiceBus.Transport.Msmq
                         queue.SetPermissions(identity, MessageQueueAccessRights.WriteMessage);
                         queue.SetPermissions(identity, MessageQueueAccessRights.ReceiveMessage);
                         queue.SetPermissions(identity, MessageQueueAccessRights.PeekMessage);
+                        queue.SetPermissions(identity, MessageQueueAccessRights.GetQueueProperties);
 
                         queue.SetPermissions(LocalAdministratorsGroupName, MessageQueueAccessRights.FullControl);
                     }
