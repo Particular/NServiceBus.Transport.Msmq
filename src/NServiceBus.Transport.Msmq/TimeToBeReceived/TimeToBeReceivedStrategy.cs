@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq
 {
-    using NServiceBus.Performance.TimeToBeReceived;
+    using Performance.TimeToBeReceived;
     using System.Collections.Generic;
     using System.Messaging;
 

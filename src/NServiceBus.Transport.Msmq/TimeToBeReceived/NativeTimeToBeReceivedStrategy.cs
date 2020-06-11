@@ -1,7 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq
 {
-    using NServiceBus.DeliveryConstraints;
-    using NServiceBus.Performance.TimeToBeReceived;
+    using DeliveryConstraints;
+    using Performance.TimeToBeReceived;
     using System;
     using System.Collections.Generic;
     using System.Messaging;
