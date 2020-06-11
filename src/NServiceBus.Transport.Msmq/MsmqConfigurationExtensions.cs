@@ -151,6 +151,16 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
             config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
-        }       
+        }     
+        
+        /// <summary>
+        /// Instruct NServiceBus not to use the built in MSMQ Time To Be Received implementation.
+        /// Messages with an expired TTBR will be discarded when they are read by a receiving endpoint.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableNativeTimeToBeReceived(this TransportExtensions<MsmqTransport> config)
+        {
+            config.GetSettings().Set("DisableNativeTtbr", true);
+        }
     }
 }

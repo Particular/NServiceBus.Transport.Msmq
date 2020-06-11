@@ -65,12 +65,25 @@ transport.TimeToReachQueue(timespanValue);";
 
             var msmqSettings = new MsmqSettings(settings);
 
+            var ttbrStrategy = CreateTimeToBeReceivedStrategy(settings);
+
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), ttbrStrategy);
+        }
+
+        static TimeToBeReceivedStrategy CreateTimeToBeReceivedStrategy(SettingsHolder settings)
+        {
+            if(settings.TryGet<bool>("DisableNativeTtbr", out var disableNativeTtbr) && disableNativeTtbr)
+            {
+                return new SoftTimeToBeReceivedStrategy();
+            }
+
             var isTransactional = IsTransactional(settings);
             var outBoxRunning = settings.IsFeatureActive(typeof(Features.Outbox));
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
+            var auditTTBROverridden = auditMessageExpiration > TimeSpan.Zero;
+            return new NativeTimeToBeReceivedStrategy(isTransactional, outBoxRunning, auditTTBROverridden);
         }
 
         static bool IsTransactional(ReadOnlySettings settings)

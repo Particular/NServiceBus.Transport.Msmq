@@ -15,9 +15,10 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqMessageDispatcher : IDispatchMessages
     {
-        public MsmqMessageDispatcher(MsmqSettings settings)
+        public MsmqMessageDispatcher(MsmqSettings settings, TimeToBeReceivedStrategy ttbrStrategy)
         {
             this.settings = settings;
+            this.ttbrStrategy = ttbrStrategy;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
@@ -44,19 +45,13 @@ namespace NServiceBus.Transport.Msmq
             var destination = transportOperation.Destination;
             var destinationAddress = MsmqAddress.Parse(destination);
 
-            if (IsCombiningTimeToBeReceivedWithTransactions(
-                transaction,
-                transportOperation.RequiredDispatchConsistency,
-                transportOperation.DeliveryConstraints))
-            {
-                throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
-            }
+            ttbrStrategy.AssertDispatchOperationSafe(transaction, transportOperation, destinationAddress);
 
             try
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
+                    using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints, ttbrStrategy))
                     {
                         var ttbrRequested = toSend.TimeToBeReceived < MessageQueue.InfiniteTimeout;
 
@@ -106,34 +101,6 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        bool IsCombiningTimeToBeReceivedWithTransactions(TransportTransaction transaction, DispatchConsistency requiredDispatchConsistency, List<DeliveryConstraint> deliveryConstraints)
-        {
-            if (!settings.UseTransactionalQueues)
-            {
-                return false;
-            }
-
-            if (requiredDispatchConsistency == DispatchConsistency.Isolated)
-            {
-                return false;
-            }
-
-            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
-
-            if (!timeToBeReceivedRequested)
-            {
-                return false;
-            }
-
-            if (Transaction.Current != null)
-            {
-                return true;
-            }
-
-
-            return TryGetNativeTransaction(transaction, out _);
-        }
-
         static bool TryGetNativeTransaction(TransportTransaction transportTransaction, out MessageQueueTransaction transaction)
         {
             return transportTransaction.TryGet(out transaction);
@@ -181,5 +148,6 @@ namespace NServiceBus.Transport.Msmq
         }
         
         MsmqSettings settings;
+        TimeToBeReceivedStrategy ttbrStrategy;
     }
 }

@@ -71,7 +71,9 @@
                 MsmqHelpers.DeleteQueue(path);
                 MsmqHelpers.CreateQueue(path);
 
-                var messageSender = new MsmqMessageDispatcher(settings);
+                var ttbrStrategy = new NativeTimeToBeReceivedStrategy(settings.UseTransactionalQueues, false, false);
+
+                var messageSender = new MsmqMessageDispatcher(settings, ttbrStrategy);
 
                 var bytes = new byte[]
                 {

@@ -14,14 +14,12 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
+        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, TimeToBeReceivedStrategy ttbrStrategy)
         {
             this.settings = settings;
             this.msmqSettings = msmqSettings;
             this.queueBindings = queueBindings;
-            this.isTransactional = isTransactional;
-            this.outBoxRunning = outBoxRunning;
-            this.auditMessageExpiration = auditMessageExpiration;
+            this.ttbrStrategy = ttbrStrategy;
         }
 
         public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
@@ -90,7 +88,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
             return new TransportReceiveInfrastructure(
-                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout),
+                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, ttbrStrategy),
                 () =>
                 {
                     if (msmqSettings.ExecuteInstaller)
@@ -114,7 +112,7 @@ namespace NServiceBus.Transport.Msmq
             CheckMachineNameForCompliance.Check();
 
             return new TransportSendInfrastructure(
-                () => new MsmqMessageDispatcher(msmqSettings),
+                () => new MsmqMessageDispatcher(msmqSettings, ttbrStrategy),
                 () =>
                 {
                     foreach (var address in queueBindings.SendingAddresses)
@@ -122,8 +120,7 @@ namespace NServiceBus.Transport.Msmq
                         QueuePermissions.CheckQueue(address);
                     }
 
-                    var auditTTBROverridden = auditMessageExpiration > TimeSpan.Zero;
-                    var result = TimeToBeReceivedOverrideChecker.Check(isTransactional, outBoxRunning, auditTTBROverridden);
+                    var result = ttbrStrategy.PerformStartupCheck();
                     return Task.FromResult(result);
                 });
         }
@@ -150,8 +147,6 @@ namespace NServiceBus.Transport.Msmq
                 : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
         }
 
-
-
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
             throw new NotImplementedException("MSMQ does not support native pub/sub.");
@@ -160,8 +155,6 @@ namespace NServiceBus.Transport.Msmq
         ReadOnlySettings settings;
         MsmqSettings msmqSettings;
         QueueBindings queueBindings;
-        bool isTransactional;
-        bool outBoxRunning;
-        TimeSpan auditMessageExpiration;
+        TimeToBeReceivedStrategy ttbrStrategy;
     }
 }

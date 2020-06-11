@@ -20,7 +20,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new List<DeliveryConstraint>());
+            }, new byte[0]), new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
             var headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
@@ -35,7 +35,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new List<DeliveryConstraint>());
+            }, new byte[0]), new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
             var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
 
             Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
@@ -52,7 +52,7 @@
         {
             var message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]),
-                new List<DeliveryConstraint>());
+                new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -68,7 +68,7 @@
                     {
                         {Headers.ReplyToAddress, "SomeAddress"}
                     }, new byte[0]),
-                new List<DeliveryConstraint>());
+                new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -84,7 +84,7 @@
                 {
                     {Headers.MessageIntent, MessageIntentEnum.Send.ToString()}
                 }, new byte[0]),
-                new List<DeliveryConstraint>());
+                new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -98,7 +98,7 @@
             var message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", new Dictionary<string, string>
                 (), new byte[0]),
-                new List<DeliveryConstraint>());
+                new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -107,14 +107,16 @@
         }
 
         [Test]
-        public void Should_use_the_TTBR_in_the_send_options_if_set()
+        public void Should_use_the_TTBR_in_the_send_options_if_set_and_native_ttbr_strategy()
         {
             var deliveryConstraints = new List<DeliveryConstraint>
             {
                 new DiscardIfNotReceivedBefore(TimeSpan.FromDays(1))
             };
 
-            var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), deliveryConstraints);
+            var ttbrStrategy = new NativeTimeToBeReceivedStrategy(true, false, false);
+
+            var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), deliveryConstraints, ttbrStrategy);
 
             Assert.AreEqual(TimeSpan.FromDays(1), message.TimeToBeReceived);
         }
@@ -129,8 +131,8 @@
             };
             var durableDeliveryConstraint = new List<DeliveryConstraint>();
 
-            Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), nonDurableDeliveryConstraint).Recoverable);
-            Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), durableDeliveryConstraint).Recoverable);
+            Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), nonDurableDeliveryConstraint, new NoOpTimeToBeReceivedStrategy()).Recoverable);
+            Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), durableDeliveryConstraint, new NoOpTimeToBeReceivedStrategy()).Recoverable);
         }
 
         [Test]
@@ -141,7 +143,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new List<DeliveryConstraint>());
+            }, new byte[0]), new List<DeliveryConstraint>(), new NoOpTimeToBeReceivedStrategy());
 
             var r = new Random();
 

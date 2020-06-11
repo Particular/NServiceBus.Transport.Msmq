@@ -116,7 +116,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, List<DeliveryConstraint> deliveryConstraints)
+        public static Message Convert(OutgoingMessage message, List<DeliveryConstraint> deliveryConstraints, TimeToBeReceivedStrategy ttbrStrategy)
         {
             var result = new Message();
 
@@ -131,7 +131,7 @@ namespace NServiceBus.Transport.Msmq
 
             if (deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
             {
-                result.TimeToBeReceived = timeToBeReceived.MaxTime;
+                ttbrStrategy.Apply(result, timeToBeReceived);
             }
 
             var addCorrIdHeader = !message.Headers.ContainsKey("CorrId");
