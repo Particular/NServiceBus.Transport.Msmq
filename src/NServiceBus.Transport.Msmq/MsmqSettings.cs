@@ -36,6 +36,11 @@ namespace NServiceBus.Transport.Msmq
                 UseDeadLetterQueue = useDeadLetterQueue;
             }
 
+            if (settings.TryGet<bool>("UseJournalQueue", out var useJournalQueue))
+            {
+                UseJournalQueue = useJournalQueue;
+            }
+
             if (settings.TryGet<bool>("UseConnectionCache", out var useConnectionCache))
             {
                 UseConnectionCache = useConnectionCache;
