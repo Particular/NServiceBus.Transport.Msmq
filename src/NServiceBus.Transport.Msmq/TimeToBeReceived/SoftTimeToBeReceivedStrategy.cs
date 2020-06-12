@@ -1,10 +1,9 @@
-﻿using NServiceBus.Logging;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-
-namespace NServiceBus.Transport.Msmq
+﻿namespace NServiceBus.Transport.Msmq
 {
+    using Logging;
+    using System;
+    using System.Collections.Generic;
+
     class SoftTimeToBeReceivedStrategy : TimeToBeReceivedStrategy
     {
         public override bool DiscardDueToElapsedTtbr(Dictionary<string, string> headers)
