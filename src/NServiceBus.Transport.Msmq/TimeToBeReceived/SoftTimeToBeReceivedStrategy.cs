@@ -45,20 +45,12 @@ namespace NServiceBus.Transport.Msmq
         {
             if(headers.TryGetValue(Headers.TimeSent, out var timeSentString))
             {
-                timeSent = ToUtcDateTime(timeSentString);
+                timeSent = DateTimeExtensions.ToUtcDateTime(timeSentString);
                 return true;
             }
 
             timeSent = DateTime.MinValue;
             return false;
-        }
-
-        const string Format = "yyyy-MM-dd HH:mm:ss:ffffff Z";
-
-        public static DateTime ToUtcDateTime(string wireFormattedString)
-        {
-            return DateTime.ParseExact(wireFormattedString, Format, CultureInfo.InvariantCulture)
-               .ToUniversalTime();
         }
 
         ILog Logger = LogManager.GetLogger<SoftTimeToBeReceivedStrategy>();
