@@ -71,9 +71,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.UseTransport<MsmqTransport>();
-                    //.Transactions(TransportTransactionMode.TransactionScope)
-                    //.TransactionScopeOptions(isolationLevel: isolationLevel);
+                    c.UseTransport<MsmqTransport>(); // Required, to prevent runtime failure.
                 });
             }
 
