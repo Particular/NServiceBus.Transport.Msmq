@@ -28,6 +28,7 @@ namespace NServiceBus
         public static void DisableConnectionCachingForSends(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static void DisableDeadLetterQueueing(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static void DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        public static void DisableNativeTimeToBeReceivedInTransactions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static void EnableJournaling(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }

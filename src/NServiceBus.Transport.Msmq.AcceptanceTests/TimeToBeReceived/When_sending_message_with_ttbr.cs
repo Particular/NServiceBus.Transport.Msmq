@@ -68,6 +68,27 @@
             StringAssert.Contains("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ", context.ThrownException.Message);
         }
 
+        [Test]
+        public async Task Suppress_native_ttbr_if_enabled_inside_transaction()
+        {
+            var context = await Scenario.Define<Context>()
+                .WithEndpoint<Sender>(endpoint => endpoint
+                    .CustomConfig(endpointConfiguration => endpointConfiguration.UseTransport<MsmqTransport>().DisableNativeTimeToBeReceivedInTransactions())
+                    .When(async (session, ctx) =>
+                    {
+                        using (var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                        {
+                            await session.SendLocal(new SomeMessage());
+                            ctx.MessageSent = true;
+                        }
+                    })
+                )
+                .Done(ctx => ctx.MessageSent = true)
+                .Run();
+
+            Assert.IsTrue(context.MessageSent, "Message was sent");
+        }
+
         class Sender : EndpointConfigurationBuilder
         {
             public Sender()

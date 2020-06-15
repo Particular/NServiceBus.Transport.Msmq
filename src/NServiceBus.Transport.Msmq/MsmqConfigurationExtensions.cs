@@ -158,5 +158,14 @@ namespace NServiceBus
             Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
             config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
         }
+
+        /// <summary>
+        /// Disables native TTBR when combined with transactions.
+        /// </summary>
+        /// <param name="config"></param>
+        public static void DisableNativeTimeToBeReceivedInTransactions(this TransportExtensions<MsmqTransport> config)
+        {
+            config.GetSettings().Set("DisableNativeTtbrInTransactions", true);
+        }
     }
 }

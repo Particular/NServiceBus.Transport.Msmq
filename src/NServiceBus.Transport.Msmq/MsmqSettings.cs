@@ -75,6 +75,11 @@ namespace NServiceBus.Transport.Msmq
             {
                 LabelGenerator = generator;
             }
+
+            if(settings.TryGet<bool>("DisableNativeTtbrInTransactions", out var disableNativeTtbrInTransactions))
+            {
+                DisableNativeTtbrInTransactions = disableNativeTtbrInTransactions;
+            }
         }
 
         public bool UseDeadLetterQueue { get; set; }
@@ -96,5 +101,7 @@ namespace NServiceBus.Transport.Msmq
         public Func<IReadOnlyDictionary<string, string>, string> LabelGenerator { get; set; }
 
         public TimeSpan MessageEnumeratorTimeout { get; set; }
+
+        public bool DisableNativeTtbrInTransactions { get; set; }
     }
 }

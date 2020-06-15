@@ -44,19 +44,28 @@ namespace NServiceBus.Transport.Msmq
             var destination = transportOperation.Destination;
             var destinationAddress = MsmqAddress.Parse(destination);
 
+            var deliveryConstraints = transportOperation.DeliveryConstraints;
+
             if (IsCombiningTimeToBeReceivedWithTransactions(
                 transaction,
                 transportOperation.RequiredDispatchConsistency,
                 transportOperation.DeliveryConstraints))
             {
-                throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
+                if (settings.DisableNativeTtbrInTransactions)
+                { 
+                    deliveryConstraints = deliveryConstraints.Except(deliveryConstraints.OfType<DiscardIfNotReceivedBefore>()).ToList();
+                }
+                else
+                {
+                    throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
+                }
             }
 
             try
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
+                    using (var toSend = MsmqUtilities.Convert(message, deliveryConstraints))
                     {
                         if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
                         {
