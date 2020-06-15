@@ -48,17 +48,19 @@ namespace NServiceBus.Transport.Msmq
 
             if (!uri.IsAbsoluteUri || uri.IsFile)
             {
-                var filePath = uri.ToString();
+                var filePath = uri.LocalPath;
                 if (!File.Exists(filePath))
                 {
-                    throw new Exception($"The specified instance mapping file '{filePath}' does not exist.");
+                    throw new FileNotFoundException("The specified instance mapping file does not exist.", filePath);
                 }
+
                 loader = new InstanceMappingFileLoader(filePath);
             }
             else
             {
                 loader = new InstanceMappingUriLoader(uri);
             }
+
             return loader;
         }
 
