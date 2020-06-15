@@ -31,13 +31,13 @@ namespace NServiceBus.Transport.Msmq
 
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation);
+                ExecuteTransportOperation(transaction, unicastTransportOperation, context);
             }
 
             return TaskEx.CompletedTask;
         }
 
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
         {
             var message = transportOperation.Message;
 
@@ -58,10 +58,22 @@ namespace NServiceBus.Transport.Msmq
                 {
                     using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
                     {
-                        var ttbrRequested = toSend.TimeToBeReceived < MessageQueue.InfiniteTimeout;
+                        if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+                        {
+                            toSend.UseDeadLetterQueue = useDeadLetterQueue;
+                        }
+                        else
+                        {
+                            var ttbrRequested = toSend.TimeToBeReceived < MessageQueue.InfiniteTimeout;
+                            toSend.UseDeadLetterQueue = ttbrRequested
+                                ? settings.UseDeadLetterQueueForMessagesWithTimeToBeReceived
+                                : settings.UseDeadLetterQueue;
+                        }
 
-                        toSend.UseDeadLetterQueue = ttbrRequested ? settings.UseDeadLetterQueueForMessagesWithTimeToBeReceived : settings.UseDeadLetterQueue;
-                        toSend.UseJournalQueue = settings.UseJournalQueue;
+                        toSend.UseJournalQueue = context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue)
+                            ? useJournalQueue
+                            : settings.UseJournalQueue;
+
                         toSend.TimeToReachQueue = settings.TimeToReachQueue;
 
                         if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
@@ -179,7 +191,7 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
-        
+
         MsmqSettings settings;
     }
 }
