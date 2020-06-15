@@ -80,6 +80,8 @@ namespace NServiceBus.Transport.Msmq
             {
                 DisableNativeTtbrInTransactions = disableNativeTtbrInTransactions;
             }
+
+            IgnoreIncomingTimeToBeReceivedHeaders = settings.GetOrDefault<bool>("IgnoreIncomingTimeToBeReceivedHeaders");
         }
 
         public bool UseDeadLetterQueue { get; set; }
@@ -103,5 +105,7 @@ namespace NServiceBus.Transport.Msmq
         public TimeSpan MessageEnumeratorTimeout { get; set; }
 
         public bool DisableNativeTtbrInTransactions { get; set; }
+
+        public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
     }
 }

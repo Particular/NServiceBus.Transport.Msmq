@@ -14,13 +14,14 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, bool discardExpiredTtbrMessages)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
             this.onError = onError;
             this.criticalError = criticalError;
+            this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
         }
 
         protected bool TryReceive(MessageQueueTransactionType transactionType, out Message message)
@@ -101,7 +102,7 @@ namespace NServiceBus.Transport.Msmq
 
         protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
         {
-            if (TimeToBeReceived.HasElapsed(headers))
+            if (discardExpiredTtbrMessages && TimeToBeReceived.HasElapsed(headers))
             {
                 Logger.Debug($"Discarding message {messageId} due to lapsed Time To Be Received header");
                 return false;
@@ -154,6 +155,7 @@ namespace NServiceBus.Transport.Msmq
         Func<MessageContext, Task> onMessage;
         Func<ErrorContext, Task<ErrorHandleResult>> onError;
         CriticalError criticalError;
+        bool discardExpiredTtbrMessages;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }

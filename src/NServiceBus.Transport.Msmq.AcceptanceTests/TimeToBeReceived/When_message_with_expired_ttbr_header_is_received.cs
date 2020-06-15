@@ -7,6 +7,7 @@
     using NUnit.Framework;
     using System;
     using System.Threading.Tasks;
+    using NServiceBus.Configuration.AdvancedExtensibility;
 
     class When_message_with_expired_ttbr_header_is_received : NServiceBusAcceptanceTest
     {
@@ -36,7 +37,10 @@
         {
             public SomeEndpoint()
             {
-                EndpointSetup<DefaultServer>();
+                EndpointSetup<DefaultServer>(config => 
+                    // NOTE: This is resetting the default
+                    config.GetSettings().Set("IgnoreIncomingTimeToBeReceivedHeaders", false)
+                );
             }
 
             public class SomeMessageHandler : IHandleMessages<SomeMessage>

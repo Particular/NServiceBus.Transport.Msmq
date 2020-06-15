@@ -13,10 +13,11 @@ namespace NServiceBus.Transport.Msmq
 
     class MessagePump : IPushMessages, IDisposable
     {
-        public MessagePump(Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory, TimeSpan messageEnumeratorTimeout)
+        public MessagePump(Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory, TimeSpan messageEnumeratorTimeout, bool discardExpiredTtbrMessages)
         {
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
+            this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
         }
 
         public void Dispose()
@@ -54,7 +55,7 @@ namespace NServiceBus.Transport.Msmq
 
             receiveStrategy = receiveStrategyFactory(settings.RequiredTransactionMode);
 
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalError);
+            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalError, discardExpiredTtbrMessages);
 
             return TaskEx.CompletedTask;
         }
@@ -237,6 +238,7 @@ namespace NServiceBus.Transport.Msmq
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
         ConcurrentDictionary<Task, Task> runningReceiveTasks;
+        bool discardExpiredTtbrMessages;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();
 
