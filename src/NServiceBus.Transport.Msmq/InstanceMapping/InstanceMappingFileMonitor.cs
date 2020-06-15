@@ -11,12 +11,11 @@ namespace NServiceBus.Transport.Msmq
 
     class InstanceMappingFileMonitor : FeatureStartupTask
     {
-        public InstanceMappingFileMonitor(string filePath, TimeSpan checkInterval, IAsyncTimer timer, IInstanceMappingFileAccess fileAccess, EndpointInstances endpointInstances)
+        public InstanceMappingFileMonitor(TimeSpan checkInterval, IAsyncTimer timer, IInstanceMappingLoader loader, EndpointInstances endpointInstances)
         {
-            this.filePath = filePath;
             this.checkInterval = checkInterval;
             this.timer = timer;
-            this.fileAccess = fileAccess;
+            this.loader = loader;
             this.endpointInstances = endpointInstances;
         }
 
@@ -39,25 +38,25 @@ namespace NServiceBus.Transport.Msmq
         {
             try
             {
-                var doc = fileAccess.Load(filePath);
+                var doc = loader.Load();
                 var instances = parser.Parse(doc);
-                LogChanges(instances, filePath);
+                LogChanges(instances);
                 endpointInstances.AddOrReplaceInstances("InstanceMappingFile", instances);
             }
             catch (Exception exception)
             {
-                throw new Exception($"An error occurred while reading the endpoint instance mapping file at {filePath}. See the inner exception for more details.", exception);
+                throw new Exception($"An error occurred while reading the endpoint instance mapping ({loader}). See the inner exception for more details.", exception);
             }
         }
 
-        void LogChanges(List<EndpointInstance> instances, string filepath)
+        void LogChanges(List<EndpointInstance> instances)
         {
             var output = new StringBuilder();
             var hasChanges = false;
 
             var instancesPerEndpoint = instances.GroupBy(i => i.Endpoint).ToDictionary(g => g.Key, g => g.ToArray());
 
-            output.AppendLine($"Updating instance mapping table from '{filepath}':");
+            output.AppendLine($"Updating instance mapping table from '{loader}':");
 
             foreach (var endpoint in instancesPerEndpoint)
             {
@@ -101,8 +100,7 @@ namespace NServiceBus.Transport.Msmq
         protected override Task OnStop(IMessageSession session) => timer.Stop();
 
         TimeSpan checkInterval;
-        IInstanceMappingFileAccess fileAccess;
-        string filePath;
+        IInstanceMappingLoader loader;
         EndpointInstances endpointInstances;
         InstanceMappingFileParser parser = new InstanceMappingFileParser();
         IAsyncTimer timer;

@@ -2,8 +2,8 @@ namespace NServiceBus.Transport.Msmq
 {
     using System.Xml.Linq;
 
-    interface IInstanceMappingFileAccess
+    interface IInstanceMappingLoader
     {
-        XDocument Load(string path);
+        XDocument Load();
     }
 }
