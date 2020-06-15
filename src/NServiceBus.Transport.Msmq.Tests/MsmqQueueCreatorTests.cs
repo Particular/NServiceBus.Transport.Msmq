@@ -74,6 +74,7 @@
             Assert.True(accessControlEntryType == AccessControlEntryType.Allow, "User should have access");
             Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.WriteMessage), $"{NetworkServiceAccountName} should have write access");
             Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.ReceiveMessage), $"{NetworkServiceAccountName} should have receive messages access");
+            Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.GetQueueProperties), $"{NetworkServiceAccountName} should have get queue properties access");
 
             Assert.True(createdQueue.TryGetPermissions(LocalAdministratorsGroupName, out var localAdminAccessRights, out var accessControlEntryTypeForLocalAdmin));
             Assert.True(localAdminAccessRights.HasValue);
