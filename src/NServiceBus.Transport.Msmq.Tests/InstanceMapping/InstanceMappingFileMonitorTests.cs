@@ -37,15 +37,12 @@
         {
             var timer = new FakeTimer();
             var fileAccessException = new Exception("Simulated");
-            var loader = new FakeLoader(() =>
-            {
-                throw fileAccessException;
-            });
+            var loader = new FakeLoader(() => throw fileAccessException);
             var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances());
 
             var exception = Assert.Throws<Exception>(() => monitor.ReloadData());
 
-            Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping (NServiceBus.Transport.Msmq.Tests.InstanceMappingFileMonitorTests+FakeLoader). See the inner exception for more details."));
+            Assert.That(exception.Message, Does.Contain("An error occurred while reading the endpoint instance mapping (NServiceBus.Transport.Msmq.Tests.InstanceMappingFileMonitorTests+FakeLoader). See the inner exception for more details."));
             Assert.That(exception.InnerException, Is.EqualTo(fileAccessException));
         }
 

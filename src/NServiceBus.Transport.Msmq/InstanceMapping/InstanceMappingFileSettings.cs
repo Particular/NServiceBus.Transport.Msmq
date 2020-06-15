@@ -1,7 +1,6 @@
 namespace NServiceBus
 {
     using System;
-    using System.IO;
     using Configuration.AdvancedExtensibility;
     using Settings;
     using Transport.Msmq;

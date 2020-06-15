@@ -3,8 +3,8 @@ namespace NServiceBus.Transport.Msmq
     using System;
     using System.IO;
     using Features;
-    using NServiceBus.Settings;
     using Routing;
+    using Settings;
 
     class InstanceMappingFileFeature : Feature
     {
