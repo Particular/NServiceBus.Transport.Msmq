@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests.TimeToBeReceived
 {
-    using NServiceBus.AcceptanceTesting;
+    using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;

@@ -41,7 +41,7 @@
 
             public class SomeMessageHandler : IHandleMessages<SomeMessage>
             {
-                private Context scenarioContext;
+                Context scenarioContext;
 
                 public SomeMessageHandler(Context scenarioContext)
                 {
