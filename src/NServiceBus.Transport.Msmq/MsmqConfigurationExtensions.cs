@@ -43,10 +43,16 @@ namespace NServiceBus
         {
             Guard.AgainstNull(nameof(transportExtensions), transportExtensions);
             Guard.AgainstNegativeAndZero(nameof(timeout), timeout);
+
+            if (isolationLevel.HasValue && isolationLevel.Value == IsolationLevel.Snapshot)
+            {
+                throw new ArgumentException("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", nameof(isolationLevel));
+            }
+
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
-        
+
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
@@ -76,7 +82,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseDeadLetterQueueForMessagesWithTimeToBeReceived", true);
         }
-       
+
         /// <summary>
         /// Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
@@ -116,7 +122,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseConnectionCache", false);
         }
-        
+
         /// <summary>
         /// This setting should be used with caution. As the queues are not transactional, any message that has
         /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
@@ -140,7 +146,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("UseJournalQueue", true);
         }
-        
+
         /// <summary>
         /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
         /// </summary>
@@ -151,6 +157,6 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             Guard.AgainstNegativeAndZero(nameof(timeToReachQueue), timeToReachQueue);
             config.GetSettings().Set("TimeToReachQueue", timeToReachQueue);
-        }       
+        }
     }
 }
