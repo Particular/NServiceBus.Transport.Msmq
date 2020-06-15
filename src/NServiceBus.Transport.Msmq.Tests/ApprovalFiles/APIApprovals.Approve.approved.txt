@@ -3,6 +3,10 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
 namespace NServiceBus
 {
+    public class static DeadLetterQueueOptionExtensions
+    {
+        public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = True) { }
+    }
     public class static EndpointInstanceExtensions
     {
         public static NServiceBus.Routing.EndpointInstance AtMachine(this NServiceBus.Routing.EndpointInstance instance, string machineName) { }
@@ -12,6 +16,10 @@ namespace NServiceBus
         public InstanceMappingFileSettings(NServiceBus.Settings.SettingsHolder settings) { }
         public NServiceBus.InstanceMappingFileSettings FilePath(string filePath) { }
         public NServiceBus.InstanceMappingFileSettings RefreshInterval(System.TimeSpan refreshInterval) { }
+    }
+    public class static JournalOptionExtensions
+    {
+        public static void UseJournalQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = True) { }
     }
     public class static MsmqConfigurationExtensions
     {
