@@ -56,7 +56,7 @@
                         .Run();
             });
 
-            StringAssert.Contains("Isolation level `Snapshot` is unsupport by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", ex.Message);
+            StringAssert.Contains("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", ex.Message);
         }
         public class Context : ScenarioContext
         {
