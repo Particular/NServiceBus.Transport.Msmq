@@ -101,6 +101,12 @@ namespace NServiceBus.Transport.Msmq
 
         protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
         {
+            if (TimeToBeReceived.HasElapsed(headers))
+            {
+                Logger.Debug($"Discarding message {messageId} due to lapsed Time To Be Received header");
+                return false;
+            }
+
             using (var tokenSource = new CancellationTokenSource())
             {
                 var body = await ReadStream(bodyStream).ConfigureAwait(false);
