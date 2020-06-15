@@ -34,6 +34,8 @@
                 .Done(ctx => ctx.MessageSent)
                 .Run();
 
+            Assert.IsTrue(context.MessageSent, "Message was sent");
+
             using(var queue = new MessageQueue(queuePath))
             {
                 queue.MessageReadPropertyFilter.TimeToBeReceived = true;
@@ -49,7 +51,7 @@
                 .WithEndpoint<Sender>(endpoint => endpoint
                     .When(async (session, ctx) =>
                     {
-                        using (var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                        using (new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
                         {
                             try
                             {
@@ -76,7 +78,7 @@
                     .CustomConfig(endpointConfiguration => endpointConfiguration.UseTransport<MsmqTransport>().DisableNativeTimeToBeReceivedInTransactions())
                     .When(async (session, ctx) =>
                     {
-                        using (var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                        using (new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
                         {
                             await session.SendLocal(new SomeMessage());
                             ctx.MessageSent = true;
