@@ -11,35 +11,11 @@
         internal const string KeyJournaling = "MSMQ.UseJournalQueue";
 
         /// <summary>
-        /// Allows a to enable or disable MSMQ journaling.
+        /// Enable or disable MSMQ journaling.
         /// </summary>
         /// <param name="options">Option being extended.</param>
         /// <param name="enable">Either enable or disabling message journaling.</param>
-        public static void UseJournalQueue(this SendOptions options, bool enable)
-        {
-            Guard.AgainstNull(nameof(options), options);
-            var ext = options.GetExtensions();
-            ext.Set(KeyJournaling, enable);
-        }
-
-        /// <summary>
-        /// Allows a to enable or disable MSMQ journaling.
-        /// </summary>
-        /// <param name="options">Option being extended.</param>
-        /// <param name="enable">Either enable or disabling message journaling.</param>
-        public static void UseJournalQueue(this ReplyOptions options, bool enable)
-        {
-            Guard.AgainstNull(nameof(options), options);
-            var ext = options.GetExtensions();
-            ext.Set(KeyJournaling, enable);
-        }
-
-        /// <summary>
-        /// Allows a to enable or disable MSMQ journaling.
-        /// </summary>
-        /// <param name="options">Option being extended.</param>
-        /// <param name="enable">Either enable or disabling message journaling.</param>
-        public static void UseJournalQueue(this PublishOptions options, bool enable)
+        public static void UseJournalQueue(this ExtendableOptions options, bool enable = true)
         {
             Guard.AgainstNull(nameof(options), options);
             var ext = options.GetExtensions();
