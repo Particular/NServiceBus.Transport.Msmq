@@ -54,7 +54,7 @@
             }
             finally
             {
-                //DeleteSpyQueue();
+                DeleteSpyQueue();
             }
         }
 
@@ -102,7 +102,7 @@
             }
             finally
             {
-                //DeleteSpyQueue();
+                DeleteSpyQueue();
             }
         }
 
