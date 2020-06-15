@@ -41,7 +41,7 @@
         {
             var ex = Assert.ThrowsAsync<ArgumentException>(async () =>
             {
-                var context = await Scenario.Define<Context>()
+                await Scenario.Define<Context>()
                         .WithEndpoint<ScopeEndpoint>(g =>
                         {
                             g.CustomConfig(c =>
@@ -77,6 +77,7 @@
 
             class MyMessageHandler : IHandleMessages<MyMessage>
             {
+                // ReSharper disable once UnusedAutoPropertyAccessor.Local
                 public Context Context { get; set; }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
