@@ -46,7 +46,7 @@ namespace NServiceBus
 
             if (isolationLevel.HasValue && isolationLevel.Value == IsolationLevel.Snapshot)
             {
-                throw new ArgumentException("Isolation level `Snapshot` is unsupport by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", nameof(isolationLevel));
+                throw new ArgumentException("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", nameof(isolationLevel));
             }
 
             transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
