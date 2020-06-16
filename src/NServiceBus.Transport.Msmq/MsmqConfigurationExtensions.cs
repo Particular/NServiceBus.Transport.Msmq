@@ -39,6 +39,9 @@ namespace NServiceBus
         /// If not specified the default transaction timeout of the machine will be used and the isolation level will be set to
         /// <see cref="IsolationLevel.ReadCommitted"/>.
         /// </remarks>
+        /// <param name="transportExtensions">MSMQ Transport configuration object.</param>
+        /// <param name="timeout">Transaction timeout duration.</param>
+        /// <param name="isolationLevel">Transaction isolation level.</param>
         public static TransportExtensions<MsmqTransport> TransactionScopeOptions(this TransportExtensions<MsmqTransport> transportExtensions, TimeSpan? timeout = null, IsolationLevel? isolationLevel = null)
         {
             Guard.AgainstNull(nameof(transportExtensions), transportExtensions);
@@ -56,7 +59,7 @@ namespace NServiceBus
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
-        /// <param name="config">Config object.</param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         /// <param name="distributionStrategy">The instance of a distribution strategy.</param>
         public static void SetMessageDistributionStrategy(this RoutingSettings<MsmqTransport> config, DistributionStrategy distributionStrategy)
         {
@@ -68,6 +71,7 @@ namespace NServiceBus
         /// <summary>
         /// Returns the configuration options for the file based instance mapping file.
         /// </summary>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static InstanceMappingFileSettings InstanceMappingFile(this RoutingSettings<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -77,6 +81,7 @@ namespace NServiceBus
         /// <summary>
         /// Moves messages that have exceeded their TimeToBeReceived to the dead letter queue instead of discarding them.
         /// </summary>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -92,6 +97,7 @@ namespace NServiceBus
         /// The installers might still need to be enabled to fulfill the installation needs of other components, but this method allows
         /// scripts to be used for queue creation instead.
         /// </remarks>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void DisableInstaller(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -103,7 +109,7 @@ namespace NServiceBus
         /// in the dead letter queue. Therefore this setting must only be used where loss of messages 
         /// is an acceptable scenario. 
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void DisableDeadLetterQueueing(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -116,7 +122,7 @@ namespace NServiceBus
         /// Turning connection caching off will negatively impact the message throughput in 
         /// most scenarios.
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void DisableConnectionCachingForSends(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -128,7 +134,7 @@ namespace NServiceBus
         /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
         /// be used where loss of messages is an acceptable scenario.  
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void UseNonTransactionalQueues(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -140,7 +146,7 @@ namespace NServiceBus
         /// Should be used ONLY when debugging as it can 
         /// potentially use up the MSMQ journal storage quota based on the message volume.
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void EnableJournaling(this TransportExtensions<MsmqTransport> config)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -148,10 +154,10 @@ namespace NServiceBus
         }
 
         /// <summary>
-        /// Overrides the TTRQ timespan. The default value if not set is Message.InfiniteTimeout
+        /// Overrides the Time-To-Reach-Queue (TTRQ) timespan. The default value if not set is Message.InfiniteTimeout
         /// </summary>
-        /// <param name="config"></param>
-        /// <param name="timeToReachQueue">Timespan for the TTRQ</param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
+        /// <param name="timeToReachQueue">Timespan for the Time-To-Reach-Queue (TTRQ)</param>
         public static void TimeToReachQueue(this TransportExtensions<MsmqTransport> config, TimeSpan timeToReachQueue)
         {
             Guard.AgainstNull(nameof(config), config);
@@ -160,12 +166,23 @@ namespace NServiceBus
         }
 
         /// <summary>
-        /// Disables native TTBR when combined with transactions.
+        /// Disables native Time-To-Be-Received (TTBR) when combined with transactions.
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="config">MSMQ Transport configuration object.</param>
         public static void DisableNativeTimeToBeReceivedInTransactions(this TransportExtensions<MsmqTransport> config)
         {
+            Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("DisableNativeTtbrInTransactions", true);
+        }
+        
+        /// <summary>
+        /// Ignore incoming Time-To-Be-Received (TTBR) headers. By default an expired TTBR header will result in the message to be discarded.
+        /// </summary>
+        /// <param name="config">MSMQ Transport configuration object.</param>
+        public static void IgnoreIncomingTimeToBeReceivedHeaders(this TransportExtensions<MsmqTransport> config)
+        {
+            Guard.AgainstNull(nameof(config), config);
+            config.GetSettings().Set("IgnoreIncomingTimeToBeReceivedHeaders", true);
         }
     }
 }
