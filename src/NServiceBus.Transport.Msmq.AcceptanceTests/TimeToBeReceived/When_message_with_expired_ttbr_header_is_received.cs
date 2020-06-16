@@ -4,6 +4,7 @@
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
+    using NServiceBus.Configuration.AdvancedExtensibility;
     using NUnit.Framework;
     using System;
     using System.Threading.Tasks;
@@ -15,6 +16,7 @@
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SomeEndpoint>(endpoint => endpoint
+                    .CustomConfig(c => c.GetSettings().Set("IgnoreIncomingTimeToBeReceivedHeaders", false))
                     .When(async (session, ctx) =>
                     {
                         var sendOptions = new SendOptions();

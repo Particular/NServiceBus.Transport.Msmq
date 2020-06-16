@@ -15,7 +15,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         var msmqTransportDefinition = new MsmqTransport();
         settingsHolder = settings;
         settingsHolder.Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
-        settingsHolder.SetDefault("IgnoreIncomingTimeToBeReceivedHeaders", false);
+        settingsHolder.SetDefault("IgnoreIncomingTimeToBeReceivedHeaders", true); // Acual default is False
         return new TransportConfigurationResult
         {
             TransportInfrastructure = msmqTransportDefinition.Initialize(settingsHolder, null),
