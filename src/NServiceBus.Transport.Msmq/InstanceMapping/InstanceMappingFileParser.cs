@@ -37,7 +37,7 @@ namespace NServiceBus.Transport.Msmq
             }
             catch(XmlSchemaValidationException ex)
             {
-                Logger.Warn($"Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes.", ex);
+                Logger.Warn("Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes.", ex);
 
                 document.Validate(schema, null, true);
             }
