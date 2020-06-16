@@ -4,7 +4,7 @@
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
-    using NServiceBus.Configuration.AdvancedExtensibility;
+    using Configuration.AdvancedExtensibility;
     using NUnit.Framework;
     using System;
     using System.Threading.Tasks;
