@@ -6,6 +6,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Xml;
     using System.Xml.Linq;
     using System.Xml.Schema;
+    using NServiceBus.Logging;
     using Routing;
 
     class InstanceMappingFileParser
@@ -18,11 +19,28 @@ namespace NServiceBus.Transport.Msmq
                 schema = new XmlSchemaSet();
                 schema.Add("", xmlReader);
             }
+
+            using(var stream = GetType().Assembly.GetManifestResourceStream("NServiceBus.Transport.Msmq.InstanceMapping.endpointsV2.xsd"))
+            using(var xmlReader = XmlReader.Create(stream))
+            {
+                schemaV2 = new XmlSchemaSet();
+                schemaV2.Add("", xmlReader);
+            }
         }
 
         public List<EndpointInstance> Parse(XDocument document)
         {
-            document.Validate(schema, null, true);
+
+            try
+            {
+                document.Validate(schemaV2, null, false);
+            }
+            catch(XmlSchemaValidationException ex)
+            {
+                Logger.Warn($"Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes.", ex);
+
+                document.Validate(schema, null, true);
+            }
 
             var root = document.Root;
             var endpointElements = root.Descendants("endpoint");
@@ -49,5 +67,8 @@ namespace NServiceBus.Transport.Msmq
         }
 
         XmlSchemaSet schema;
+        XmlSchemaSet schemaV2;
+
+        static ILog Logger = LogManager.GetLogger<InstanceMappingFileParser>();
     }
 }
