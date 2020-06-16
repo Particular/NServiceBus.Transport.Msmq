@@ -35,18 +35,14 @@
         [Test]
         public void Reload_should_throw_when_file_does_not_exist()
         {
-            const string filePath = "some file path";
             var timer = new FakeTimer();
             var fileAccessException = new Exception("Simulated");
-            var fileAccess = new FakeFileAccess(() =>
-            {
-                throw fileAccessException;
-            });
-            var monitor = new InstanceMappingFileMonitor(filePath, TimeSpan.Zero, timer, fileAccess, new EndpointInstances());
+            var loader = new FakeLoader(() => throw fileAccessException);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances());
 
             var exception = Assert.Throws<Exception>(() => monitor.ReloadData());
 
-            Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping file at {filePath}. See the inner exception for more details."));
+            Assert.That(exception.Message, Does.Contain("An error occurred while reading the endpoint instance mapping (NServiceBus.Transport.Msmq.Tests.InstanceMappingFileMonitorTests+FakeLoader). See the inner exception for more details."));
             Assert.That(exception.InnerException, Is.EqualTo(fileAccessException));
         }
 
@@ -59,7 +55,7 @@
                 errorCallbackInvoked = true;
             });
             var fail = false;
-            var fileAccess = new FakeFileAccess(() =>
+            var loader = new FakeLoader(() =>
             {
                 // ReSharper disable once AccessToModifiedClosure
                 if (fail)
@@ -69,7 +65,7 @@
                 return XDocument.Parse(@"<endpoints><endpoint name=""A""><instance/></endpoint></endpoints>");
             });
 
-            var monitor = new InstanceMappingFileMonitor("unused", TimeSpan.Zero, timer, fileAccess, new EndpointInstances());
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances());
             await monitor.Start(null);
 
             fail = true;
@@ -81,13 +77,12 @@
         [Test]
         public void Should_log_added_endpoints()
         {
-            var fileAccess = new FakeFileAccess(() => XDocument.Parse(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>"));
-            var monitor = new InstanceMappingFileMonitor("filepath", TimeSpan.Zero, new FakeTimer(), fileAccess, new EndpointInstances());
+            var loader = new FakeLoader(() => XDocument.Parse(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>"));
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
 
-            Assert.That(logOutput.ToString(), Does.Contain(@"Updating instance mapping table from 'filepath':
-Added endpoint 'A' with 2 instances"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Added endpoint 'A' with 2 instances"));
         }
 
         [Test]
@@ -96,15 +91,14 @@ Added endpoint 'A' with 2 instances"));
             var fileData = new Queue<string>();
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>");
             fileData.Enqueue("<endpoints></endpoints>");
-            var fileAccess = new FakeFileAccess(() => XDocument.Parse(fileData.Dequeue()));
-            var monitor = new InstanceMappingFileMonitor("filepath", TimeSpan.Zero, new FakeTimer(), fileAccess, new EndpointInstances());
+            var loader = new FakeLoader(() => XDocument.Parse(fileData.Dequeue()));
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
             logOutput.Clear();
             monitor.ReloadData();
 
-            Assert.That(logOutput.ToString(), Does.Contain(@"Updating instance mapping table from 'filepath':
-Removed all instances of endpoint 'A'"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Removed all instances of endpoint 'A'"));
         }
 
         [Test]
@@ -113,27 +107,26 @@ Removed all instances of endpoint 'A'"));
             var fileData = new Queue<string>();
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>");
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""3"" /><instance discriminator=""4"" /></endpoint></endpoints>");
-            var fileAccess = new FakeFileAccess(() => XDocument.Parse(fileData.Dequeue()));
-            var monitor = new InstanceMappingFileMonitor("filepath", TimeSpan.Zero, new FakeTimer(), fileAccess, new EndpointInstances());
+            var loader = new FakeLoader(() => XDocument.Parse(fileData.Dequeue()));
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
             logOutput.Clear();
             monitor.ReloadData();
 
-            Assert.That(logOutput.ToString(), Does.Contain(@"Updating instance mapping table from 'filepath':
-Updated endpoint 'A': +2 instances, -1 instance"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Updated endpoint 'A': +2 instances, -1 instance"));
         }
 
-        class FakeFileAccess : IInstanceMappingFileAccess
+        class FakeLoader : IInstanceMappingLoader
         {
             readonly Func<XDocument> docCallback;
 
-            public FakeFileAccess(Func<XDocument> docCallback)
+            public FakeLoader(Func<XDocument> docCallback)
             {
                 this.docCallback = docCallback;
             }
 
-            public XDocument Load(string path) => docCallback();
+            public XDocument Load() => docCallback();
         }
 
         class FakeTimer : IAsyncTimer

@@ -15,6 +15,7 @@ namespace NServiceBus
     {
         public InstanceMappingFileSettings(NServiceBus.Settings.SettingsHolder settings) { }
         public NServiceBus.InstanceMappingFileSettings FilePath(string filePath) { }
+        public NServiceBus.InstanceMappingFileSettings Path(System.Uri uriPath) { }
         public NServiceBus.InstanceMappingFileSettings RefreshInterval(System.TimeSpan refreshInterval) { }
     }
     public class static JournalOptionExtensions

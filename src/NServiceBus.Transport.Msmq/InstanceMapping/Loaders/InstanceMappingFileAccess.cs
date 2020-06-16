@@ -4,15 +4,27 @@ namespace NServiceBus.Transport.Msmq
     using System.Xml;
     using System.Xml.Linq;
 
-    class InstanceMappingFileAccess : IInstanceMappingFileAccess
+    class InstanceMappingFileLoader : IInstanceMappingLoader
     {
-        public XDocument Load(string path)
+        string path;
+
+        public InstanceMappingFileLoader(string path)
+        {
+            this.path = path;
+        }
+
+        public XDocument Load()
         {
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var reader = XmlReader.Create(file))
             {
                 return XDocument.Load(reader);
             }
+        }
+
+        public override string ToString()
+        {
+            return path;
         }
     }
 }

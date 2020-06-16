@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.IO;
     using Features;
     using Routing;
+    using Settings;
 
     class InstanceMappingFileFeature : Feature
     {
@@ -14,25 +15,20 @@ namespace NServiceBus.Transport.Msmq
             Defaults(s =>
             {
                 s.SetDefault(CheckIntervalSettingsKey, TimeSpan.FromSeconds(30));
-                s.SetDefault(FilePathSettingsKey, DefaultInstanceMappingFileName);
+                s.SetDefault(PathSettingsKey, DefaultInstanceMappingFileName);
             });
 
-            Prerequisite(c => c.Settings.HasExplicitValue(FilePathSettingsKey) || File.Exists(GetRootedPath(DefaultInstanceMappingFileName)), "No explicit instance mapping file configuration and default file does not exist.");
+            Prerequisite(c => c.Settings.HasExplicitValue(PathSettingsKey) || File.Exists(GetRootedPath(DefaultInstanceMappingFileName)), "No explicit instance mapping file configuration and default file does not exist.");
         }
 
         protected override void Setup(FeatureConfigurationContext context)
         {
-            var filePath = GetRootedPath(context.Settings.Get<string>(FilePathSettingsKey));
-
-            if (!File.Exists(filePath))
-            {
-                throw new Exception($"The specified instance mapping file '{filePath}' does not exist.");
-            }
+            var instanceMappingLoader = CreateInstanceMappingLoader(context.Settings);
 
             var checkInterval = context.Settings.Get<TimeSpan>(CheckIntervalSettingsKey);
             var endpointInstances = context.Settings.Get<EndpointInstances>();
 
-            var instanceMappingTable = new InstanceMappingFileMonitor(filePath, checkInterval, new AsyncTimer(), new InstanceMappingFileAccess(), endpointInstances);
+            var instanceMappingTable = new InstanceMappingFileMonitor(checkInterval, new AsyncTimer(), instanceMappingLoader, endpointInstances);
             instanceMappingTable.ReloadData();
             context.RegisterStartupTask(instanceMappingTable);
         }
@@ -44,8 +40,32 @@ namespace NServiceBus.Transport.Msmq
                 : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
         }
 
+        IInstanceMappingLoader CreateInstanceMappingLoader(ReadOnlySettings settings)
+        {
+            var uri = settings.Get<Uri>(PathSettingsKey);
+
+            IInstanceMappingLoader loader;
+
+            if (!uri.IsAbsoluteUri || uri.IsFile)
+            {
+                var filePath = uri.LocalPath;
+                if (!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException("The specified instance mapping file does not exist.", filePath);
+                }
+
+                loader = new InstanceMappingFileLoader(filePath);
+            }
+            else
+            {
+                loader = new InstanceMappingUriLoader(uri);
+            }
+
+            return loader;
+        }
+
         public const string CheckIntervalSettingsKey = "InstanceMappingFile.CheckInterval";
-        public const string FilePathSettingsKey = "InstanceMappingFile.FilePath";
+        public const string PathSettingsKey = "InstanceMappingFile.Path";
         const string DefaultInstanceMappingFileName = "instance-mapping.xml";
     }
 }

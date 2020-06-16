@@ -45,8 +45,20 @@ namespace NServiceBus
         public InstanceMappingFileSettings FilePath(string filePath)
         {
             Guard.AgainstNullAndEmpty(nameof(filePath), filePath);
+            var result = Uri.TryCreate(filePath, UriKind.RelativeOrAbsolute, out var uriPath);
+            if (!result) throw new ArgumentException("Invalid format", nameof(filePath));
+            this.GetSettings().Set(InstanceMappingFileFeature.PathSettingsKey, uriPath);
+            return this;
+        }
 
-            this.GetSettings().Set(InstanceMappingFileFeature.FilePathSettingsKey, filePath);
+        /// <summary>
+        /// Specifies the uri for the instance mapping XML.
+        /// </summary>
+        /// <param name="uriPath">The absolute uri to the instance mapping XML.</param>
+        public InstanceMappingFileSettings Path(Uri uriPath)
+        {
+            Guard.AgainstNull(nameof(uriPath), uriPath);
+            this.GetSettings().Set(InstanceMappingFileFeature.PathSettingsKey, uriPath);
             return this;
         }
     }

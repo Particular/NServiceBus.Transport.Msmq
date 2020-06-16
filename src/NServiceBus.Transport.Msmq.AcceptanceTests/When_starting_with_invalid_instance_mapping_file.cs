@@ -37,7 +37,7 @@
                 .Done(c => c.EndpointsStarted)
                 .Run());
 
-            Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping file at {mappingFilePath}. See the inner exception for more details."));
+            Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping ({mappingFilePath}). See the inner exception for more details."));
             Assert.That(exception.InnerException, Is.TypeOf<XmlSchemaValidationException>());
         }
 
