@@ -1,6 +1,5 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
-    using System;
     using System.Linq;
     using System.Security.Principal;
     using System.Threading.Tasks;
@@ -14,7 +13,7 @@
         [Test]
         public async Task Should_log_warning_as_queue_is_configured_for_everyone()
         {
-            var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
+            var context = await Scenario.Define<ScenarioContext>()
                 .WithEndpoint<Endpoint>(b => b.When((session, c) => Task.FromResult(0)))
                 .Run();
 
@@ -23,11 +22,6 @@
             var logItem = context.Logs.FirstOrDefault(item => item.Message.Contains($"[{everyone}]"));
             Assert.IsNotNull(logItem);
             StringAssert.Contains("Consider setting appropriate permissions", logItem.Message);
-        }
-
-        class Context : ScenarioContext
-        {
-            public Guid Id { get; set; }
         }
 
         class Endpoint : EndpointConfigurationBuilder

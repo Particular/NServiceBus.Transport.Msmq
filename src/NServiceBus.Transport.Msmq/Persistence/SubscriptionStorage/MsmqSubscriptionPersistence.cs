@@ -33,14 +33,14 @@
             {
                 return configuredQueueName;
             }
-            ThrowIfUsingTheOldDefaultSubscriptionsQueue(configuredQueueName);
+            ThrowIfUsingTheOldDefaultSubscriptionsQueue();
 
             var defaultQueueName = $"{settings.EndpointName()}.Subscriptions";
             Logger.Info($"The queue used to store subscriptions has not been configured, the default '{defaultQueueName}' will be used.");
             return defaultQueueName;
         }
 
-        static void ThrowIfUsingTheOldDefaultSubscriptionsQueue(string configuredQueueName)
+        static void ThrowIfUsingTheOldDefaultSubscriptionsQueue()
         {
             if (DoesOldDefaultQueueExists())
             {
