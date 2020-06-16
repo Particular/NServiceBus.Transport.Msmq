@@ -6,7 +6,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Xml;
     using System.Xml.Linq;
     using System.Xml.Schema;
-    using NServiceBus.Logging;
+    using Logging;
     using Routing;
 
     class InstanceMappingFileParser
