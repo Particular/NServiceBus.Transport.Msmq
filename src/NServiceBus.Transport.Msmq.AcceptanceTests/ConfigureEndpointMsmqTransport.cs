@@ -17,7 +17,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         var transportConfig = configuration.UseTransport<MsmqTransport>();
         transportConfig.DisableConnectionCachingForSends();
         configuration.GetSettings().Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
-        configuration.GetSettings().SetDefault("IgnoreIncomingTimeToBeReceivedHeaders", true);
+        configuration.GetSettings().SetDefault("IgnoreIncomingTimeToBeReceivedHeaders", false);
 
         var routingConfig = transportConfig.Routing();
 
