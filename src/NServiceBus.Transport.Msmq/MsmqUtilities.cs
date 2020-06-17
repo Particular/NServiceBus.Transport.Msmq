@@ -19,13 +19,13 @@ namespace NServiceBus.Transport.Msmq
             var arr = q.FormatName.Split('\\');
             var queueName = arr[arr.Length - 1];
 
-            var directPrefixIndex = arr[0].IndexOf(DIRECTPREFIX);
+            var directPrefixIndex = arr[0].IndexOf(DIRECTPREFIX, StringComparison.Ordinal);
             if (directPrefixIndex >= 0)
             {
                 return new MsmqAddress(queueName, arr[0].Substring(directPrefixIndex + DIRECTPREFIX.Length));
             }
 
-            var tcpPrefixIndex = arr[0].IndexOf(DIRECTPREFIX_TCP);
+            var tcpPrefixIndex = arr[0].IndexOf(DIRECTPREFIX_TCP, StringComparison.Ordinal);
             if (tcpPrefixIndex >= 0)
             {
                 return new MsmqAddress(queueName, arr[0].Substring(tcpPrefixIndex + DIRECTPREFIX_TCP.Length));
@@ -47,7 +47,7 @@ namespace NServiceBus.Transport.Msmq
         public static Dictionary<string, string> ExtractHeaders(Message msmqMessage)
         {
             var headers = DeserializeMessageHeaders(msmqMessage);
-            
+
             //note: we can drop this line when we no longer support interop btw v3 + v4
             if (msmqMessage.ResponseQueue != null && !headers.ContainsKey(Headers.ReplyToAddress))
             {
@@ -62,7 +62,7 @@ namespace NServiceBus.Transport.Msmq
             headers[Headers.CorrelationId] = GetCorrelationId(msmqMessage, headers);
             return headers;
         }
-        
+
         static string GetCorrelationId(Message message, Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(Headers.CorrelationId, out var correlationId))

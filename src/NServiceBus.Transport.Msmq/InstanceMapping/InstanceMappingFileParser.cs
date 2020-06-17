@@ -1,5 +1,6 @@
 namespace NServiceBus.Transport.Msmq
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Xml;
@@ -12,7 +13,7 @@ namespace NServiceBus.Transport.Msmq
         public InstanceMappingFileParser()
         {
             using (var stream = GetType().Assembly.GetManifestResourceStream("NServiceBus.Transport.Msmq.InstanceMapping.endpoints.xsd"))
-            using (var xmlReader = XmlReader.Create(stream))
+            using (var xmlReader = XmlReader.Create(stream??throw new InvalidOperationException("Could not load resource.")))
             {
                 schema = new XmlSchemaSet();
                 schema.Add("", xmlReader);
