@@ -90,7 +90,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
             return new TransportReceiveInfrastructure(
-                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout),
+                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, !msmqSettings.IgnoreIncomingTimeToBeReceivedHeaders),
                 () =>
                 {
                     if (msmqSettings.ExecuteInstaller)
