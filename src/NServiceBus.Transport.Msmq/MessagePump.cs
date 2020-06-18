@@ -149,7 +149,7 @@ namespace NServiceBus.Transport.Msmq
 
                     await concurrencyLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    ReceiveMessage().Ignore();
+                    _ = ReceiveMessage();
                 }
             }
         }
