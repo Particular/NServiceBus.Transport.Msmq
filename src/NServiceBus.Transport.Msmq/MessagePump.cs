@@ -1,9 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Diagnostics;
-    using System.Linq;
     using System.Messaging;
     using System.Threading;
     using System.Threading.Tasks;
@@ -64,8 +62,8 @@ namespace NServiceBus.Transport.Msmq
         {
             MessageQueue.ClearConnectionCache();
 
-            runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
-            concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency);
+            maxConcurrency = limitations.MaxConcurrency;
+            concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
             cancellationTokenSource = new CancellationTokenSource();
 
             cancellationToken = cancellationTokenSource.Token;
@@ -78,21 +76,14 @@ namespace NServiceBus.Transport.Msmq
         {
             cancellationTokenSource.Cancel();
 
-            // ReSharper disable once MethodSupportsCancellation
-            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
-            var allTasks = runningReceiveTasks.Values.Concat(new[]
-            {
-                messagePumpTask
-            });
-            var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
+            await messagePumpTask.ConfigureAwait(false);
 
-            if (finishedTask.Equals(timeoutTask))
+            while (concurrencyLimiter.CurrentCount != maxConcurrency)
             {
-                Logger.Error("The message pump failed to stop with in the time allowed(30s)");
+                await Task.Delay(50, CancellationToken.None).ConfigureAwait(false);
             }
 
             concurrencyLimiter.Dispose();
-            runningReceiveTasks.Clear();
             inputQueue.Dispose();
             errorQueue.Dispose();
         }
@@ -148,24 +139,7 @@ namespace NServiceBus.Transport.Msmq
 
                     await concurrencyLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    var receiveTask = ReceiveMessage();
-
-                    runningReceiveTasks.TryAdd(receiveTask, receiveTask);
-
-                    // We insert the original task into the runningReceiveTasks because we want to await the completion
-                    // of the running receives. ExecuteSynchronously is a request to execute the continuation as part of
-                    // the transition of the antecedents completion phase. This means in most of the cases the continuation
-                    // will be executed during this transition and the antecedent task goes into the completion state only
-                    // after the continuation is executed. This is not always the case. When the TPL thread handling the
-                    // antecedent task is aborted the continuation will be scheduled. But in this case we don't need to await
-                    // the continuation to complete because only really care about the receive operations. The final operation
-                    // when shutting down is a clear of the running tasks anyway.
-                    receiveTask.ContinueWith((t, state) =>
-                    {
-                        var receiveTasks = (ConcurrentDictionary<Task, Task>) state;
-                        receiveTasks.TryRemove(t, out _);
-                    }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously)
-                        .Ignore();
+                    ReceiveMessage().Ignore();
                 }
             }
         }
@@ -225,6 +199,7 @@ namespace NServiceBus.Transport.Msmq
 
         CancellationToken cancellationToken;
         CancellationTokenSource cancellationTokenSource;
+        int maxConcurrency;
         SemaphoreSlim concurrencyLimiter;
         MessageQueue errorQueue;
         MessageQueue inputQueue;
@@ -237,7 +212,6 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
-        ConcurrentDictionary<Task, Task> runningReceiveTasks;
         bool discardExpiredTtbrMessages;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();
