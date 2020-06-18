@@ -61,5 +61,15 @@ namespace NServiceBus
             this.GetSettings().Set(InstanceMappingFileFeature.PathSettingsKey, uriPath);
             return this;
         }
+
+        /// <summary>
+        /// Turns on strict schema validation for the instance mapping XML.
+        /// Unknown attribtutes will trigger a schema validation exception.
+        /// </summary>
+        public InstanceMappingFileSettings EnforceStrictSchemaValidation()
+        {
+            this.GetSettings().Set(InstanceMappingFileFeature.StrictSchemaValidationKey, true);
+            return this;
+        }
     }
 }
