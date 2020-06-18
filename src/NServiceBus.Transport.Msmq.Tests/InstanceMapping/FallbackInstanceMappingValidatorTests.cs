@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using Logging;
-    using Msmq;
     using NUnit.Framework;
     using System;
     using System.IO;

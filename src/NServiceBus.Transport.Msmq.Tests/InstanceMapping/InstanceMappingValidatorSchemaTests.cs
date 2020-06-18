@@ -2,7 +2,6 @@
 {
     using System.Xml.Linq;
     using System.Xml.Schema;
-    using NServiceBus.Transport.Msmq;
     using NUnit.Framework;
 
     [TestFixture]

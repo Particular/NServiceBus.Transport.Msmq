@@ -1,6 +1,5 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using NServiceBus.Transport.Msmq;
     using NUnit.Framework;
     using System.Xml.Linq;
     using System.Xml.Schema;
