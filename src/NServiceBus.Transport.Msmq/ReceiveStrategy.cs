@@ -112,18 +112,20 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        protected async Task<ErrorHandleResult> HandleError(Message message, Dictionary<string, string> headers, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
+        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
         {
             try
             {
                 var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
+                var headers = MsmqUtilities.ExtractHeaders(message);
+
                 var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts);
 
                 return await onError(errorContext).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                criticalError.Raise($"Failed to execute recoverability actions for message `{message.Id}`", ex);
+                criticalError.Raise($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
 
                 //best thing we can do is roll the message back if possible
                 return ErrorHandleResult.RetryRequired;
@@ -133,7 +135,7 @@ namespace NServiceBus.Transport.Msmq
         static async Task<byte[]> ReadStream(Stream bodyStream)
         {
             bodyStream.Seek(0, SeekOrigin.Begin);
-            var length = (int) bodyStream.Length;
+            var length = (int)bodyStream.Length;
             var body = new byte[length];
             await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
             return body;

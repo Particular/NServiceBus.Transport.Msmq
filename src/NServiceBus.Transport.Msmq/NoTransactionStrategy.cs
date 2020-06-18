@@ -32,7 +32,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     message.BodyStream.Position = 0;
 
-                    await HandleError(message, headers, exception, transportTransaction, 1).ConfigureAwait(false);
+                    await HandleError(message, exception, transportTransaction, 1).ConfigureAwait(false);
                 }
             }
         }
