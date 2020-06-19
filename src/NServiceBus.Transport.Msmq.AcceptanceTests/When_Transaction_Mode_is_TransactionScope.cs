@@ -15,7 +15,7 @@
             var searcher = new ManagementObjectSearcher(wmiQuery);
             var results = searcher.Get();
 
-            foreach (ManagementBaseObject service in results)
+            foreach (var service in results)
             {
                 var mode = (string)service["StartMode"];
 
