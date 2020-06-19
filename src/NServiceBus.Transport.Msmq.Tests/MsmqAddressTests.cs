@@ -13,9 +13,9 @@ namespace NServiceBus.Transport.Msmq.Tests
         {
             var address = new MsmqAddress("replyToAddress", "replyToMachine");
             var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue", "destinationmachine"), _ =>
-             {
-                 throw new Exception("Should not call the lookup method");
-             });
+            {
+                throw new Exception("Should not call the lookup method");
+            });
             Assert.AreEqual("replyToMachine", returnAddress.Machine);
         }
 
