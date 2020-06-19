@@ -37,7 +37,7 @@
             });
 
             Assert.AreEqual(
-                "Transaction mode is set to `TransactionScope`. This depends on Microsoft Distributed Transaction Coordinator (MSDTC) which is not available. Either enable MSDTC, or enabled Outbox, or lower transaction mode to `SendsAtomicWithReceive`.",
+                "Transaction mode is set to `TransactionScope`. This depends on Microsoft Distributed Transaction Coordinator (MSDTC) which is not available. Either enable MSDTC, enable Outbox, or lower the transaction mode to `SendsAtomicWithReceive`.",
                 exception.Message
                 );
         }
