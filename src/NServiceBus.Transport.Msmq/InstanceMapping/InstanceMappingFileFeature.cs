@@ -12,13 +12,16 @@ namespace NServiceBus.Transport.Msmq
         {
             EnableByDefault();
 
+            var defaultPath = GetRootedPath(DefaultInstanceMappingFileName);
+            Uri.TryCreate(defaultPath, UriKind.Absolute, out var defaultUri);
+
             Defaults(s =>
             {
                 s.SetDefault(CheckIntervalSettingsKey, TimeSpan.FromSeconds(30));
-                s.SetDefault(PathSettingsKey, DefaultInstanceMappingFileName);
+                s.SetDefault(PathSettingsKey, defaultUri);
             });
 
-            Prerequisite(c => c.Settings.HasExplicitValue(PathSettingsKey) || File.Exists(GetRootedPath(DefaultInstanceMappingFileName)), "No explicit instance mapping file configuration and default file does not exist.");
+            Prerequisite(c => c.Settings.HasExplicitValue(PathSettingsKey) || File.Exists(defaultPath), "No explicit instance mapping file configuration and default file does not exist.");
         }
 
         protected override void Setup(FeatureConfigurationContext context)
@@ -48,7 +51,10 @@ namespace NServiceBus.Transport.Msmq
 
             if (!uri.IsAbsoluteUri || uri.IsFile)
             {
-                var filePath = uri.LocalPath;
+                var filePath = uri.IsAbsoluteUri
+                    ? uri.LocalPath
+                    : GetRootedPath(uri.OriginalString);
+
                 if (!File.Exists(filePath))
                 {
                     throw new FileNotFoundException("The specified instance mapping file does not exist.", filePath);
