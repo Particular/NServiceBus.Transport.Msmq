@@ -11,11 +11,11 @@
     {
         public When_Transaction_Mode_is_TransactionScope()
         {
-            string wmiQuery = "SELECT * FROM Win32_Service WHERE Name='MSDTC'";
+            var wmiQuery = "SELECT * FROM Win32_Service WHERE Name='MSDTC'";
             var searcher = new ManagementObjectSearcher(wmiQuery);
             var results = searcher.Get();
 
-            foreach (ManagementObject service in results)
+            foreach (ManagementBaseObject service in results)
             {
                 var mode = (string)service["StartMode"];
 
@@ -31,12 +31,9 @@
         {
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {
-                var context = await Scenario.Define<ScenarioContext>()
-                        .WithEndpoint<TransactionalEndpoint>(b => b.When((session, c) =>
-                        {
-                            return TaskEx.CompletedTask;
-                        }))
-                        .Run();
+                await Scenario.Define<ScenarioContext>()
+                    .WithEndpoint<TransactionalEndpoint>(b => b.When((session, c) => TaskEx.CompletedTask))
+                    .Run();
             });
 
             Assert.AreEqual(
@@ -45,7 +42,7 @@
                 );
         }
 
-        public class TransactionalEndpoint : EndpointConfigurationBuilder
+        class TransactionalEndpoint : EndpointConfigurationBuilder
         {
             public TransactionalEndpoint()
             {
