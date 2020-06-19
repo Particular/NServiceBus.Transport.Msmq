@@ -33,7 +33,7 @@ namespace NServiceBus.Persistence.Msmq
             return queue.GetAllMessages().Select(m => new MsmqSubscriptionMessage(m));
         }
 
-        public string Send(string body, string label)
+        public void Send(string body, string label)
         {
             var toSend = new Message
             {
@@ -44,8 +44,6 @@ namespace NServiceBus.Persistence.Msmq
             };
 
             queue.Send(toSend, transactionTypeToUseForSend);
-
-            return toSend.Id;
         }
 
         public void TryReceiveById(string messageId)

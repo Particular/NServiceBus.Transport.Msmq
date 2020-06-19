@@ -312,7 +312,7 @@
                 return Messages.ToArray();
             }
 
-            public string Send(string body, string label)
+            public void Send(string body, string label)
             {
                 var id = Guid.NewGuid().ToString();
 
@@ -323,8 +323,6 @@
                     Label = label,
                     Id = id
                 });
-
-                return id;
             }
 
             public void TryReceiveById(string messageId)

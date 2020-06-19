@@ -5,7 +5,7 @@ namespace NServiceBus.Persistence.Msmq
     interface IMsmqSubscriptionStorageQueue
     {
         IEnumerable<MsmqSubscriptionMessage> GetAllMessages();
-        string Send(string body, string label);
+        void Send(string body, string label);
         void TryReceiveById(string messageId);
     }
 }

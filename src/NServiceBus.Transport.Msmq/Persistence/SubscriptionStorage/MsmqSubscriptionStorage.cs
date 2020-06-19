@@ -3,7 +3,6 @@ namespace NServiceBus.Persistence.Msmq
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -29,7 +28,7 @@ namespace NServiceBus.Persistence.Msmq
                 .OrderByDescending(m => m.ArrivedTime)
                 .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
                 .ToArray();
-            var lookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
+            var newLookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
 
             foreach (var m in messages)
             {
@@ -37,9 +36,9 @@ namespace NServiceBus.Persistence.Msmq
                 var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
                 var subscriber = Deserialize(m.Label);
 
-                if (!lookup.TryGetValue(subscriber, out var endpointSubscriptions))
+                if (!newLookup.TryGetValue(subscriber, out var endpointSubscriptions))
                 {
-                    lookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
+                    newLookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
                 }
 
                 if (endpointSubscriptions.ContainsKey(messageType))
@@ -53,7 +52,7 @@ namespace NServiceBus.Persistence.Msmq
                 }
             }
 
-            this.lookup = lookup;
+            lookup = newLookup;
         }
 
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
