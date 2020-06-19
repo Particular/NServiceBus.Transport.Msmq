@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.Xml.Linq;
-    using System.Xml.Schema;
     using NUnit.Framework;
     using Routing;
 
@@ -46,34 +45,5 @@
             Assert.DoesNotThrow(() => parser.Parse(doc));
         }
 
-        [Test]
-        public void It_requires_endpoint_name()
-        {
-            const string xml = @"
-<endpoints>
-    <endpoint/>
-</endpoints>
-";
-            var doc = XDocument.Parse(xml);
-            var parser = new InstanceMappingFileParser();
-
-            var exception = Assert.Throws<XmlSchemaValidationException>(() => parser.Parse(doc));
-            Assert.That(exception.Message, Does.Contain("The required attribute 'name' is missing."));
-        }
-
-        [Test]
-        public void It_requires_endpoint_to_have_an_instance()
-        {
-            const string xml = @"
-<endpoints>
-    <endpoint name=""A""/>
-</endpoints>
-";
-            var doc = XDocument.Parse(xml);
-            var parser = new InstanceMappingFileParser();
-
-            var exception = Assert.Throws<XmlSchemaValidationException>(() => parser.Parse(doc));
-            Assert.That(exception.Message, Does.Contain("The element 'endpoint' has incomplete content. List of possible elements expected: 'instance'."));
-        }
     }
 }

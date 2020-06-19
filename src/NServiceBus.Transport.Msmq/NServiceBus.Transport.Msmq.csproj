@@ -21,7 +21,9 @@
 
   <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
-    <EmbeddedResource Include="InstanceMapping\endpoints.xsd" />
+    <None Remove="InstanceMapping\endpointsV2.xsd" />
+    <EmbeddedResource Include="InstanceMapping\Validators\endpointsV2.xsd" />
+    <EmbeddedResource Include="InstanceMapping\Validators\endpoints.xsd" />
   </ItemGroup>
 
   <ItemGroup>

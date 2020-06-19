@@ -61,11 +61,27 @@ namespace NServiceBus.Transport.Msmq
                 loader = new InstanceMappingUriLoader(uri);
             }
 
-            return loader;
+            IInstanceMappingValidator validator;
+
+            if(settings.GetOrDefault<bool>(StrictSchemaValidationKey))
+            {
+                validator = EmbeddedSchemaInstanceMappingValidator.CreateValidatorV2();
+            }
+            else
+            {
+                validator = new FallbackInstanceMappingValidator(
+                    EmbeddedSchemaInstanceMappingValidator.CreateValidatorV2(),
+                    EmbeddedSchemaInstanceMappingValidator.CreateValidatorV1(),
+                    "Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes."
+                );
+            }
+
+            return new ValidatingInstanceMappingLoader(loader, validator);
         }
 
         public const string CheckIntervalSettingsKey = "InstanceMappingFile.CheckInterval";
         public const string PathSettingsKey = "InstanceMappingFile.Path";
+        public const string StrictSchemaValidationKey = "InstanceMappingFile.StrictSchemaValidation";
         const string DefaultInstanceMappingFileName = "instance-mapping.xml";
     }
 }

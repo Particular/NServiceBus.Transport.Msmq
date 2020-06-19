@@ -1,29 +1,14 @@
 namespace NServiceBus.Transport.Msmq
 {
-    using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Xml;
     using System.Xml.Linq;
-    using System.Xml.Schema;
     using Routing;
 
     class InstanceMappingFileParser
     {
-        public InstanceMappingFileParser()
-        {
-            using (var stream = GetType().Assembly.GetManifestResourceStream("NServiceBus.Transport.Msmq.InstanceMapping.endpoints.xsd"))
-            using (var xmlReader = XmlReader.Create(stream??throw new InvalidOperationException("Could not load resource.")))
-            {
-                schema = new XmlSchemaSet();
-                schema.Add("", xmlReader);
-            }
-        }
-
         public List<EndpointInstance> Parse(XDocument document)
         {
-            document.Validate(schema, null, true);
-
             var root = document.Root;
             var endpointElements = root.Descendants("endpoint");
 
@@ -47,7 +32,5 @@ namespace NServiceBus.Transport.Msmq
 
             return instances;
         }
-
-        XmlSchemaSet schema;
     }
 }

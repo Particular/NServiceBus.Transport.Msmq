@@ -14,6 +14,7 @@ namespace NServiceBus
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
         public InstanceMappingFileSettings(NServiceBus.Settings.SettingsHolder settings) { }
+        public NServiceBus.InstanceMappingFileSettings EnforceStrictSchemaValidation() { }
         public NServiceBus.InstanceMappingFileSettings FilePath(string filePath) { }
         public NServiceBus.InstanceMappingFileSettings Path(System.Uri uriPath) { }
         public NServiceBus.InstanceMappingFileSettings RefreshInterval(System.TimeSpan refreshInterval) { }
