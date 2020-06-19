@@ -24,7 +24,7 @@
             await storage.Subscribe(new Subscriber("sub2", "endpointA"), messageType, new ContextBag());
 
             var storedMessages = queue.GetAllMessages().ToArray();
-            Assert.That(storedMessages.Length, Is.EqualTo(2));
+            Assert.That(storedMessages.Length, Is.EqualTo(2), "");
 
             storage = CreateAndInit(queue);
             var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
@@ -192,7 +192,7 @@
         [Test]
         public void Messages_with_the_same_timestamp_have_repeatedly_same_order()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             var msg1 = new MsmqSubscriptionMessage
             {
@@ -211,7 +211,7 @@
 
             var queue1 = new FakeStorageQueue();
             var storage1 = new MsmqSubscriptionStorage(queue1);
-            queue1.Messages.AddRange(new []
+            queue1.Messages.AddRange(new[]
             {
                 msg1,
                 msg2,
@@ -259,6 +259,33 @@
             Assert.AreEqual("subscriberA", subscribers.Single().Endpoint);
         }
 
+        [Test]
+        public async Task ExpectStorageInSyncWithStateAfterSubscribe()
+        {
+            var queue = new FakeStorageQueue();
+            var messageType = new MessageType(typeof(SomeMessage));
+            var storage = CreateAndInit(queue);
+
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+
+            var storedMessageCount = queue.GetAllMessages().Count();
+            Assert.AreEqual(1, storedMessageCount, nameof(storedMessageCount));
+        }
+
+        [Test]
+        public async Task ExpectStorageInSyncWithStateAfterUnsubscribe()
+        {
+            var queue = new FakeStorageQueue();
+            var messageType = new MessageType(typeof(SomeMessage));
+            var storage = CreateAndInit(queue);
+
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Unsubscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+
+            var storedMessageCount = queue.GetAllMessages().Count();
+            Assert.AreEqual(0, storedMessageCount, nameof(storedMessageCount));
+        }
         static MsmqSubscriptionStorage CreateAndInit(FakeStorageQueue queue)
         {
             var storage = new MsmqSubscriptionStorage(queue);
@@ -278,7 +305,7 @@
         {
             public readonly List<MsmqSubscriptionMessage> Messages = new List<MsmqSubscriptionMessage>();
 
-            DateTime arrivedTime = DateTime.Now;
+            DateTime arrivedTime = DateTime.UtcNow;
 
             public IEnumerable<MsmqSubscriptionMessage> GetAllMessages()
             {
