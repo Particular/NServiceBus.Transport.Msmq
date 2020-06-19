@@ -1,6 +1,7 @@
 namespace NServiceBus
 {
     using System;
+    using System.Transactions;
     using Features;
     using Routing;
     using Settings;
@@ -31,6 +32,7 @@ namespace NServiceBus
         public override TransportInfrastructure Initialize(SettingsHolder settings, string connectionString)
         {
             Guard.AgainstNull(nameof(settings), settings);
+            ValidateIfDtcIsAvailable(settings);
 
             if (!settings.GetOrDefault<bool>("Endpoint.SendOnly") && !settings.TryGetExplicitlyConfiguredErrorQueueAddress(out _))
             {
@@ -82,6 +84,27 @@ transport.TimeToReachQueue(timespanValue);";
             }
             //otherwise use msmq default which is transactional
             return true;
+        }
+
+        static void ValidateIfDtcIsAvailable(ReadOnlySettings settings)
+        {
+            var settingAvailable = settings.TryGet(out TransportTransactionMode transactionMode);
+
+            if (!settingAvailable  || transactionMode == TransportTransactionMode.TransactionScope)
+            {
+                try
+                {
+                    using (var ts = new TransactionScope())
+                    {
+                        TransactionInterop.GetTransmitterPropagationToken(Transaction.Current); // Enforce promotion to MSDTC
+                        ts.Complete();
+                    }
+                }
+                catch (TransactionAbortedException)
+                {
+                    throw new Exception("Transaction mode is set to `TransactionScope`. This depends on Microsoft Distributed Transaction Coordinator (MSDTC) which is not available. Either enable MSDTC, or enabled Outbox, or lower transaction mode to `SendsAtomicWithReceive`.");
+                }
+            }
         }
     }
 }
