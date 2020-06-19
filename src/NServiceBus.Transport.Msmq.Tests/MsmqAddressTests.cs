@@ -1,9 +1,7 @@
 namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
-    using System.Linq;
     using System.Net;
-    using System.Runtime.InteropServices;
     using NUnit.Framework;
 
     [TestFixture]
