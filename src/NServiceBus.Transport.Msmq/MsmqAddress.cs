@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Linq;
     using System.Net;
     using Support;
 
@@ -48,14 +49,37 @@ namespace NServiceBus.Transport.Msmq
             return new MsmqAddress(queue, machineName);
         }
 
-        public bool IsRemote => Machine != RuntimeEnvironment.MachineName;
+        public bool IsRemote() => Machine != RuntimeEnvironment.MachineName && IsLocalIpAddress(Machine) != true;
+
+        static bool? IsLocalIpAddress(string hostName)
+        {
+            if (string.IsNullOrWhiteSpace(hostName))
+            {
+                return null;
+            }
+            try
+            {
+                var hostIPs = Dns.GetHostAddresses(hostName);
+                var localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+
+                if (hostIPs.Any(hostIp => IPAddress.IsLoopback(hostIp) || localIPs.Contains(hostIp)))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+            return false;
+        }
 
         static string ApplyLocalMachineConventions(string machineName)
         {
             if (
                 machineName == "." ||
                 machineName.ToLower() == "localhost" ||
-                machineName == IPAddress.Loopback.ToString()
+                IPAddress.TryParse(machineName, out var address) && IPAddress.IsLoopback(address)
                 )
             {
                 return RuntimeEnvironment.MachineName;

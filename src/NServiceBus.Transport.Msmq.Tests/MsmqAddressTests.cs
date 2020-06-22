@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
+    using System.Net;
     using NUnit.Framework;
 
     [TestFixture]
@@ -11,7 +12,7 @@ namespace NServiceBus.Transport.Msmq.Tests
         public void If_both_addresses_are_specified_via_host_name_it_should_not_convert()
         {
             var address = new MsmqAddress("replyToAddress", "replyToMachine");
-            var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue","destinationmachine"), _ =>
+            var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue", "destinationmachine"), _ =>
             {
                 throw new Exception("Should not call the lookup method");
             });
@@ -35,6 +36,35 @@ namespace NServiceBus.Transport.Msmq.Tests
             var address = new MsmqAddress("replyToAddress", "replyToMachine");
             var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue", "202.171.13.140"), _ => "10.10.10.10");
             Assert.AreEqual("10.10.10.10", returnAddress.Machine);
+        }
+
+        [Test]
+        [TestCase("::1")]
+        [TestCase(".")]
+        public void If_machine_is_looplocal_is_specified_is_remote_should_be_false(string machine)
+        {
+            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machine).IsRemote());
+        }
+
+        [Test]
+        public void If_local_machine_name_is_remote_should_be_false()
+        {
+            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + Environment.MachineName).IsRemote());
+        }
+
+        [Test]
+        public void If_machine_name_is_local_ip_is_remote_should_be_false()
+        {
+            var machinename = "localtestmachinename";
+            try
+            {
+                Dns.GetHostAddresses(machinename);
+            }
+            catch
+            {
+                Assert.Ignore($"Add `127.0.0.1 {machinename}` to hosts file for this test to run.");
+            }
+            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machinename).IsRemote());
         }
     }
 }
