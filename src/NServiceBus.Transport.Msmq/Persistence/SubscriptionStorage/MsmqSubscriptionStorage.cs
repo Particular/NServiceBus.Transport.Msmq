@@ -3,6 +3,7 @@ namespace NServiceBus.Persistence.Msmq
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -24,82 +25,137 @@ namespace NServiceBus.Persistence.Msmq
 
         public void Init()
         {
-            var messages = storageQueue.GetAllMessages()
-                .OrderByDescending(m => m.ArrivedTime)
-                .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
-                .ToArray();
-            var newLookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
-
-            foreach (var m in messages)
+            rwl.EnterWriteLock();
+            try
             {
-                var messageTypeString = m.Body as string;
-                var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
-                var subscriber = Deserialize(m.Label);
+                var messages = storageQueue.GetAllMessages()
+                    .OrderByDescending(m => m.ArrivedTime)
+                    .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
+                    .ToArray();
+                var newLookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
 
-                if (!newLookup.TryGetValue(subscriber, out var endpointSubscriptions))
+                foreach (var m in messages)
                 {
-                    newLookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
+                    var messageTypeString = m.Body as string;
+                    var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
+                    var subscriber = Deserialize(m.Label);
+
+                    if (!newLookup.TryGetValue(subscriber, out var endpointSubscriptions))
+                    {
+                        newLookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
+                    }
+
+                    if (endpointSubscriptions.ContainsKey(messageType))
+                    {
+                        // this message is stale and can be removed
+                        storageQueue.TryReceiveById(m.Id);
+                    }
+                    else
+                    {
+                        endpointSubscriptions[messageType] = m.Id;
+                    }
                 }
 
-                if (endpointSubscriptions.ContainsKey(messageType))
-                {
-                    // this message is stale and can be removed
-                    storageQueue.TryReceiveById(m.Id);
-                }
-                else
-                {
-                    endpointSubscriptions[messageType] = m.Id;
-                }
+                lookup = newLookup;
             }
-
-            lookup = newLookup;
+            finally
+            {
+                rwl.ExitWriteLock();
+            }
         }
 
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
         {
-            var messagelist = messageTypes.ToArray();
-            var result = new HashSet<Subscriber>();
-
-            foreach (var subscribers in lookup)
+            rwl.EnterReadLock();
+            try
             {
-                foreach (var messageType in messagelist)
+                var messagelist = messageTypes.ToArray();
+                var result = new HashSet<Subscriber>();
+
+                foreach (var subscribers in lookup)
                 {
-                    if (subscribers.Value.TryGetValue(messageType, out _))
+                    foreach (var messageType in messagelist)
                     {
-                        result.Add(subscribers.Key);
+                        if (subscribers.Value.TryGetValue(messageType, out _))
+                        {
+                            result.Add(subscribers.Key);
+                        }
                     }
                 }
-            }
 
-            return Task.FromResult<IEnumerable<Subscriber>>(result);
+                return Task.FromResult<IEnumerable<Subscriber>>(result);
+            }
+            finally
+            {
+                rwl.ExitReadLock();
+            }
         }
 
         public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            var body = $"{messageType.TypeName}, Version={messageType.Version}";
-            var label = Serialize(subscriber);
-            storageQueue.Send(body, label);
+            rwl.EnterUpgradeableReadLock();
+            try
+            {
+                if (null == GetFromLookup(subscriber, messageType))
+                {
+                    rwl.EnterWriteLock();
+                    try
+                    {
+                        // Only a single (upgradable) writer can obtain the `EnterUpgradeableReadLock`, no need to execute `GetFromLookup` again.
 
-            log.DebugFormat($"Subscriber {subscriber.TransportAddress} added for message {messageType}.");
+                        var body = $"{messageType.TypeName}, Version={messageType.Version}";
+                        var label = Serialize(subscriber);
+                        storageQueue.Send(body, label);
 
-            Init(); // Reload, which will dedupe storage entries FIFO.
+                        log.DebugFormat($"Subscriber {subscriber.TransportAddress} added for message {messageType}.");
+
+                        Init(); // Reload, which will dedupe storage entries FIFO.
+                    }
+                    finally
+                    {
+                        rwl.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                rwl.ExitUpgradeableReadLock();
+            }
 
             return TaskEx.CompletedTask;
         }
 
         public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            var messageId = GetFromLookup(subscriber, messageType);
-
-            if (messageId != null)
+            rwl.EnterUpgradeableReadLock();
+            try
             {
-                storageQueue.TryReceiveById(messageId);
+                if (null != GetFromLookup(subscriber, messageType))
+                {
+                    rwl.EnterWriteLock();
+                    try
+                    {
+                        var messageId = GetFromLookup(subscriber, messageType);
+
+                        if (messageId != null)
+                        {
+                            storageQueue.TryReceiveById(messageId);
+                        }
+
+                        log.Debug($"Subscriber {subscriber.TransportAddress} removed for message {messageType}.");
+
+                        Init(); // Reload, which will dedupe storage entries FIFO.
+                    }
+                    finally
+                    {
+                        rwl.ExitWriteLock();
+                    }
+                }
             }
-
-            log.Debug($"Subscriber {subscriber.TransportAddress} removed for message {messageType}.");
-
-            Init(); // Reload, which will dedupe storage entries FIFO.
-
+            finally
+            {
+                rwl.ExitUpgradeableReadLock();
+            }
             return TaskEx.CompletedTask;
         }
 
@@ -123,6 +179,7 @@ namespace NServiceBus.Persistence.Msmq
             return new Subscriber(parts[0], endpointName);
         }
 
+
         string GetFromLookup(Subscriber subscriber, MessageType typeName)
         {
             if (lookup.TryGetValue(subscriber, out var subscriptions))
@@ -138,7 +195,7 @@ namespace NServiceBus.Persistence.Msmq
 
         Dictionary<Subscriber, Dictionary<MessageType, string>> lookup;
         IMsmqSubscriptionStorageQueue storageQueue;
-
+        ReaderWriterLockSlim rwl = new ReaderWriterLockSlim();
         static ILog log = LogManager.GetLogger(typeof(ISubscriptionStorage));
         static TransportAddressEqualityComparer SubscriberComparer = new TransportAddressEqualityComparer();
 
