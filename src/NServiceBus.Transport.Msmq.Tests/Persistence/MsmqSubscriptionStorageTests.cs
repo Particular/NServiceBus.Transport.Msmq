@@ -24,7 +24,7 @@
             await storage.Subscribe(new Subscriber("sub2", "endpointA"), messageType, new ContextBag());
 
             var storedMessages = queue.GetAllMessages().ToArray();
-            Assert.That(storedMessages.Length, Is.EqualTo(2), "");
+            Assert.That(storedMessages.Length, Is.EqualTo(2));
 
             storage = CreateAndInit(queue);
             var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
