@@ -3,7 +3,6 @@ namespace NServiceBus.Persistence.Msmq
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -25,8 +24,7 @@ namespace NServiceBus.Persistence.Msmq
 
         public void Init()
         {
-            rwl.EnterWriteLock();
-            try
+            lock (lookupLockObject)
             {
                 var messages = storageQueue.GetAllMessages()
                     .OrderByDescending(m => m.ArrivedTime)
@@ -58,104 +56,50 @@ namespace NServiceBus.Persistence.Msmq
 
                 lookup = newLookup;
             }
-            finally
-            {
-                rwl.ExitWriteLock();
-            }
         }
 
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
         {
-            rwl.EnterReadLock();
-            try
-            {
-                var messagelist = messageTypes.ToArray();
-                var result = new HashSet<Subscriber>();
+            var messagelist = messageTypes.ToArray();
+            var result = new HashSet<Subscriber>();
 
-                foreach (var subscribers in lookup)
+            foreach (var subscribers in lookup)
+            {
+                foreach (var messageType in messagelist)
                 {
-                    foreach (var messageType in messagelist)
+                    if (subscribers.Value.TryGetValue(messageType, out _))
                     {
-                        if (subscribers.Value.TryGetValue(messageType, out _))
-                        {
-                            result.Add(subscribers.Key);
-                        }
+                        result.Add(subscribers.Key);
                     }
                 }
+            }
 
-                return Task.FromResult<IEnumerable<Subscriber>>(result);
-            }
-            finally
-            {
-                rwl.ExitReadLock();
-            }
+            return Task.FromResult<IEnumerable<Subscriber>>(result);
         }
 
         public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            rwl.EnterUpgradeableReadLock();
-            try
-            {
-                if (null == GetFromLookup(subscriber, messageType))
-                {
-                    rwl.EnterWriteLock();
-                    try
-                    {
-                        // Only a single (upgradable) writer can obtain the `EnterUpgradeableReadLock`, no need to execute `GetFromLookup` again.
+            var body = $"{messageType.TypeName}, Version={messageType.Version}";
+            var label = Serialize(subscriber);
+            storageQueue.Send(body, label);
 
-                        var body = $"{messageType.TypeName}, Version={messageType.Version}";
-                        var label = Serialize(subscriber);
-                        storageQueue.Send(body, label);
-
-                        log.DebugFormat($"Subscriber {subscriber.TransportAddress} added for message {messageType}.");
-
-                        Init(); // Reload, which will dedupe storage entries FIFO.
-                    }
-                    finally
-                    {
-                        rwl.ExitWriteLock();
-                    }
-                }
-            }
-            finally
-            {
-                rwl.ExitUpgradeableReadLock();
-            }
+            Init(); // Reload, which will dedupe storage entries FIFO.
 
             return TaskEx.CompletedTask;
         }
 
         public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
         {
-            rwl.EnterUpgradeableReadLock();
-            try
+            var messageId = GetFromLookup(subscriber, messageType);
+
+            if (messageId != null)
             {
-                if (null != GetFromLookup(subscriber, messageType))
-                {
-                    rwl.EnterWriteLock();
-                    try
-                    {
-                        var messageId = GetFromLookup(subscriber, messageType);
-
-                        if (messageId != null)
-                        {
-                            storageQueue.TryReceiveById(messageId);
-                        }
-
-                        log.Debug($"Subscriber {subscriber.TransportAddress} removed for message {messageType}.");
-
-                        Init(); // Reload, which will dedupe storage entries FIFO.
-                    }
-                    finally
-                    {
-                        rwl.ExitWriteLock();
-                    }
-                }
+                storageQueue.TryReceiveById(messageId);
+                Init(); // Reload, which will dedupe storage entries FIFO.
             }
-            finally
-            {
-                rwl.ExitUpgradeableReadLock();
-            }
+
+            log.Debug($"Subscriber {subscriber.TransportAddress} removed for message {messageType}.");
+
             return TaskEx.CompletedTask;
         }
 
@@ -195,7 +139,8 @@ namespace NServiceBus.Persistence.Msmq
 
         Dictionary<Subscriber, Dictionary<MessageType, string>> lookup;
         IMsmqSubscriptionStorageQueue storageQueue;
-        ReaderWriterLockSlim rwl = new ReaderWriterLockSlim();
+        object lookupLockObject = new object();
+
         static ILog log = LogManager.GetLogger(typeof(ISubscriptionStorage));
         static TransportAddressEqualityComparer SubscriberComparer = new TransportAddressEqualityComparer();
 
