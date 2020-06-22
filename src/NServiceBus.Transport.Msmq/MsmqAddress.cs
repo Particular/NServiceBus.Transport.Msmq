@@ -49,7 +49,7 @@ namespace NServiceBus.Transport.Msmq
             return new MsmqAddress(queue, machineName);
         }
 
-        public bool IsRemote => Machine != RuntimeEnvironment.MachineName && IsLocalIpAddress(Machine) != true;
+        public bool IsRemote() => Machine != RuntimeEnvironment.MachineName && IsLocalIpAddress(Machine) != true;
 
         static bool? IsLocalIpAddress(string hostName)
         {

@@ -13,7 +13,7 @@
             var queuePath = msmqAddress.PathWithoutPrefix;
 
             Logger.Debug($"Checking if queue exists: {queuePath}.");
-            if (msmqAddress.IsRemote)
+            if (msmqAddress.IsRemote())
             {
                 Logger.Info($"Since {address} is remote, the queue could not be verified. Make sure the queue exists and that the address and permissions are correct. Messages could end up in the dead letter queue if configured incorrectly.");
                 return;

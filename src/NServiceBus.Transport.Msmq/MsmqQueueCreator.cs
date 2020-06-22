@@ -34,7 +34,7 @@ namespace NServiceBus.Transport.Msmq
 
             Logger.Debug($"Creating '{address}' if needed.");
 
-            if (msmqAddress.IsRemote)
+            if (msmqAddress.IsRemote())
             {
                 Logger.Info($"'{address}' is a remote queue and won't be created");
                 return;
