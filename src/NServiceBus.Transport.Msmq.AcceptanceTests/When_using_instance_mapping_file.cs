@@ -10,8 +10,20 @@
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using Settings;
 
+    [NonParallelizable] // Due to default instance mapping file
+    [TestFixture(true)]
+    [TestFixture(false)]
     public class When_using_instance_mapping_file : NServiceBusAcceptanceTest
     {
+        readonly bool defaultFile;
+        readonly string mappingFilePath;
+
+        public When_using_instance_mapping_file(bool defaultFile)
+        {
+            this.defaultFile = defaultFile;
+            mappingFilePath = Path.Combine(TestContext.CurrentContext.TestDirectory, defaultFile ? "instance-mapping.xml" : nameof(When_using_instance_mapping_file) + ".xml");
+        }
+
         [SetUp]
         public void SetupMappingFile()
         {
@@ -37,7 +49,15 @@
         public async Task Should_send_messages_to_configured_instances()
         {
             var context = await Scenario.Define<Context>()
-                .WithEndpoint<SenderWithMappingFile>(e => e.When(async c =>
+                .WithEndpoint<SenderWithMappingFile>(e => e.CustomConfig(cfg =>
+                {
+                    if (!defaultFile)
+                    {
+                        var routingSettings = cfg.UseTransport<MsmqTransport>().Routing();
+                        routingSettings.InstanceMappingFile().FilePath(mappingFilePath);
+                    }
+                })
+                .When(async c =>
                 {
                     for (var i = 0; i < 5; i++)
                     {
@@ -53,7 +73,6 @@
             Assert.That(context.MessagesForInstance2, Is.EqualTo(5));
         }
 
-        static string mappingFilePath = Path.Combine(TestContext.CurrentContext.TestDirectory, nameof(When_using_instance_mapping_file) + ".xml");
         static string destination;
 
         public class Context : ScenarioContext
@@ -70,7 +89,6 @@
                 {
                     var routingSettings = c.UseTransport<MsmqTransport>().Routing();
                     routingSettings.RouteToEndpoint(typeof(Message), destination);
-                    routingSettings.InstanceMappingFile().FilePath(mappingFilePath);
                 });
             }
         }
