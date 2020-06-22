@@ -113,27 +113,6 @@
         }
 
         [Test]
-        public void Should_give_everyone_and_anonymous_access_rights_when_creating_queues()
-        {
-            var path = MsmqAddress.Parse(testQueueNameForReceiving).PathWithoutPrefix;
-
-            using (var queue = MessageQueue.Create(path))
-            {
-                Assert.True(queue.TryGetPermissions(LocalEveryoneGroupName, out var everyoneAccessRights, out var accessControlEntryTypeForEveryone));
-                Assert.True(everyoneAccessRights.HasValue, $"{LocalEveryoneGroupName} should have access rights");
-                Assert.True(everyoneAccessRights.Value.HasFlag(MessageQueueAccessRights.GenericWrite), $"{LocalEveryoneGroupName} should have GenericWrite access by default");
-                Assert.True(accessControlEntryTypeForEveryone == AccessControlEntryType.Allow);
-
-
-                Assert.True(queue.TryGetPermissions(LocalAnonymousLogonName, out var anonymousAccessRights, out var accessControlEntryTypeForAnonymous));
-                Assert.True(anonymousAccessRights.HasValue, $"{LocalAnonymousLogonName} should have access rights");
-                Assert.True(anonymousAccessRights.Value.HasFlag(MessageQueueAccessRights.WriteMessage), $"{LocalAnonymousLogonName} should have write access by default");
-                Assert.True(accessControlEntryTypeForAnonymous == AccessControlEntryType.Allow);
-            }
-        }
-
-
-        [Test]
         public void Should_not_add_everyone_and_anonymous_to_already_existing_queues()
         {
             var path = MsmqAddress.Parse(testQueueNameForReceiving).PathWithoutPrefix;
