@@ -43,20 +43,24 @@
 
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context Context { get; set; }
+                private readonly Context scenarioContext;
+                public MyMessageHandler(Context scenarioContext)
+                {
+                    this.scenarioContext = scenarioContext;
+                }
 
                 public Task Handle(MyMessage messageThatIsEnlisted, IMessageHandlerContext context)
                 {
                     using (var tx = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        Context.DistributedIdentifierBefore = Transaction.Current.TransactionInformation.DistributedIdentifier;
+                        scenarioContext.DistributedIdentifierBefore = Transaction.Current.TransactionInformation.DistributedIdentifier;
 
-                        Context.CanEnlistPromotable = Transaction.Current.EnlistPromotableSinglePhase(new FakePromotableResourceManager());
+                        scenarioContext.CanEnlistPromotable = Transaction.Current.EnlistPromotableSinglePhase(new FakePromotableResourceManager());
 
                         tx.Complete();
                     }
 
-                    Context.HandlerInvoked = true;
+                    scenarioContext.HandlerInvoked = true;
 
                     return Task.FromResult(0);
                 }

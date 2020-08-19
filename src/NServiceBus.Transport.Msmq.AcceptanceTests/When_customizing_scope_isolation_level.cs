@@ -77,17 +77,20 @@
 
             class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                // ReSharper disable once UnusedAutoPropertyAccessor.Local
-                public Context Context { get; set; }
+                private readonly Context scenarioContext;
+                public MyMessageHandler(Context scenarioContext)
+                {
+                    this.scenarioContext = scenarioContext;
+                }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
                     if (Transaction.Current != null)
                     {
-                        Context.AmbientTransactionPresent = Transaction.Current != null;
-                        Context.IsolationLevel = Transaction.Current.IsolationLevel;
+                        scenarioContext.AmbientTransactionPresent = Transaction.Current != null;
+                        scenarioContext.IsolationLevel = Transaction.Current.IsolationLevel;
                     }
-                    Context.Done = true;
+                    scenarioContext.Done = true;
 
                     return Task.FromResult(0);
                 }

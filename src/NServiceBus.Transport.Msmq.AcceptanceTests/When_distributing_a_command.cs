@@ -134,13 +134,17 @@
 
             public class MyMessageHandler : IHandleMessages<RequestA>
             {
-                public ReadOnlySettings Settings { get; set; }
+                private readonly ReadOnlySettings settings;
+                public MyMessageHandler(ReadOnlySettings settings)
+                {
+                    this.settings = settings;
+                }              
 
                 public Task Handle(RequestA message, IMessageHandlerContext context)
                 {
                     return context.Reply(new ResponseA
                     {
-                        EndpointInstance = Settings.Get<string>("EndpointInstanceDiscriminator")
+                        EndpointInstance = settings.Get<string>("EndpointInstanceDiscriminator")
                     });
                 }
             }
@@ -155,13 +159,17 @@
 
             public class MyMessageHandler : IHandleMessages<RequestB>
             {
-                public ReadOnlySettings Settings { get; set; }
+                private readonly ReadOnlySettings settings;
+                public MyMessageHandler(ReadOnlySettings settings)
+                {
+                    this.settings = settings;
+                }
 
                 public Task Handle(RequestB message, IMessageHandlerContext context)
                 {
                     return context.Reply(new ResponseB
                     {
-                        EndpointInstance = Settings.Get<string>("EndpointInstanceDiscriminator")
+                        EndpointInstance = settings.Get<string>("EndpointInstanceDiscriminator")
                     });
                 }
             }
