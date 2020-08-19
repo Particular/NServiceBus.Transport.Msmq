@@ -52,7 +52,7 @@ namespace NServiceBus
                 throw new ArgumentException("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", nameof(isolationLevel));
             }
 
-            transportExtensions.GetSettings().Set<MsmqScopeOptions>(new MsmqScopeOptions(timeout, isolationLevel));
+            transportExtensions.GetSettings().Set(new MsmqScopeOptions(timeout, isolationLevel));
             return transportExtensions;
         }
 
