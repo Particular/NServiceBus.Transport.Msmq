@@ -39,7 +39,7 @@
         {
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.GetService<IDispatchMessages>()));
+                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.GetRequiredService<IDispatchMessages>()));
             }
 
             class V33ControlMessageSimulatorTask : FeatureStartupTask
