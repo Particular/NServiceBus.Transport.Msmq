@@ -99,16 +99,20 @@
 
         public class MyMessageHandler : IHandleMessages<MyMessage>
         {
-            public Context Context { get; set; }
+            private readonly Context scenarioContext;
+            public MyMessageHandler(Context scenarioContext)
+            {
+                this.scenarioContext = scenarioContext;
+            }
 
             public Task Handle(MyMessage message, IMessageHandlerContext context)
             {
-                if (Context.Id != message.Id)
+                if (scenarioContext.Id != message.Id)
                 {
                     return Task.FromResult(0);
                 }
 
-                Context.WasCalled = true;
+                scenarioContext.WasCalled = true;
 
                 return Task.FromResult(0);
             }

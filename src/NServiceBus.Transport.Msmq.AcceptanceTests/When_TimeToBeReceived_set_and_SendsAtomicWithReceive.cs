@@ -40,11 +40,15 @@
             }
             public class MyMessageHandler : IHandleMessages<MyMessage>
             {
-                public Context Context { get; set; }
+                private readonly Context scenarioContext;
+                public MyMessageHandler(Context scenarioContext)
+                {
+                    this.scenarioContext = scenarioContext;
+                }
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
-                    Context.HandlerInvoked = true;
+                    scenarioContext.HandlerInvoked = true;
                     return context.SendLocal(new MyTimeToBeReceivedMessage());
                 }
             }

@@ -88,11 +88,15 @@
 
             public class MyMessageHandler : IHandleMessages<MyEvent>
             {
-                public Context Context { get; set; }
+                private readonly Context scenarioContext;
+                public MyMessageHandler(Context scenarioContext)
+                {
+                    this.scenarioContext = scenarioContext;
+                }
 
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
-                    Context.OnReceived1();
+                    scenarioContext.OnReceived1();
                     return Task.FromResult(0);
                 }
             }
@@ -112,11 +116,15 @@
 
             public class MyMessageHandler : IHandleMessages<MyEvent>
             {
-                public Context Context { get; set; }
+                private readonly Context scenarioContext;
+                public MyMessageHandler(Context scenarioContext)
+                {
+                    this.scenarioContext = scenarioContext;
+                }
 
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
-                    Context.OnReceived2();
+                    scenarioContext.OnReceived2();
                     return Task.FromResult(0);
                 }
             }

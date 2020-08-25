@@ -10,6 +10,7 @@
     using Features;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
+    using Microsoft.Extensions.DependencyInjection;
     using NUnit.Framework;
     using Pipeline;
     using Routing;
@@ -38,7 +39,7 @@
         {
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.Build<IDispatchMessages>()));
+                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.GetRequiredService<IDispatchMessages>()));
             }
 
             class V33ControlMessageSimulatorTask : FeatureStartupTask
