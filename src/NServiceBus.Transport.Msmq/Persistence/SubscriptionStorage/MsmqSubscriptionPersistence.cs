@@ -4,9 +4,11 @@
     using System.Messaging;
     using Features;
     using Logging;
+    using Microsoft.Extensions.DependencyInjection;
     using Settings;
     using Transport;
     using Transport.Msmq;
+    using Unicast.Subscriptions.MessageDrivenSubscriptions;
 
     class MsmqSubscriptionPersistence : Feature
     {
@@ -18,11 +20,11 @@
 
             var msmqSettings = new MsmqSettings(context.Settings);
 
-            context.Container.ConfigureComponent(b =>
+            context.Services.AddSingleton<IInitializableSubscriptionStorage>(b =>
             {
                 var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), msmqSettings.UseTransactionalQueues);
                 return new MsmqSubscriptionStorage(queue);
-            }, DependencyLifecycle.SingleInstance);
+            });
         }
 
         internal static string DetermineStorageQueueName(ReadOnlySettings settings)
