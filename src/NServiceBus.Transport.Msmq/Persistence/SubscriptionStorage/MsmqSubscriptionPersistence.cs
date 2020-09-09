@@ -20,11 +20,11 @@
 
             var msmqSettings = new MsmqSettings(context.Settings);
 
-            context.Services.AddSingleton<IInitializableSubscriptionStorage>(b =>
-            {
-                var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), msmqSettings.UseTransactionalQueues);
-                return new MsmqSubscriptionStorage(queue);
-            });
+            var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), msmqSettings.UseTransactionalQueues);
+            var storage = new MsmqSubscriptionStorage(queue);
+            
+            context.Services.AddSingleton<ISubscriptionStorage>(storage);
+            context.Services.AddSingleton<IInitializableSubscriptionStorage>(storage);
         }
 
         internal static string DetermineStorageQueueName(ReadOnlySettings settings)
