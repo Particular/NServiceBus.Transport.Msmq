@@ -91,7 +91,6 @@
                     c.DisableFeature<AutoSubscribe>();
                     c.UseTransport<MsmqTransport>()
                         .Routing().RegisterPublisher(typeof(MyEvent), AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)));
-
                 });
             }
 
@@ -121,7 +120,6 @@
                     c.DisableFeature<AutoSubscribe>();
                     c.UseTransport<MsmqTransport>()
                         .Routing().RegisterPublisher(typeof(MyEvent), AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)));
-
                 });
             }
 

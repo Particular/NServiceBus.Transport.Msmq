@@ -76,7 +76,7 @@ namespace NServiceBus.Transport.Msmq
                 LabelGenerator = generator;
             }
 
-            if(settings.TryGet<bool>("DisableNativeTtbrInTransactions", out var disableNativeTtbrInTransactions))
+            if (settings.TryGet<bool>("DisableNativeTtbrInTransactions", out var disableNativeTtbrInTransactions))
             {
                 DisableNativeTtbrInTransactions = disableNativeTtbrInTransactions;
             }

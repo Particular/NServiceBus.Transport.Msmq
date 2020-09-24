@@ -44,6 +44,5 @@
 
             Assert.DoesNotThrow(() => parser.Parse(doc));
         }
-
     }
 }

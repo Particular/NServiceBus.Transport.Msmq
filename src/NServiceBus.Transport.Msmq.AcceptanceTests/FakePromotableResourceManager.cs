@@ -45,10 +45,6 @@
         public byte[] Promote()
         {
             return TransactionInterop.GetTransmitterPropagationToken(new CommittableTransaction());
-
         }
-
-
     }
-
 }

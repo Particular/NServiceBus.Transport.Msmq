@@ -57,7 +57,6 @@
             var fail = false;
             var loader = new FakeLoader(() =>
             {
-                // ReSharper disable once AccessToModifiedClosure
                 if (fail)
                 {
                     throw new Exception("Simulated");

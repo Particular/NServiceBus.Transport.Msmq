@@ -36,7 +36,7 @@
 
             Assert.IsTrue(context.MessageSent, "Message was sent");
 
-            using(var queue = new MessageQueue(queuePath))
+            using (var queue = new MessageQueue(queuePath))
             {
                 queue.MessageReadPropertyFilter.TimeToBeReceived = true;
                 var message = queue.Receive();
@@ -102,7 +102,6 @@
         [TimeToBeReceived("00:00:30")]
         class SomeMessage : IMessage
         {
-
         }
 
         class Context : ScenarioContext

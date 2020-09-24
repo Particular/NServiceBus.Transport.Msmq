@@ -111,7 +111,7 @@
 
             public void Validate(XDocument document)
             {
-                if(failureMessage != null)
+                if (failureMessage != null)
                 {
                     throw new Exception(failureMessage);
                 }
