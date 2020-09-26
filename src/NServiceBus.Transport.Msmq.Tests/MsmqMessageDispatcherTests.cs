@@ -1,4 +1,6 @@
-﻿namespace NServiceBus.Transport.Msmq.Tests
+﻿using System.Threading.Tasks;
+
+namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Collections.Generic;
@@ -14,43 +16,43 @@
     public class MsmqMessageDispatcherTests
     {
         [Test]
-        public void Should_set_label_when_convention_configured()
+        public async Task Should_set_label_when_convention_configured()
         {
-            var dispatchedMessage = DispatchMessage("labelTest", new MsmqSettings(null), messageLabelGenerator: _ => "mylabel");
+            var dispatchedMessage = await DispatchMessage("labelTest", new MsmqSettings(null), messageLabelGenerator: _ => "mylabel");
 
             Assert.AreEqual("mylabel", dispatchedMessage.Label);
         }
 
         [Test]
-        public void Should_default_dlq_to_off_for_messages_with_ttbr()
+        public async Task Should_default_dlq_to_off_for_messages_with_ttbr()
         {
-            var dispatchedMessage = DispatchMessage("dlqOffForTTBR", deliveryConstraint: new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
+            var dispatchedMessage = await DispatchMessage("dlqOffForTTBR", deliveryConstraint: new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
 
             Assert.False(dispatchedMessage.UseDeadLetterQueue);
         }
 
         [Test]
-        public void Should_allow_optin_for_dlq_on_ttbr_messages()
+        public async Task Should_allow_optin_for_dlq_on_ttbr_messages()
         {
             var settings = new MsmqSettings(null)
             {
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived = true
             };
 
-            var dispatchedMessage = DispatchMessage("dlqOnForTTBR", settings, new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
+            var dispatchedMessage = await DispatchMessage("dlqOnForTTBR", settings, new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
 
             Assert.True(dispatchedMessage.UseDeadLetterQueue);
         }
 
         [Test]
-        public void Should_set_dlq_by_default_for_non_ttbr_messages()
+        public async Task Should_set_dlq_by_default_for_non_ttbr_messages()
         {
-            var dispatchedMessage = DispatchMessage("dlqOnByDefault");
+            var dispatchedMessage = await DispatchMessage("dlqOnByDefault");
 
             Assert.True(dispatchedMessage.UseDeadLetterQueue);
         }
 
-        static Message DispatchMessage(string queueName, MsmqSettings settings = null, DeliveryConstraint deliveryConstraint = null, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator = null)
+        static async Task<Message> DispatchMessage(string queueName, MsmqSettings settings = null, DeliveryConstraint deliveryConstraint = null, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator = null)
         {
             if (settings == null)
             {
@@ -88,7 +90,7 @@
 
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), DispatchConsistency.Default, deliveryConstraints);
 
-                messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), new ContextBag());
+                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), new ContextBag());
 
                 using (var queue = new MessageQueue(path))
                 using (var message = queue.Receive(TimeSpan.FromSeconds(5)))

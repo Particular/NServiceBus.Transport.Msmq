@@ -36,9 +36,9 @@
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
             }, new byte[0]), new List<DeliveryConstraint>());
-            var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
+            var bufferWithNulls = new byte[message.Extension.Length + (10*sizeof(char))];
 
-            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
+            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10*sizeof(char)));
 
             message.Extension = bufferWithNulls;
 
@@ -145,10 +145,10 @@
 
             var r = new Random();
 
-            var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
+            var bufferWithNulls = new byte[message.Extension.Length + (10*sizeof(char))];
             r.NextBytes(bufferWithNulls);
 
-            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
+            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10*sizeof(char)));
 
             message.Extension = bufferWithNulls;
 

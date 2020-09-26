@@ -69,7 +69,7 @@ namespace NServiceBus.Transport.Msmq
 
             IInstanceMappingValidator validator;
 
-            if(settings.GetOrDefault<bool>(StrictSchemaValidationKey))
+            if (settings.GetOrDefault<bool>(StrictSchemaValidationKey))
             {
                 validator = EmbeddedSchemaInstanceMappingValidator.CreateValidatorV2();
             }

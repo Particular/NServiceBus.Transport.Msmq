@@ -67,7 +67,6 @@ namespace NServiceBus.Transport.Msmq
                     {
                         Logger.Warn($"The name for queue '{queue.FormatName}' is too long for permissions to be applied. Please consider a shorter endpoint name.", permissionException);
                     }
-
                 }
             }
             catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.QueueExists)

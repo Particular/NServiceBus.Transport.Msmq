@@ -43,7 +43,6 @@
         //Security constants
 
         // the following constants taken from MessageQueue.cs (see http://referencesource.microsoft.com/#System.Messaging/System/Messaging/MessageQueue.cs)
-        // ReSharper disable MemberCanBePrivate.Local
         [StructLayout(LayoutKind.Sequential)]
         struct ACE_HEADER
         {
@@ -70,7 +69,6 @@
 
         enum ACL_INFORMATION_CLASS
         {
-            // ReSharper disable once UnusedMember.Local
             AclRevisionInformation = 1,
             AclSizeInformation
         }

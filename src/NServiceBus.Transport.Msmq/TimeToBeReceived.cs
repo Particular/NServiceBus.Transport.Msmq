@@ -7,12 +7,12 @@
     {
         public static bool HasElapsed(Dictionary<string, string> headers)
         {
-            if(!TryGetTtbr(headers, out var ttbr))
+            if (!TryGetTtbr(headers, out var ttbr))
             {
                 return false;
             }
 
-            if(!TryGetTimeSent(headers, out var timeSent))
+            if (!TryGetTimeSent(headers, out var timeSent))
             {
                 return false;
             }
