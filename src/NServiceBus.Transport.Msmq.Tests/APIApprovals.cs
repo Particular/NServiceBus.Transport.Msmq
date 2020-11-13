@@ -9,7 +9,7 @@ public class APIApprovals
     [Test]
     public void Approve()
     {
-        var publicApi = ApiGenerator.GeneratePublicApi(typeof(MsmqTransport).Assembly);
+        var publicApi = typeof(MsmqTransport).Assembly.GeneratePublicApi();
         Approver.Verify(publicApi);
     }
 }
