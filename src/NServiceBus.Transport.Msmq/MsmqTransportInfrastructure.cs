@@ -12,26 +12,20 @@ namespace NServiceBus.Transport.Msmq
     using Support;
     using Transport;
 
+    //TODO how to support non-durable delivery?
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
+        private readonly MsmqTransport transportSettings;
+        private readonly bool outboxEnabled;
+
+        public MsmqTransportInfrastructure(MsmqTransport transportSettings, bool outboxEnabled)
         {
-            this.settings = settings;
-            this.msmqSettings = msmqSettings;
-            this.queueBindings = queueBindings;
-            this.isTransactional = isTransactional;
-            this.outBoxRunning = outBoxRunning;
-            this.auditMessageExpiration = auditMessageExpiration;
+            this.transportSettings = transportSettings;
+            this.outboxEnabled = outboxEnabled;
+
+            //TODO make non-virtual in core
+            Dispatcher = new MsmqMessageDispatcher(transportSettings);
         }
-
-        public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
-        {
-            typeof(DiscardIfNotReceivedBefore),
-            typeof(NonDurableDelivery)
-        };
-
-        public override TransportTransactionMode TransactionMode { get; } = TransportTransactionMode.TransactionScope;
-        public override OutboundRoutingPolicy OutboundRoutingPolicy { get; } = new OutboundRoutingPolicy(OutboundRoutingType.Unicast, OutboundRoutingType.Unicast, OutboundRoutingType.Unicast);
 
         ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
         {
@@ -50,33 +44,9 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        public override EndpointInstance BindToLocalEndpoint(EndpointInstance instance) => instance.AtMachine(RuntimeEnvironment.MachineName);
-
-        public override string ToTransportAddress(LogicalAddress logicalAddress)
+        void SetupReceivers(ReceiveSettings[] receivers)
         {
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("machine", out var machine))
-            {
-                machine = RuntimeEnvironment.MachineName;
-            }
-            if (!logicalAddress.EndpointInstance.Properties.TryGetValue("queue", out var queueName))
-            {
-                queueName = logicalAddress.EndpointInstance.Endpoint;
-            }
-            var queue = new StringBuilder(queueName);
-            if (logicalAddress.EndpointInstance.Discriminator != null)
-            {
-                queue.Append("-" + logicalAddress.EndpointInstance.Discriminator);
-            }
-            if (logicalAddress.Qualifier != null)
-            {
-                queue.Append("." + logicalAddress.Qualifier);
-            }
-            return $"{queue}@{machine}";
-        }
-
-        public override string MakeCanonicalForm(string transportAddress)
-        {
-            return MsmqAddress.Parse(transportAddress).ToString();
+            //TODO
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
@@ -109,25 +79,6 @@ namespace NServiceBus.Transport.Msmq
                 });
         }
 
-        public override TransportSendInfrastructure ConfigureSendInfrastructure()
-        {
-            CheckMachineNameForCompliance.Check();
-
-            return new TransportSendInfrastructure(
-                () => new MsmqMessageDispatcher(msmqSettings),
-                () =>
-                {
-                    foreach (var address in queueBindings.SendingAddresses)
-                    {
-                        QueuePermissions.CheckQueue(address);
-                    }
-
-                    var auditTTBROverridden = auditMessageExpiration > TimeSpan.Zero;
-                    var result = TimeToBeReceivedOverrideChecker.Check(isTransactional, outBoxRunning, auditTTBROverridden);
-                    return Task.FromResult(result);
-                });
-        }
-
         public override Task Start()
         {
             settings.AddStartupDiagnosticsSection("NServiceBus.Transport.MSMQ", new
@@ -151,17 +102,14 @@ namespace NServiceBus.Transport.Msmq
         }
 
 
-
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
             throw new NotImplementedException("MSMQ does not support native pub/sub.");
         }
 
-        ReadOnlySettings settings;
-        MsmqSettings msmqSettings;
-        QueueBindings queueBindings;
-        bool isTransactional;
-        bool outBoxRunning;
-        TimeSpan auditMessageExpiration;
+        public override Task DisposeAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

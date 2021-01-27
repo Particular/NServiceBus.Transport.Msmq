@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus
 {
     using Extensibility;
+    using Transport;
     using Transport.Msmq;
 
     /// <summary>
@@ -8,7 +9,7 @@
     /// </summary>
     public static class JournalOptionExtensions
     {
-        internal const string KeyJournaling = "MSMQ.UseJournalQueue";
+        const string KeyJournaling = "MSMQ.UseJournalQueue";
 
         /// <summary>
         /// Enable or disable MSMQ journaling.
@@ -18,8 +19,18 @@
         public static void UseJournalQueue(this ExtendableOptions options, bool enable = true)
         {
             Guard.AgainstNull(nameof(options), options);
-            var ext = options.GetExtensions();
-            ext.Set(KeyJournaling, enable);
+
+            options.GetDispatchProperties()[KeyJournaling] = enable.ToString();
+        }
+
+        internal static bool? ShouldUseJournalQueue(this DispatchProperties dispatchProperties)
+        {
+            if (dispatchProperties.TryGetValue(KeyJournaling, out var boolString))
+            {
+                return bool.Parse(boolString);
+            }
+
+            return null;
         }
     }
 }

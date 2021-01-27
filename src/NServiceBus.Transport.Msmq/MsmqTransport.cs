@@ -31,6 +31,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(receivers), receivers);
             Guard.AgainstNull(nameof(sendingAddresses), sendingAddresses);
 
+            CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
             var outBoxRunning = false;
@@ -44,15 +45,20 @@ namespace NServiceBus
 
                 outBoxRunning = hostSettings.CoreSettings.IsFeatureActive(typeof(Features.Outbox));
 
-                if (TransportTransactionMode == TransportTransactionMode.None &&
-                    hostSettings.CoreSettings.TryGetAuditMessageExpiration(out var auditMessageExpiration) &&
-                    auditMessageExpiration > TimeSpan.Zero)
+                if (hostSettings.CoreSettings.TryGetAuditMessageExpiration(out var auditMessageExpiration))
                 {
-                    throw new Exception(
-                        "Setting a custom OverrideTimeToBeReceived for audits is not supported on transactional MSMQ.");
+                    TimeToBeReceivedOverrideChecker.Check(
+                        TransportTransactionMode != TransportTransactionMode.None,
+                        outBoxRunning,
+                        auditMessageExpiration > TimeSpan.Zero);
                 }
             }
 
+            foreach (var address in sendingAddresses)
+            {
+                QueuePermissions.CheckQueue(address);
+            }
+            
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, outBoxRunning);
             return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
         }
