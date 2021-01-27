@@ -9,13 +9,25 @@ namespace NServiceBus.Transport.Msmq
     using Support;
     using Transport;
 
-    class MessagePump : IPushMessages, IDisposable
+    //TODO we need to dispose the pumps when disposing the transport
+    class MessagePump : IMessageReceiver, IDisposable
     {
-        public MessagePump(Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory, TimeSpan messageEnumeratorTimeout, bool discardExpiredTtbrMessages)
+        public MessagePump(
+            string id,
+            Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
+            TimeSpan messageEnumeratorTimeout,
+            bool discardExpiredTtbrMessages,
+            Action<string, Exception> criticalErrorAction,
+            MsmqTransport transportSettings,
+            ReceiveSettings receiveSettings)
         {
+            Id = id;
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
             this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
+            this.criticalErrorAction = criticalErrorAction;
+            this.transportSettings = transportSettings;
+            this.receiveSettings = receiveSettings;
         }
 
         public void Dispose()
@@ -23,55 +35,63 @@ namespace NServiceBus.Transport.Msmq
             // Injected
         }
 
-        public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
+        public Task Initialize(PushRuntimeSettings limitations, Func<MessageContext, Task> onMessage,
+            Func<ErrorContext, Task<ErrorHandleResult>> onError)
         {
-            peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30), ex => criticalError.Raise("Failed to peek " + settings.InputQueue, ex));
-            receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30), ex => criticalError.Raise("Failed to receive from " + settings.InputQueue, ex));
+            peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex));
+            receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex));
 
-            var inputAddress = MsmqAddress.Parse(settings.InputQueue);
-            var errorAddress = MsmqAddress.Parse(settings.ErrorQueue);
+            var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
+            var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
 
-            if (!string.Equals(inputAddress.Machine, RuntimeEnvironment.MachineName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(inputAddress.Machine, RuntimeEnvironment.MachineName,
+                StringComparison.OrdinalIgnoreCase))
             {
-                throw new Exception($"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{settings.InputQueue}'.");
+                throw new Exception(
+                    $"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{receiveSettings.ReceiveAddress}'.");
             }
 
             inputQueue = new MessageQueue(inputAddress.FullPath, false, true, QueueAccessMode.Receive);
             errorQueue = new MessageQueue(errorAddress.FullPath, false, true, QueueAccessMode.Send);
 
-            if (settings.RequiredTransactionMode != TransportTransactionMode.None && !QueueIsTransactional())
+            if (transportSettings.TransportTransactionMode != TransportTransactionMode.None && !QueueIsTransactional())
             {
-                throw new ArgumentException($"Queue must be transactional if you configure the endpoint to be transactional ({settings.InputQueue}).");
+                throw new ArgumentException(
+                    $"Queue must be transactional if you configure the endpoint to be transactional ({receiveSettings.ReceiveAddress}).");
             }
 
             inputQueue.MessageReadPropertyFilter = DefaultReadPropertyFilter;
 
-            if (settings.PurgeOnStartup)
+            receiveStrategy = receiveStrategyFactory(transportSettings.TransportTransactionMode);
+            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction,
+                discardExpiredTtbrMessages);
+
+            maxConcurrency = limitations.MaxConcurrency;
+            concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
+            return TaskEx.CompletedTask;
+        }
+
+        public Task StartReceive()
+        {
+            MessageQueue.ClearConnectionCache();
+
+            if (receiveSettings.PurgeOnStartup)
             {
                 inputQueue.Purge();
             }
 
-            receiveStrategy = receiveStrategyFactory(settings.RequiredTransactionMode);
-
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalError, discardExpiredTtbrMessages);
-
-            return TaskEx.CompletedTask;
-        }
-
-        public void Start(PushRuntimeSettings limitations)
-        {
-            MessageQueue.ClearConnectionCache();
-
-            maxConcurrency = limitations.MaxConcurrency;
-            concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
             cancellationTokenSource = new CancellationTokenSource();
-
             cancellationToken = cancellationTokenSource.Token;
+
             // LongRunning is useless combined with async/await
             messagePumpTask = Task.Run(() => ProcessMessages(), CancellationToken.None);
+
+            return Task.CompletedTask;
         }
 
-        public async Task Stop()
+        public async Task StopReceive()
         {
             cancellationTokenSource.Cancel();
 
@@ -188,23 +208,33 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (MessageQueueException msmqEx)
             {
-                var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+                var error =
+                    $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
                 {
-                    error = $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
+                    error =
+                        $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
                 }
+
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.AccessDenied)
                 {
-                    error = $"Access denied for the queue {inputQueue.Path}. Ensure the user has Get Properties permission on the queue.";
+                    error =
+                        $"Access denied for the queue {inputQueue.Path}. Ensure the user has Get Properties permission on the queue.";
                 }
+
                 throw new Exception(error, msmqEx);
             }
             catch (Exception ex)
             {
-                var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+                var error =
+                    $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
                 throw new Exception(error, ex);
             }
         }
+
+        public ISubscriptionManager Subscriptions => null;
+
+        public string Id { get; }
 
         CancellationToken cancellationToken;
         CancellationTokenSource cancellationTokenSource;
@@ -222,6 +252,9 @@ namespace NServiceBus.Transport.Msmq
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
         bool discardExpiredTtbrMessages;
+        private readonly Action<string, Exception> criticalErrorAction;
+        private readonly MsmqTransport transportSettings;
+        private readonly ReceiveSettings receiveSettings;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();
 

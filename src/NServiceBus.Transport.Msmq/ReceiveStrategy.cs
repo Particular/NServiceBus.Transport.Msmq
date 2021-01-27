@@ -14,7 +14,7 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, bool discardExpiredTtbrMessages)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, Action<string, Exception> criticalError, bool discardExpiredTtbrMessages)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
@@ -132,7 +132,7 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (Exception ex)
             {
-                criticalError.Raise($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
+                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
 
                 //best thing we can do is roll the message back if possible
                 return ErrorHandleResult.RetryRequired;
@@ -154,7 +154,7 @@ namespace NServiceBus.Transport.Msmq
         MessageQueue errorQueue;
         Func<MessageContext, Task> onMessage;
         Func<ErrorContext, Task<ErrorHandleResult>> onError;
-        CriticalError criticalError;
+        Action<string, Exception> criticalError;
         bool discardExpiredTtbrMessages;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();

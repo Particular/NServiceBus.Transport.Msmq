@@ -53,12 +53,23 @@ namespace NServiceBus
                         auditMessageExpiration > TimeSpan.Zero);
                 }
             }
-
+            //TODO run QueueCreator
             foreach (var address in sendingAddresses)
             {
                 QueuePermissions.CheckQueue(address);
             }
-            
+
+            hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
+            {
+                ExecuteInstaller,
+                UseDeadLetterQueue,
+                UseConnectionCache,
+                UseTransactionalQueues,
+                UseJournalQueue,
+                UseDeadLetterQueueForMessagesWithTimeToBeReceived,
+                TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue)
+            });
+
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, outBoxRunning);
             return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
         }
@@ -204,6 +215,12 @@ namespace NServiceBus
             }
 
             TransactionScopeOptions = new MsmqScopeOptions(timeout, isolationLevel);
+        }
+
+        static string GetFormattedTimeToReachQueue(TimeSpan timeToReachQueue)
+        {
+            return timeToReachQueue == Message.InfiniteTimeout ? "Infinite"
+                : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
         }
 
 

@@ -2,6 +2,7 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Messaging;
     using System.Text;
     using System.Threading.Tasks;
@@ -44,72 +45,44 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        void SetupReceivers(ReceiveSettings[] receivers)
+        void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception> criticalErrorAction)
         {
-            //TODO
-        }
+            var messagePumps = new List<IMessageReceiver>(receivers.Length);
 
-        public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
-        {
-            CheckMachineNameForCompliance.Check();
-
-            // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
-            foreach (var queue in queueBindings.ReceivingAddresses)
+            foreach (var receiver in receivers)
             {
-                CheckEndpointNameComplianceForMsmq.Check(queue);
+                if (receiver.UsePublishSubscribe)
+                {
+                    throw new NotImplementedException("MSMQ does not support native pub/sub.");
+                }
+
+                // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
+                CheckEndpointNameComplianceForMsmq.Check(receiver.ReceiveAddress);
+                QueuePermissions.CheckQueue(receiver.ReceiveAddress);
+
+                var pump = new MessagePump(
+                    receiver.Id,
+                    transactionMode =>
+                        SelectReceiveStrategy(transactionMode, transportSettings.TransactionScopeOptions.TransactionOptions),
+                    transportSettings.MessageEnumeratorTimeout,
+                    transportSettings.IgnoreIncomingTimeToBeReceivedHeaders,
+                    criticalErrorAction,
+                    transportSettings,
+                    receiver);
+                messagePumps.Add(pump);
             }
 
-            return new TransportReceiveInfrastructure(
-                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, !msmqSettings.IgnoreIncomingTimeToBeReceivedHeaders),
-                () =>
-                {
-                    if (msmqSettings.ExecuteInstaller)
-                    {
-                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues);
-                    }
-                    return new NullQueueCreator();
-                },
-                () =>
-                {
-                    foreach (var address in queueBindings.ReceivingAddresses)
-                    {
-                        QueuePermissions.CheckQueue(address);
-                    }
-                    return Task.FromResult(StartupCheckResult.Success);
-                });
-        }
-
-        public override Task Start()
-        {
-            settings.AddStartupDiagnosticsSection("NServiceBus.Transport.MSMQ", new
-            {
-                msmqSettings.ExecuteInstaller,
-                msmqSettings.UseDeadLetterQueue,
-                msmqSettings.UseConnectionCache,
-                msmqSettings.UseTransactionalQueues,
-                msmqSettings.UseJournalQueue,
-                msmqSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived,
-                TimeToReachQueue = GetFormattedTimeToReachQueue(msmqSettings.TimeToReachQueue)
-            });
-
-            return Task.FromResult(0);
-        }
-
-        static string GetFormattedTimeToReachQueue(TimeSpan timeToReachQueue)
-        {
-            return timeToReachQueue == Message.InfiniteTimeout ? "Infinite"
-                : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
-        }
-
-
-        public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
-        {
-            throw new NotImplementedException("MSMQ does not support native pub/sub.");
+            Receivers = messagePumps.AsReadOnly();
         }
 
         public override Task DisposeAsync()
         {
-            throw new NotImplementedException();
+            foreach (var receiver in Receivers)
+            {
+                (receiver as MessagePump)?.Dispose();
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
