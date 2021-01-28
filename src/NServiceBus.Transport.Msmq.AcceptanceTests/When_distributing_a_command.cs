@@ -97,6 +97,8 @@
                         case "2":
                             testContext.ReceiverA2TimesCalled++;
                             break;
+                        default:
+                            break;
                     }
 
                     return context.Send(new RequestB());
@@ -111,6 +113,8 @@
                             break;
                         case "2":
                             testContext.ReceiverB2TimesCalled++;
+                            break;
+                        default:
                             break;
                     }
 
@@ -134,11 +138,11 @@
 
             public class MyMessageHandler : IHandleMessages<RequestA>
             {
-                private readonly ReadOnlySettings settings;
+                readonly ReadOnlySettings settings;
                 public MyMessageHandler(ReadOnlySettings settings)
                 {
                     this.settings = settings;
-                }              
+                }
 
                 public Task Handle(RequestA message, IMessageHandlerContext context)
                 {
@@ -159,7 +163,7 @@
 
             public class MyMessageHandler : IHandleMessages<RequestB>
             {
-                private readonly ReadOnlySettings settings;
+                readonly ReadOnlySettings settings;
                 public MyMessageHandler(ReadOnlySettings settings)
                 {
                     this.settings = settings;

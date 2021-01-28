@@ -157,7 +157,7 @@ namespace NServiceBus.Transport.Msmq
         {
             return TaskEx.Run(async state =>
             {
-                var messagePump = (MessagePump) state;
+                var messagePump = (MessagePump)state;
 
                 try
                 {
