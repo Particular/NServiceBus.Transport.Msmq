@@ -3,16 +3,16 @@
     using System;
     using System.Collections.Generic;
 
-    internal static class TimeToBeReceived
+    static class TimeToBeReceived
     {
         public static bool HasElapsed(Dictionary<string, string> headers)
         {
-            if(!TryGetTtbr(headers, out var ttbr))
+            if (!TryGetTtbr(headers, out var ttbr))
             {
                 return false;
             }
 
-            if(!TryGetTimeSent(headers, out var timeSent))
+            if (!TryGetTimeSent(headers, out var timeSent))
             {
                 return false;
             }
@@ -20,7 +20,7 @@
             var cutOff = timeSent + ttbr;
             var receiveTime = DateTime.UtcNow;
 
-            return cutOff < receiveTime;            
+            return cutOff < receiveTime;
         }
 
         static bool TryGetTtbr(Dictionary<string, string> headers, out TimeSpan ttbr)

@@ -36,7 +36,7 @@
 
         const string PREFIX_FORMAT_NAME = "FORMATNAME:";
         const int DACL_SECURITY_INFORMATION = 4;
-        const int MQ_ERROR_SECURITY_DESCRIPTOR_TOO_SMALL = unchecked((int) 0xc00e0023);
+        const int MQ_ERROR_SECURITY_DESCRIPTOR_TOO_SMALL = unchecked((int)0xc00e0023);
         const int MQ_OK = 0;
         static bool administerGranted;
 
@@ -159,7 +159,7 @@
                         aceType = null;
                         break;
                 }
-                return (MessageQueueAccessRights) allowedAce.Mask;
+                return (MessageQueueAccessRights)allowedAce.Mask;
             }
             finally
             {
@@ -173,7 +173,7 @@
         static string GetSidForUser(string username)
         {
             var account = new NTAccount(username);
-            var sid = (SecurityIdentifier) account.Translate(typeof(SecurityIdentifier));
+            var sid = (SecurityIdentifier)account.Translate(typeof(SecurityIdentifier));
 
             return sid.ToString();
         }
@@ -181,13 +181,13 @@
         static ACCESS_ALLOWED_ACE GetAce(IntPtr pDacl, string sid)
         {
             var AclSize = new ACL_SIZE_INFORMATION();
-            GetAclInformation(pDacl, ref AclSize, (uint) Marshal.SizeOf(typeof(ACL_SIZE_INFORMATION)), ACL_INFORMATION_CLASS.AclSizeInformation);
+            GetAclInformation(pDacl, ref AclSize, (uint)Marshal.SizeOf(typeof(ACL_SIZE_INFORMATION)), ACL_INFORMATION_CLASS.AclSizeInformation);
 
             for (var i = 0; i < AclSize.AceCount; i++)
             {
                 GetAce(pDacl, i, out var pAce);
-                var ace = (ACCESS_ALLOWED_ACE) Marshal.PtrToStructure(pAce, typeof(ACCESS_ALLOWED_ACE));
-                var iter = (IntPtr) ((long) pAce + (long) Marshal.OffsetOf(typeof(ACCESS_ALLOWED_ACE), "SidStart"));
+                var ace = (ACCESS_ALLOWED_ACE)Marshal.PtrToStructure(pAce, typeof(ACCESS_ALLOWED_ACE));
+                var iter = (IntPtr)((long)pAce + (long)Marshal.OffsetOf(typeof(ACCESS_ALLOWED_ACE), "SidStart"));
                 var size = GetLengthSid(iter);
                 var bSID = new byte[size];
                 Marshal.Copy(iter, bSID, 0, size);

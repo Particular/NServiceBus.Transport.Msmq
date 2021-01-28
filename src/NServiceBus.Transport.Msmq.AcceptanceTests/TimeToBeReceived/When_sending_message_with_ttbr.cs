@@ -36,7 +36,7 @@
 
             Assert.IsTrue(context.MessageSent, "Message was sent");
 
-            using(var queue = new MessageQueue(queuePath))
+            using (var queue = new MessageQueue(queuePath))
             {
                 queue.MessageReadPropertyFilter.TimeToBeReceived = true;
                 var message = queue.Receive();

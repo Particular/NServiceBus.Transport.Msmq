@@ -3,6 +3,7 @@
     using System;
     using System.Messaging;
     using System.Security.Principal;
+    using System.Threading.Tasks;
     using NUnit.Framework;
     using Transport;
 
@@ -27,7 +28,7 @@
         }
 
         [Test]
-        public void Should_create_all_queues()
+        public async Task Should_create_all_queues()
         {
             var creator = new MsmqQueueCreator(true);
             var bindings = new QueueBindings();
@@ -35,14 +36,14 @@
             bindings.BindReceiving(testQueueNameForReceiving);
             bindings.BindSending(testQueueNameForSending);
 
-            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+            await creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
             Assert.True(QueueExists(testQueueNameForSending));
             Assert.True(QueueExists(testQueueNameForReceiving));
         }
 
         [Test]
-        public void Should_not_create_queue_when_a_remote_queue_is_provided()
+        public async Task Should_not_create_queue_when_a_remote_queue_is_provided()
         {
             var remoteQueueName = $"{testQueueNameForReceiving}@some-machine";
             var creator = new MsmqQueueCreator(true);
@@ -50,14 +51,14 @@
 
             bindings.BindSending(remoteQueueName);
 
-            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+            await creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
             Assert.False(QueueExists(testQueueNameForReceiving));
         }
 
 
         [Test]
-        public void Should_setup_permissions()
+        public async Task Should_setup_permissions()
         {
             var creator = new MsmqQueueCreator(true);
             var bindings = new QueueBindings();
@@ -65,7 +66,7 @@
             bindings.BindReceiving(testQueueNameForReceiving);
 
             // use the network service account since that one won't be in the local admin group
-            creator.CreateQueueIfNecessary(bindings, NetworkServiceAccountName);
+            await creator.CreateQueueIfNecessary(bindings, NetworkServiceAccountName);
 
             var createdQueue = GetQueue(testQueueNameForReceiving);
 
@@ -83,14 +84,14 @@
         }
 
         [Test]
-        public void Should_make_queues_transactional_if_requested()
+        public async Task Should_make_queues_transactional_if_requested()
         {
             var creator = new MsmqQueueCreator(true);
             var bindings = new QueueBindings();
 
             bindings.BindReceiving(testQueueNameForReceiving);
 
-            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+            await creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
             var queue = GetQueue(testQueueNameForReceiving);
 
@@ -98,14 +99,14 @@
         }
 
         [Test]
-        public void Should_make_queues_non_transactional_if_requested()
+        public async Task Should_make_queues_non_transactional_if_requested()
         {
             var creator = new MsmqQueueCreator(false);
             var bindings = new QueueBindings();
 
             bindings.BindReceiving(testQueueNameForReceiving);
 
-            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+            await creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
             var queue = GetQueue(testQueueNameForReceiving);
 
@@ -113,7 +114,7 @@
         }
 
         [Test]
-        public void Should_not_add_everyone_and_anonymous_to_already_existing_queues()
+        public async Task Should_not_add_everyone_and_anonymous_to_already_existing_queues()
         {
             var path = MsmqAddress.Parse(testQueueNameForReceiving).PathWithoutPrefix;
 
@@ -128,7 +129,7 @@
 
             bindings.BindReceiving(testQueueNameForReceiving);
 
-            creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
+            await creator.CreateQueueIfNecessary(bindings, WindowsIdentity.GetCurrent().Name);
 
 
             var existingQueue = GetQueue(testQueueNameForReceiving);

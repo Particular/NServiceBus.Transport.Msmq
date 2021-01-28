@@ -79,7 +79,7 @@ namespace NServiceBus.Transport.Msmq
             if (
                 machineName == "." ||
                 machineName.ToLower() == "localhost" ||
-                IPAddress.TryParse(machineName, out var address) && IPAddress.IsLoopback(address)
+                (IPAddress.TryParse(machineName, out var address) && IPAddress.IsLoopback(address))
                 )
             {
                 return RuntimeEnvironment.MachineName;
