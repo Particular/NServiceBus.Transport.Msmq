@@ -22,8 +22,8 @@
     <PackageReference Include="Particular.CodeRules" Version="0.8.0" PrivateAssets="All" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!--<ItemGroup>
     <Compile Remove="\**\NServiceBusTransportTest.cs" />
-  </ItemGroup>
+  </ItemGroup>-->
 
 </Project>
