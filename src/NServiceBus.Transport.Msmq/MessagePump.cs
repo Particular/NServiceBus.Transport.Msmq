@@ -12,7 +12,6 @@ namespace NServiceBus.Transport.Msmq
     class MessagePump : IMessageReceiver, IDisposable
     {
         public MessagePump(
-            string id,
             Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
             TimeSpan messageEnumeratorTimeout,
             bool discardExpiredTtbrMessages,
@@ -20,7 +19,7 @@ namespace NServiceBus.Transport.Msmq
             MsmqTransport transportSettings,
             ReceiveSettings receiveSettings)
         {
-            Id = id;
+            Id = receiveSettings.Id;
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
             this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;

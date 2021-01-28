@@ -54,7 +54,6 @@ namespace NServiceBus.Transport.Msmq
                 QueuePermissions.CheckQueue(receiver.ReceiveAddress);
 
                 var pump = new MessagePump(
-                    receiver.Id,
                     transactionMode =>
                         SelectReceiveStrategy(transactionMode, transportSettings.TransactionScopeOptions.TransactionOptions),
                     transportSettings.MessageEnumeratorTimeout,
