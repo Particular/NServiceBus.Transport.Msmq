@@ -2,15 +2,8 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Messaging;
-    using System.Text;
     using System.Threading.Tasks;
     using System.Transactions;
-    using Performance.TimeToBeReceived;
-    using Routing;
-    using Settings;
-    using Support;
     using Transport;
 
     //TODO how to support non-durable delivery?
@@ -45,7 +38,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception> criticalErrorAction)
+        public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception> criticalErrorAction)
         {
             var messagePumps = new List<IMessageReceiver>(receivers.Length);
 

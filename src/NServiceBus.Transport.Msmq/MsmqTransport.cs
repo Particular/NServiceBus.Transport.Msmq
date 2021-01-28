@@ -71,6 +71,8 @@ namespace NServiceBus
             });
 
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, outBoxRunning);
+            msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
+
             return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
         }
 
