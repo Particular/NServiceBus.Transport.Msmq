@@ -9,7 +9,6 @@ namespace NServiceBus.Transport.Msmq
     using Support;
     using Transport;
 
-    //TODO we need to dispose the pumps when disposing the transport
     class MessagePump : IMessageReceiver, IDisposable
     {
         public MessagePump(
