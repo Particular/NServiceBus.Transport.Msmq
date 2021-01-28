@@ -30,11 +30,11 @@
                 && TimeSpan.TryParse(ttbrString, out ttbr);
         }
 
-        static bool TryGetTimeSent(Dictionary<string, string> headers, out DateTime timeSent)
+        static bool TryGetTimeSent(Dictionary<string, string> headers, out DateTimeOffset timeSent)
         {
             if (headers.TryGetValue(Headers.TimeSent, out var timeSentString))
             {
-                timeSent = DateTimeExtensions.ToUtcDateTime(timeSentString);
+                timeSent = DateTimeOffsetHelper.ToDateTimeOffset(timeSentString);
                 return true;
             }
 
