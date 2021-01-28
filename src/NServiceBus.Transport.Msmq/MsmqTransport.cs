@@ -2,6 +2,7 @@ namespace NServiceBus
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Messaging;
     using System.Text;
     using System.Threading.Tasks;
@@ -52,8 +53,23 @@ namespace NServiceBus
                         outBoxRunning,
                         auditMessageExpiration > TimeSpan.Zero);
                 }
+
+                if (Username == null)
+                {
+                    // try to use the configured installer user in Core:
+                    Username = hostSettings.CoreSettings.GetOrDefault<string>("Installers.UserName");
+                }
             }
-            //TODO run QueueCreator
+
+            if (hostSettings.SetupInfrastructure && ExecuteInstaller)
+            {
+                var installerUser = GetInstallationUserName();
+                var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
+                queueCreator.CreateQueueIfNecessary(receivers
+                    .Select(r => r.ReceiveAddress)
+                    .Concat(sendingAddresses));
+            }
+
             foreach (var address in sendingAddresses)
             {
                 QueuePermissions.CheckQueue(address);
@@ -128,7 +144,7 @@ namespace NServiceBus
                 TransportTransactionMode.TransactionScope,
             };
 
-        //TODO improve doc
+        //TODO improve doc / property name
         /// <summary>
         /// Indicates whether queues should be automatically created. Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
@@ -198,6 +214,13 @@ namespace NServiceBus
         /// </summary>
         public bool DisableNativeTtbrInTransactions { get; set; } = false;
 
+        //TODO improve naming/docs
+        /// <summary>
+        /// The user account that will be configured with access rights to the queues created by the transport. When not set, the current user will be used.
+        /// This setting is not relevant, if queue creation has been disabled.
+        /// </summary>
+        public string Username { get; set; }
+
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
@@ -225,6 +248,20 @@ namespace NServiceBus
                 : string.Format("{0:%d} day(s) {0:%hh} hours(s) {0:%mm} minute(s) {0:%ss} second(s)", timeToReachQueue);
         }
 
+        string GetInstallationUserName()
+        {
+            if (Username != null)
+            {
+                return Username;
+            }
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                return $"{Environment.UserDomainName}\\{Environment.UserName}";
+            }
+
+            return Environment.UserName;
+        }
 
         internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
         internal MsmqScopeOptions TransactionScopeOptions { get; set; } = new MsmqScopeOptions();

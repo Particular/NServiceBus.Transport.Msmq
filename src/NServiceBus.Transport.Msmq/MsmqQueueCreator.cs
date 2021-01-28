@@ -1,34 +1,27 @@
 namespace NServiceBus.Transport.Msmq
 {
+    using System.Collections.Generic;
     using System.Messaging;
     using System.Security.Principal;
-    using System.Threading.Tasks;
     using Logging;
-    using Transport;
 
-    class MsmqQueueCreator : ICreateQueues
+    class MsmqQueueCreator
     {
-        public MsmqQueueCreator(bool useTransactionalQueues)
+        public MsmqQueueCreator(bool useTransactionalQueues, string installerUser)
         {
             this.useTransactionalQueues = useTransactionalQueues;
+            this.installerUser = installerUser;
         }
 
-        public Task CreateQueueIfNecessary(QueueBindings queueBindings, string identity)
+        public void CreateQueueIfNecessary(IEnumerable<string> queues)
         {
-            foreach (var receivingAddress in queueBindings.ReceivingAddresses)
+            foreach (var queue in queues)
             {
-                CreateQueueIfNecessary(receivingAddress, identity);
+                CreateQueueIfNecessary(queue);
             }
-
-            foreach (var sendingAddress in queueBindings.SendingAddresses)
-            {
-                CreateQueueIfNecessary(sendingAddress, identity);
-            }
-
-            return TaskEx.CompletedTask;
         }
 
-        void CreateQueueIfNecessary(string address, string identity)
+        void CreateQueueIfNecessary(string address)
         {
             var msmqAddress = MsmqAddress.Parse(address);
 
@@ -52,14 +45,14 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var queue = MessageQueue.Create(queuePath, useTransactionalQueues))
                 {
-                    Logger.Debug($"Created queue, path: [{queuePath}], identity: [{identity}], transactional: [{useTransactionalQueues}]");
+                    Logger.Debug($"Created queue, path: [{queuePath}], identity: [{installerUser}], transactional: [{useTransactionalQueues}]");
 
                     try
                     {
-                        queue.SetPermissions(identity, MessageQueueAccessRights.WriteMessage);
-                        queue.SetPermissions(identity, MessageQueueAccessRights.ReceiveMessage);
-                        queue.SetPermissions(identity, MessageQueueAccessRights.PeekMessage);
-                        queue.SetPermissions(identity, MessageQueueAccessRights.GetQueueProperties);
+                        queue.SetPermissions(installerUser, MessageQueueAccessRights.WriteMessage);
+                        queue.SetPermissions(installerUser, MessageQueueAccessRights.ReceiveMessage);
+                        queue.SetPermissions(installerUser, MessageQueueAccessRights.PeekMessage);
+                        queue.SetPermissions(installerUser, MessageQueueAccessRights.GetQueueProperties);
 
                         queue.SetPermissions(LocalAdministratorsGroupName, MessageQueueAccessRights.FullControl);
                     }
@@ -75,9 +68,10 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        bool useTransactionalQueues;
+        readonly bool useTransactionalQueues;
+        private readonly string installerUser;
 
         static readonly string LocalAdministratorsGroupName = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Translate(typeof(NTAccount)).ToString();
-        static ILog Logger = LogManager.GetLogger<MsmqQueueCreator>();
+        static readonly ILog Logger = LogManager.GetLogger<MsmqQueueCreator>();
     }
 }
