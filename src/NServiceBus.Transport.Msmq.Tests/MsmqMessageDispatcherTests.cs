@@ -1,12 +1,9 @@
-﻿using System.Threading.Tasks;
-
-namespace NServiceBus.Transport.Msmq.Tests
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
+    using System.Threading.Tasks;
     using System;
     using System.Collections.Generic;
     using System.Messaging;
-    using DeliveryConstraints;
-    using Extensibility;
     using NUnit.Framework;
     using Performance.TimeToBeReceived;
     using Routing;
@@ -18,7 +15,9 @@ namespace NServiceBus.Transport.Msmq.Tests
         [Test]
         public async Task Should_set_label_when_convention_configured()
         {
-            var dispatchedMessage = await DispatchMessage("labelTest", new MsmqSettings(null), messageLabelGenerator: _ => "mylabel");
+            var transportSettings = new MsmqTransport {ApplyLabel = _ => "mylabel"};
+
+            var dispatchedMessage = await DispatchMessage("labelTest", transportSettings);
 
             Assert.AreEqual("mylabel", dispatchedMessage.Label);
         }
@@ -26,7 +25,12 @@ namespace NServiceBus.Transport.Msmq.Tests
         [Test]
         public async Task Should_default_dlq_to_off_for_messages_with_ttbr()
         {
-            var dispatchedMessage = await DispatchMessage("dlqOffForTTBR", deliveryConstraint: new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
+            var dispatchProperties = new DispatchProperties
+            {
+                DiscardIfNotReceivedBefore = new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10))
+            };
+
+            var dispatchedMessage = await DispatchMessage("dlqOffForTTBR", dispatchProperties: dispatchProperties);
 
             Assert.False(dispatchedMessage.UseDeadLetterQueue);
         }
@@ -34,12 +38,14 @@ namespace NServiceBus.Transport.Msmq.Tests
         [Test]
         public async Task Should_allow_optin_for_dlq_on_ttbr_messages()
         {
-            var settings = new MsmqSettings(null)
+
+            var transportSettings = new MsmqTransport {UseDeadLetterQueueForMessagesWithTimeToBeReceived = true};
+            var dispatchProperties = new DispatchProperties
             {
-                UseDeadLetterQueueForMessagesWithTimeToBeReceived = true
+                DiscardIfNotReceivedBefore = new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10))
             };
 
-            var dispatchedMessage = await DispatchMessage("dlqOnForTTBR", settings, new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10)));
+            var dispatchedMessage = await DispatchMessage("dlqOnForTTBR", transportSettings, dispatchProperties);
 
             Assert.True(dispatchedMessage.UseDeadLetterQueue);
         }
@@ -52,19 +58,12 @@ namespace NServiceBus.Transport.Msmq.Tests
             Assert.True(dispatchedMessage.UseDeadLetterQueue);
         }
 
-        static async Task<Message> DispatchMessage(string queueName, MsmqSettings settings = null, DeliveryConstraint deliveryConstraint = null, Func<IReadOnlyDictionary<string, string>, string> messageLabelGenerator = null)
+        static async Task<Message> DispatchMessage(string queueName, MsmqTransport settings = null, DispatchProperties dispatchProperties = null)
         {
             if (settings == null)
             {
-                settings = new MsmqSettings(null);
+                settings = new MsmqTransport();
             }
-
-            if (messageLabelGenerator == null)
-            {
-                messageLabelGenerator = _ => string.Empty;
-            }
-
-            settings.LabelGenerator = messageLabelGenerator;
 
             var path = $@".\private$\{queueName}";
 
@@ -81,16 +80,11 @@ namespace NServiceBus.Transport.Msmq.Tests
                 };
                 var headers = new Dictionary<string, string>();
                 var outgoingMessage = new OutgoingMessage("1", headers, bytes);
-                var deliveryConstraints = new List<DeliveryConstraint>();
 
-                if (deliveryConstraint != null)
-                {
-                    deliveryConstraints.Add(deliveryConstraint);
-                }
+                dispatchProperties = dispatchProperties ?? new DispatchProperties();
+                var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), dispatchProperties);
 
-                var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), DispatchConsistency.Default, deliveryConstraints);
-
-                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), new ContextBag());
+                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction());
 
                 using (var queue = new MessageQueue(path))
                 using (var message = queue.Receive(TimeSpan.FromSeconds(5)))
