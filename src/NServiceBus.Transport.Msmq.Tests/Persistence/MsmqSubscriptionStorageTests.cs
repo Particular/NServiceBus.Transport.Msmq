@@ -211,7 +211,7 @@
 
             var queue1 = new FakeStorageQueue();
             var storage1 = new MsmqSubscriptionStorage(queue1);
-            queue1.Messages.AddRange(new []
+            queue1.Messages.AddRange(new[]
             {
                 msg1,
                 msg2,

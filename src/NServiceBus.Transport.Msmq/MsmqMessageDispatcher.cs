@@ -52,7 +52,7 @@ namespace NServiceBus.Transport.Msmq
                 transportOperation.DeliveryConstraints))
             {
                 if (settings.DisableNativeTtbrInTransactions)
-                { 
+                {
                     deliveryConstraints = deliveryConstraints.Except(deliveryConstraints.OfType<DiscardIfNotReceivedBefore>()).ToList();
                 }
                 else

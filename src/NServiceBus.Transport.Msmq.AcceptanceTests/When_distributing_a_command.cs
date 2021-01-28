@@ -97,6 +97,8 @@
                         case "2":
                             testContext.ReceiverA2TimesCalled++;
                             break;
+                        default:
+                            break;
                     }
 
                     return context.Send(new RequestB());
@@ -111,6 +113,8 @@
                             break;
                         case "2":
                             testContext.ReceiverB2TimesCalled++;
+                            break;
+                        default:
                             break;
                     }
 

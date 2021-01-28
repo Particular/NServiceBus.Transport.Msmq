@@ -46,7 +46,11 @@ namespace NServiceBus
         {
             Guard.AgainstNullAndEmpty(nameof(filePath), filePath);
             var result = Uri.TryCreate(filePath, UriKind.RelativeOrAbsolute, out var uriPath);
-            if (!result) throw new ArgumentException("Invalid format", nameof(filePath));
+            if (!result)
+            {
+                throw new ArgumentException("Invalid format", nameof(filePath));
+            }
+
             this.GetSettings().Set(InstanceMappingFileFeature.PathSettingsKey, uriPath);
             return this;
         }

@@ -15,7 +15,7 @@ namespace NServiceBus.Transport.Msmq
         public static void Check()
         {
             uint capacity = 24;
-            var buffer = new StringBuilder((int) capacity);
+            var buffer = new StringBuilder((int)capacity);
             if (!GetComputerNameEx(COMPUTER_NAME_FORMAT.ComputerNameNetBIOS, buffer, ref capacity))
             {
                 return;

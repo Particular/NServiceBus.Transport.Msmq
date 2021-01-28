@@ -15,7 +15,7 @@
         [Test]
         public void Should_convert_a_message_back_even_if_special_characters_are_contained_in_the_headers()
         {
-            var expected = $"Can u see this '{(char) 0x19}' character.";
+            var expected = $"Can u see this '{(char)0x19}' character.";
 
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
@@ -36,9 +36,9 @@
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
             }, new byte[0]), new List<DeliveryConstraint>());
-            var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
+            var bufferWithNulls = new byte[message.Extension.Length + (10 * sizeof(char))];
 
-            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
+            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10 * sizeof(char)));
 
             message.Extension = bufferWithNulls;
 
@@ -72,7 +72,7 @@
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             var headers = MsmqUtilities.ExtractHeaders(message);
-            
+
             Assert.AreEqual("SomeAddress", headers[Headers.ReplyToAddress]);
         }
 
@@ -86,7 +86,7 @@
                 }, new byte[0]),
                 new List<DeliveryConstraint>());
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             var headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Send", headers[Headers.MessageIntent]);
@@ -100,7 +100,7 @@
                 (), new byte[0]),
                 new List<DeliveryConstraint>());
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             var headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
@@ -145,10 +145,10 @@
 
             var r = new Random();
 
-            var bufferWithNulls = new byte[message.Extension.Length + 10*sizeof(char)];
+            var bufferWithNulls = new byte[message.Extension.Length + (10 * sizeof(char))];
             r.NextBytes(bufferWithNulls);
 
-            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - 10*sizeof(char));
+            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10 * sizeof(char)));
 
             message.Extension = bufferWithNulls;
 
