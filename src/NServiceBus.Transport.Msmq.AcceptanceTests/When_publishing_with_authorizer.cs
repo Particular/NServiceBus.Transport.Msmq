@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
     using AcceptanceTesting;
+    using Configuration.AdvancedExtensibility;
     using Features;
     using Pipeline;
     using NServiceBus.AcceptanceTests;
@@ -51,7 +52,8 @@
             {
                 EndpointSetup<DefaultServer>(b =>
                 {
-                    b.UseTransport<MsmqTransport>().SubscriptionAuthorizer(Authorizer);
+                    var routingSettings = new RoutingSettings<MsmqTransport>(b.GetSettings());
+                    routingSettings.SubscriptionAuthorizer(Authorizer);
                     b.OnEndpointSubscribed<TestContext>((s, context) =>
                     {
                         if (s.SubscriberReturnAddress.Contains("Subscriber1"))
@@ -89,9 +91,7 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.DisableFeature<AutoSubscribe>();
-                    c.UseTransport<MsmqTransport>()
-                        .Routing().RegisterPublisher(typeof(MyEvent), AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)));
-                });
+                }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
             public class MyEventHandler : IHandleMessages<MyEvent>
@@ -118,9 +118,7 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.DisableFeature<AutoSubscribe>();
-                    c.UseTransport<MsmqTransport>()
-                        .Routing().RegisterPublisher(typeof(MyEvent), AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)));
-                });
+                }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
             public class MyEventHandler : IHandleMessages<MyEvent>

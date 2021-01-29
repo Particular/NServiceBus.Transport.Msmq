@@ -30,9 +30,13 @@
         {
             public SenderWithoutMappingFile()
             {
-                EndpointSetup<DefaultServer>(c => c.UseTransport<MsmqTransport>().Routing()
-                    // only configure logical endpoint
-                    .RouteToEndpoint(typeof(Message), Conventions.EndpointNamingConvention(typeof(ReceiverWithoutMappingFile))));
+                EndpointSetup<DefaultServer>(c =>
+                {
+                    c.ConfigureRouting()
+                        // only configure logical endpoint
+                        .RouteToEndpoint(typeof(Message),
+                            Conventions.EndpointNamingConvention(typeof(ReceiverWithoutMappingFile)));
+                });
             }
         }
 

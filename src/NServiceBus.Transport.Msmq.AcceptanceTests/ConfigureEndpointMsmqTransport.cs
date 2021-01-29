@@ -10,16 +10,17 @@ using NServiceBus.Transport;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
+    internal readonly MsmqTransport transportDefinition = new MsmqTransport();
+
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
         queueBindings = configuration.GetSettings().Get<QueueBindings>();
 
-        var transportConfig = configuration.UseTransport<MsmqTransport>();
-        transportConfig.DisableConnectionCachingForSends();
-        configuration.GetSettings().Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
-        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders();
+        transportDefinition.UseConnectionCache = false;
+        transportDefinition.MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
+        //transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
-        var routingConfig = transportConfig.Routing();
+        var routingConfig = configuration.UseTransport(transportDefinition);
 
         foreach (var publisher in publisherMetadata.Publishers)
         {
@@ -41,7 +42,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         {
             using (messageQueue)
             {
-                if (queueBindings.ReceivingAddresses.Any(ra =>
+                if (transportDefinition.receiveQueues.Any(ra =>
                 {
                     var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
                     if (indexOfAt >= 0)

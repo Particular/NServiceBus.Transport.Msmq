@@ -27,8 +27,8 @@
                 await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
-                    var t = c.UseTransport<MsmqTransport>();
-                    if (!global) t.DisableDeadLetterQueueing();
+                    var t = (MsmqTransport) c.ConfigureTransport();
+                    if (!global) t.UseDeadLetterQueue = false;
                 }).When(async (session, c) =>
                 {
                     var options = new SendOptions();
@@ -75,8 +75,8 @@
                 await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
-                    var t = c.UseTransport<MsmqTransport>();
-                    if (global) t.EnableJournaling();
+                    var t = (MsmqTransport)c.ConfigureTransport();
+                    if (global) t.UseJournalQueue = true;
                 }).When(async (session, c) =>
                 {
                     var options = new SendOptions();

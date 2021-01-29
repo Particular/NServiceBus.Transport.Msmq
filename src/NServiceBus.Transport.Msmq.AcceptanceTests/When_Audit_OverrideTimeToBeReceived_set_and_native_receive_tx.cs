@@ -30,8 +30,7 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.ReceiveOnly);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                     config.AuditProcessedMessagesTo("someAuditQueue", TimeSpan.FromHours(1));
                 });
             }

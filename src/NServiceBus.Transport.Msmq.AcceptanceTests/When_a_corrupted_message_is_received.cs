@@ -29,8 +29,7 @@
                     {
                         b.CustomConfig(c =>
                         {
-                            c.UseTransport<MsmqTransport>()
-                                .Transactions(transactionMode);
+                            c.ConfigureTransport().TransportTransactionMode = transactionMode;
                         });
                         b.When((session, c) =>
                         {

@@ -11,7 +11,6 @@
 
     public class When_distributing_an_event : NServiceBusAcceptanceTest
     {
-        static string PublisherEndpoint => Conventions.EndpointNamingConvention(typeof(Publisher));
         static string SubscriberEndpoint => Conventions.EndpointNamingConvention(typeof(Subscriber));
 
         [Test]
@@ -79,11 +78,10 @@
             public Subscriber1()
             {
                 EndpointSetup<DefaultServer>(c =>
-                {
-                    c.OverrideLocalAddress(SubscriberEndpoint + "-1");
-                    var transport = c.UseTransport<MsmqTransport>();
-                    transport.Routing().RegisterPublisher(typeof(MyEvent), PublisherEndpoint);
-                }).CustomEndpointName(SubscriberEndpoint);
+                    {
+                        c.OverrideLocalAddress(SubscriberEndpoint + "-1");
+                    }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)))
+                    .CustomEndpointName(SubscriberEndpoint);
             }
 
             public class MyMessageHandler : IHandleMessages<MyEvent>
@@ -107,11 +105,10 @@
             public Subscriber2()
             {
                 EndpointSetup<DefaultServer>(c =>
-                {
-                    c.OverrideLocalAddress(SubscriberEndpoint + "-2");
-                    var transport = c.UseTransport<MsmqTransport>();
-                    transport.Routing().RegisterPublisher(typeof(MyEvent), PublisherEndpoint);
-                }).CustomEndpointName(SubscriberEndpoint);
+                    {
+                        c.OverrideLocalAddress(SubscriberEndpoint + "-2");
+                    }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)))
+                    .CustomEndpointName(SubscriberEndpoint);
             }
 
             public class MyMessageHandler : IHandleMessages<MyEvent>

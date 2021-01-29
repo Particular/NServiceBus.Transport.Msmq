@@ -2,7 +2,7 @@
 { 
     using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
-    using NServiceBus.Transport.Msmq;
+    using Transport.Msmq;
     using Routing;
 
     /// <summary>
@@ -23,7 +23,6 @@
             config.GetSettings().GetOrCreate<List<DistributionStrategy>>().Add(distributionStrategy);
         }
 
-        //TODO is this a core-only feature?
         /// <summary>
         /// Returns the configuration options for the file based instance mapping file.
         /// </summary>

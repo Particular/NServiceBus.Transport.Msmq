@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
-    using Extensibility;
     using Features;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
@@ -39,14 +38,14 @@
         {
             protected override void Setup(FeatureConfigurationContext context)
             {
-                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.GetRequiredService<IDispatchMessages>()));
+                context.RegisterStartupTask(b => new V33ControlMessageSimulatorTask(b.GetRequiredService<IMessageDispatcher>()));
             }
 
             class V33ControlMessageSimulatorTask : FeatureStartupTask
             {
-                readonly IDispatchMessages dispatcher;
+                readonly IMessageDispatcher dispatcher;
 
-                public V33ControlMessageSimulatorTask(IDispatchMessages dispatcher)
+                public V33ControlMessageSimulatorTask(IMessageDispatcher dispatcher)
                 {
                     this.dispatcher = dispatcher;
                 }
@@ -68,7 +67,7 @@
                     }, body);
 
                     var endpoint = Conventions.EndpointNamingConvention(typeof(TestingEndpoint));
-                    return dispatcher.Dispatch(new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(endpoint))), new TransportTransaction(), new ContextBag());
+                    return dispatcher.Dispatch(new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(endpoint))), new TransportTransaction());
                 }
 
                 protected override Task OnStop(IMessageSession session)
@@ -84,7 +83,6 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.UseTransport<MsmqTransport>();
                     config.Pipeline.Register("AssertBehavior", new AssertBehavior((Context)ScenarioContext), "Asserts message was processed without any failures");
                     config.EnableFeature<V33ControlMessageSimulator>();
                 });

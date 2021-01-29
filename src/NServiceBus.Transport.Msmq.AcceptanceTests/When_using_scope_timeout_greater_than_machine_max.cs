@@ -28,9 +28,9 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.TransactionScope)
-                        .TransactionScopeOptions(timeout: TimeSpan.FromHours(1));
+                    var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                    transportSettings.TransportTransactionMode = TransportTransactionMode.TransactionScope;
+                    transportSettings.TransactionScopeOptions = new MsmqScopeOptions(TimeSpan.FromHours(1));
                 });
             }
         }

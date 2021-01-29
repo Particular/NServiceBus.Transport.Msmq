@@ -5,6 +5,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using Configuration.AdvancedExtensibility;
     using NUnit.Framework;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
@@ -53,7 +54,7 @@
                 {
                     if (!defaultFile)
                     {
-                        var routingSettings = cfg.UseTransport<MsmqTransport>().Routing();
+                        var routingSettings = new RoutingSettings<MsmqTransport>(cfg.GetSettings());
                         routingSettings.InstanceMappingFile().FilePath(mappingFilePath);
                     }
                 })
@@ -87,8 +88,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routingSettings = c.UseTransport<MsmqTransport>().Routing();
-                    routingSettings.RouteToEndpoint(typeof(Message), destination);
+                    c.ConfigureRouting().RouteToEndpoint(typeof(Message), destination);
                 });
             }
         }

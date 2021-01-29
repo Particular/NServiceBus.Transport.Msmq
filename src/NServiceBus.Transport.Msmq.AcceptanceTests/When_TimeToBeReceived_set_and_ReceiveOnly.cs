@@ -32,8 +32,7 @@
             public TtbrEndpoint()
             {
                 EndpointSetup<DefaultServer>(c => c
-                    .UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.ReceiveOnly));
+                    .ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly);
             }
 
             class StartMessageHandler : IHandleMessages<StartMessage>
