@@ -174,7 +174,7 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("DisableNativeTtbrInTransactions", true);
         }
-        
+
         /// <summary>
         /// Ignore incoming Time-To-Be-Received (TTBR) headers. By default an expired TTBR header will result in the message to be discarded.
         /// </summary>

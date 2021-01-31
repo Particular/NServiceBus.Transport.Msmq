@@ -22,7 +22,7 @@
 
             var queue = new MsmqSubscriptionStorageQueue(MsmqAddress.Parse(configuredQueueName), msmqSettings.UseTransactionalQueues);
             var storage = new MsmqSubscriptionStorage(queue);
-            
+
             context.Services.AddSingleton<ISubscriptionStorage>(storage);
             context.Services.AddSingleton<IInitializableSubscriptionStorage>(storage);
         }

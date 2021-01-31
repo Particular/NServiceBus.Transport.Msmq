@@ -27,7 +27,7 @@
                 }))
                 .WithEndpoint<Subscriber1>()
                 .WithEndpoint<Subscriber2>()
-                .Done(c => c.Receiver1TimesCalled + c.Receiver2TimesCalled>= 10)
+                .Done(c => c.Receiver1TimesCalled + c.Receiver2TimesCalled >= 10)
                 .Run();
 
             Assert.AreEqual(5, context.Receiver1TimesCalled);
@@ -88,7 +88,7 @@
 
             public class MyMessageHandler : IHandleMessages<MyEvent>
             {
-                private readonly Context scenarioContext;
+                readonly Context scenarioContext;
                 public MyMessageHandler(Context scenarioContext)
                 {
                     this.scenarioContext = scenarioContext;
@@ -116,7 +116,7 @@
 
             public class MyMessageHandler : IHandleMessages<MyEvent>
             {
-                private readonly Context scenarioContext;
+                readonly Context scenarioContext;
                 public MyMessageHandler(Context scenarioContext)
                 {
                     this.scenarioContext = scenarioContext;

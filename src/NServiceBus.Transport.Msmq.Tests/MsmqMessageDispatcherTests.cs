@@ -1,16 +1,15 @@
-﻿using System.Threading.Tasks;
-
-namespace NServiceBus.Transport.Msmq.Tests
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Collections.Generic;
     using System.Messaging;
-    using DeliveryConstraints;
-    using Extensibility;
+    using System.Threading.Tasks;
+    using NServiceBus.DeliveryConstraints;
+    using NServiceBus.Extensibility;
+    using NServiceBus.Performance.TimeToBeReceived;
+    using NServiceBus.Routing;
+    using NServiceBus.Transport;
     using NUnit.Framework;
-    using Performance.TimeToBeReceived;
-    using Routing;
-    using Transport;
 
     [TestFixture]
     public class MsmqMessageDispatcherTests
@@ -103,5 +102,5 @@ namespace NServiceBus.Transport.Msmq.Tests
                 MsmqHelpers.DeleteQueue(path);
             }
         }
-    }    
+    }
 }

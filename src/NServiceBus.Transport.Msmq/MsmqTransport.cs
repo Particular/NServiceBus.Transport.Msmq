@@ -90,7 +90,7 @@ transport.TimeToReachQueue(timespanValue);";
         {
             var settingAvailable = settings.TryGet(out TransportTransactionMode transactionMode);
 
-            if (!settingAvailable  || transactionMode == TransportTransactionMode.TransactionScope)
+            if (!settingAvailable || transactionMode == TransportTransactionMode.TransactionScope)
             {
                 try
                 {

@@ -1,12 +1,11 @@
-﻿using System.Threading.Tasks;
-
-namespace NServiceBus.Transport.Msmq.Tests
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Messaging;
     using System.Security.Principal;
+    using System.Threading.Tasks;
+    using NServiceBus.Transport;
     using NUnit.Framework;
-    using Transport;
 
     [TestFixture]
     public class MsmqQueueCreatorTests

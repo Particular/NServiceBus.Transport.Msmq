@@ -28,7 +28,10 @@
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
                     var t = c.UseTransport<MsmqTransport>();
-                    if (!global) t.DisableDeadLetterQueueing();
+                    if (!global)
+                    {
+                        t.DisableDeadLetterQueueing();
+                    }
                 }).When(async (session, c) =>
                 {
                     var options = new SendOptions();
@@ -76,7 +79,10 @@
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
                     var t = c.UseTransport<MsmqTransport>();
-                    if (global) t.EnableJournaling();
+                    if (global)
+                    {
+                        t.EnableJournaling();
+                    }
                 }).When(async (session, c) =>
                 {
                     var options = new SendOptions();

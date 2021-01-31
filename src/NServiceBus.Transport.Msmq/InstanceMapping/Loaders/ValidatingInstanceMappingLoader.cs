@@ -19,7 +19,7 @@
 
         public override string ToString() => loader.ToString();
 
-        private IInstanceMappingLoader loader;
-        private IInstanceMappingValidator validator;
+        IInstanceMappingLoader loader;
+        IInstanceMappingValidator validator;
     }
 }
