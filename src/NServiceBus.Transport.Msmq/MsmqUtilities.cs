@@ -116,7 +116,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties)
+        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties, MsmqTransport transportSettings)
         {
             var result = new Message();
 
@@ -128,8 +128,15 @@ namespace NServiceBus.Transport.Msmq
 
             AssignMsmqNativeCorrelationId(message, result);
 
-            //TODO implement non-durable delivery support
-            //result.Recoverable = !deliveryConstraints.Any(c => c is NonDurableDelivery);
+            if (dispatchProperties.TryGetValue(MsmqMessageDispatcher.NonDurableDispatchPropertyKey, out var boolString) && bool.Parse(boolString))
+            {
+                result.Recoverable = false;
+            }
+            else
+            {
+                result.Recoverable = transportSettings.UseRecoverableMessages;
+            }
+            
 
             if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
             {

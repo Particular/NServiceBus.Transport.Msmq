@@ -225,6 +225,12 @@ namespace NServiceBus
         public string Username { get; set; }
 
         /// <summary>
+        /// Defines whether to use recoverable or express messages. <c>true</c> by default.
+        /// When set to false, messages are stored only in memory and delivery is not guaranteed. When set to <c>false</c>, <see cref="UseTransactionalQueues"/> must be set to <c>false</c> if the transport is configured to create the queues.
+        /// </summary>
+        public bool UseRecoverableMessages { get; set; } = true;
+
+        /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
         /// <remarks>

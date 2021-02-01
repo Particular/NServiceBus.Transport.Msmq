@@ -20,7 +20,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new DispatchProperties());
+            }, new byte[0]), new DispatchProperties(), new MsmqTransport());
             var headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
@@ -35,7 +35,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new DispatchProperties());
+            }, new byte[0]), new DispatchProperties(), new MsmqTransport());
             var bufferWithNulls = new byte[message.Extension.Length + (10*sizeof(char))];
 
             Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10*sizeof(char)));
@@ -52,7 +52,7 @@
         {
             var message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]),
-                new DispatchProperties());
+                new DispatchProperties(), new MsmqTransport());
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -68,7 +68,7 @@
                     {
                         {Headers.ReplyToAddress, "SomeAddress"}
                     }, new byte[0]),
-                new DispatchProperties());
+                new DispatchProperties(), new MsmqTransport());
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -84,7 +84,7 @@
                 {
                     {Headers.MessageIntent, MessageIntentEnum.Send.ToString()}
                 }, new byte[0]),
-                new DispatchProperties());
+                new DispatchProperties(), new MsmqTransport());
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -98,7 +98,7 @@
             var message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", new Dictionary<string, string>
                 (), new byte[0]),
-                new DispatchProperties());
+                new DispatchProperties(), new MsmqTransport());
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             var headers = MsmqUtilities.ExtractHeaders(message);
@@ -115,23 +115,32 @@
             };
 
 
-            var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), properties);
+            var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), properties, new MsmqTransport());
 
             Assert.AreEqual(TimeSpan.FromDays(1), message.TimeToBeReceived);
         }
 
         [Test]
-        public void Should_use_the_non_durable_setting()
+        public void Should_use_non_durable_setting()
         {
-            Assert.Fail("TODO implement non-durable delivery");
-            // var nonDurableDeliveryConstraint = new List<DeliveryConstraint>
-            // {
-            //     new NonDurableDelivery()
-            // };
-            var nonDurableDeliveryConstraint = new DispatchProperties();
+            var durableEnabled = new MsmqTransport();
+            var durableDisabled = new MsmqTransport {UseRecoverableMessages = false};
 
-            Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), nonDurableDeliveryConstraint).Recoverable);
-            Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties()).Recoverable);
+            Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableEnabled).Recoverable);
+            Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableDisabled).Recoverable);
+        }
+
+        [Test]
+        public void Should_use_non_durable_settings_from_properties()
+        {
+            var durableEnabled = new MsmqTransport();
+
+            Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableEnabled).Recoverable);
+
+
+            var dispatchProperties = new DispatchProperties();
+            dispatchProperties["MSMQ.NonDurable"] = bool.TrueString;
+            Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), dispatchProperties, durableEnabled).Recoverable);
         }
 
         [Test]
@@ -142,7 +151,7 @@
             var message = MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>
             {
                 {"NServiceBus.ExceptionInfo.Message", expected}
-            }, new byte[0]), new DispatchProperties());
+            }, new byte[0]), new DispatchProperties(), new MsmqTransport());
 
             var r = new Random();
 
