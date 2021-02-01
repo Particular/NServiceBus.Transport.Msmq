@@ -25,8 +25,7 @@
                         {
                             var transportSettings = (MsmqTransport)c.ConfigureTransport();
                             transportSettings.TransportTransactionMode = TransportTransactionMode.TransactionScope;
-                            transportSettings.TransactionScopeOptions =
-                                new MsmqScopeOptions(requestedIsolationLevel: isolationLevel);
+                            transportSettings.ConfigureTransactionScope(isolationLevel: isolationLevel);
                         });
                         g.When(b => b.SendLocal(new MyMessage()));
                     })
@@ -49,8 +48,7 @@
                             {
                                 var transportSettings = (MsmqTransport)c.ConfigureTransport();
                                 transportSettings.TransportTransactionMode = TransportTransactionMode.TransactionScope;
-                                transportSettings.TransactionScopeOptions =
-                                    new MsmqScopeOptions(requestedIsolationLevel: IsolationLevel.Snapshot);
+                                transportSettings.ConfigureTransactionScope(isolationLevel: IsolationLevel.Snapshot);
                             });
                             g.When(b => b.SendLocal(new MyMessage()));
                         })

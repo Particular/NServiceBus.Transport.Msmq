@@ -273,7 +273,7 @@ namespace NServiceBus
         }
 
         internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
-        internal MsmqScopeOptions TransactionScopeOptions { get; set; } = new MsmqScopeOptions();
+        internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
         internal string[] receiveQueues = Array.Empty<string>();
     }
 }
