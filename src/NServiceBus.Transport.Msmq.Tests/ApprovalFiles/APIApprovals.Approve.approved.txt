@@ -1,4 +1,6 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.AcceptanceTests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.TransportTests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.7.2", FrameworkDisplayName=".NET Framework 4.7.2")]
 namespace NServiceBus
@@ -25,18 +27,41 @@ namespace NServiceBus
     }
     public static class MsmqConfigurationExtensions
     {
+        [System.Obsolete("Use `MsmqTransport.ApplyLabel` instead. The member currently throws a NotImplemen" +
+            "tedException. Will be removed in version 3.0.0.", true)]
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ApplyLabelToMessages(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
+        [System.Obsolete("Use `MsmqTransport.UseConnectionCache` instead. The member currently throws a Not" +
+            "ImplementedException. Will be removed in version 3.0.0.", true)]
         public static void DisableConnectionCachingForSends(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.UseDeadLetterQueue` instead. The member currently throws a Not" +
+            "ImplementedException. Will be removed in version 3.0.0.", true)]
         public static void DisableDeadLetterQueueing(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.ExecuteInstaller` instead. The member currently throws a NotIm" +
+            "plementedException. Will be removed in version 3.0.0.", true)]
         public static void DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.DisableNativeTtbrInTransactions` instead. The member currently" +
+            " throws a NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static void DisableNativeTimeToBeReceivedInTransactions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.UseJournalQueue` instead. The member currently throws a NotImp" +
+            "lementedException. Will be removed in version 3.0.0.", true)]
         public static void EnableJournaling(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.IgnoreIncomingTimeToBeReceivedHeaders` instead. The member cur" +
+            "rently throws a NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static void IgnoreIncomingTimeToBeReceivedHeaders(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
+        [System.Obsolete("Use `MsmqTransport.TimeToReachQueue` instead. The member currently throws a NotIm" +
+            "plementedException. Will be removed in version 3.0.0.", true)]
         public static void TimeToReachQueue(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config, System.TimeSpan timeToReachQueue) { }
+        [System.Obsolete("Use `MsmqTransport.ConfigureTransactionScope` instead. The member currently throw" +
+            "s a NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TransactionScopeOptions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
+        [System.Obsolete("Use `MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived` instead. Th" +
+            "e member currently throws a NotImplementedException. Will be removed in version " +
+            "3.0.0.", true)]
         public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `MsmqTransport.UseTransactionalQueues` instead. The member currently throws a" +
+            " NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static void UseNonTransactionalQueues(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
     }
     public class MsmqPersistence : NServiceBus.Persistence.PersistenceDefinition { }
@@ -47,9 +72,21 @@ namespace NServiceBus
     public class MsmqTransport : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport
     {
         public MsmqTransport() { }
-        public override string ExampleConnectionStringForErrorMessage { get; }
-        public override bool RequiresConnectionString { get; }
-        public override NServiceBus.Transport.TransportInfrastructure Initialize(NServiceBus.Settings.SettingsHolder settings, string connectionString) { }
+        public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyLabel { get; set; }
+        public bool DisableNativeTtbrInTransactions { get; set; }
+        public bool ExecuteInstaller { get; set; }
+        public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
+        public System.TimeSpan TimeToReachQueue { get; set; }
+        public bool UseConnectionCache { get; set; }
+        public bool UseDeadLetterQueue { get; set; }
+        public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
+        public bool UseJournalQueue { get; set; }
+        public bool UseTransactionalQueues { get; set; }
+        public string Username { get; set; }
+        public void ConfigureTransactionScope(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
+        public override System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes() { }
+        public override System.Threading.Tasks.Task<NServiceBus.Transport.TransportInfrastructure> Initialize(NServiceBus.Transport.HostSettings hostSettings, NServiceBus.Transport.ReceiveSettings[] receivers, string[] sendingAddresses) { }
+        public override string ToTransportAddress(NServiceBus.Transport.QueueAddress address) { }
     }
 }
 namespace NServiceBus.Transport.Msmq
