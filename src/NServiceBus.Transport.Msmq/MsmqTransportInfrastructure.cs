@@ -57,7 +57,6 @@ namespace NServiceBus.Transport.Msmq
                     transactionMode =>
                         SelectReceiveStrategy(transactionMode, transportSettings.TransactionScopeOptions.TransactionOptions),
                     transportSettings.MessageEnumeratorTimeout,
-                    transportSettings.IgnoreIncomingTimeToBeReceivedHeaders,
                     criticalErrorAction,
                     transportSettings,
                     receiver);

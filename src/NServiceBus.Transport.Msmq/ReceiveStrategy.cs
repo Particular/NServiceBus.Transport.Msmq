@@ -14,14 +14,14 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, Action<string, Exception> criticalError, bool discardExpiredTtbrMessages)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, Action<string, Exception> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
             this.onError = onError;
             this.criticalError = criticalError;
-            this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
+            this.ignoreIncomingTimeToBeReceivedHeaders = ignoreIncomingTimeToBeReceivedHeaders;
         }
 
         protected bool TryReceive(MessageQueueTransactionType transactionType, out Message message)
@@ -102,7 +102,7 @@ namespace NServiceBus.Transport.Msmq
 
         protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
         {
-            if (discardExpiredTtbrMessages && TimeToBeReceived.HasElapsed(headers))
+            if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
             {
                 Logger.Debug($"Discarding message {messageId} due to lapsed Time To Be Received header");
                 return false;
@@ -155,7 +155,7 @@ namespace NServiceBus.Transport.Msmq
         Func<MessageContext, Task> onMessage;
         Func<ErrorContext, Task<ErrorHandleResult>> onError;
         Action<string, Exception> criticalError;
-        bool discardExpiredTtbrMessages;
+        bool ignoreIncomingTimeToBeReceivedHeaders;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }

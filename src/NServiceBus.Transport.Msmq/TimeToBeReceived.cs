@@ -18,7 +18,7 @@
             }
 
             var cutOff = timeSent + ttbr;
-            var receiveTime = DateTime.UtcNow;
+            var receiveTime = DateTimeOffset.UtcNow;
 
             return cutOff < receiveTime;            
         }

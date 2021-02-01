@@ -14,7 +14,6 @@ namespace NServiceBus.Transport.Msmq
         public MessagePump(
             Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
             TimeSpan messageEnumeratorTimeout,
-            bool discardExpiredTtbrMessages,
             Action<string, Exception> criticalErrorAction,
             MsmqTransport transportSettings,
             ReceiveSettings receiveSettings)
@@ -22,7 +21,6 @@ namespace NServiceBus.Transport.Msmq
             Id = receiveSettings.Id;
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
-            this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
             this.criticalErrorAction = criticalErrorAction;
             this.transportSettings = transportSettings;
             this.receiveSettings = receiveSettings;
@@ -63,8 +61,7 @@ namespace NServiceBus.Transport.Msmq
             inputQueue.MessageReadPropertyFilter = DefaultReadPropertyFilter;
 
             receiveStrategy = receiveStrategyFactory(transportSettings.TransportTransactionMode);
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction,
-                discardExpiredTtbrMessages);
+            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, transportSettings.IgnoreIncomingTimeToBeReceivedHeaders);
 
             maxConcurrency = limitations.MaxConcurrency;
             concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
@@ -249,7 +246,6 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
-        bool discardExpiredTtbrMessages;
         private readonly Action<string, Exception> criticalErrorAction;
         private readonly MsmqTransport transportSettings;
         private readonly ReceiveSettings receiveSettings;
