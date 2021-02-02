@@ -11,10 +11,42 @@
     class When_message_with_expired_ttbr_header_is_received : NServiceBusAcceptanceTest
     {
         [Test]
+        public async Task Message_should_not_be_processed()
+        {
+            var context = await Scenario.Define<Context>()
+                .WithEndpoint<SomeEndpoint>(endpoint => endpoint
+                    .CustomConfig(e =>
+                    {
+                        var transportConfig = (MsmqTransport)e.ConfigureTransport();
+                        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = false;
+                    })
+                    .When(async (session, ctx) =>
+                    {
+                        var sendOptions = new SendOptions();
+                        sendOptions.RouteToThisEndpoint();
+                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
+                        sendOptions.SetHeader(Headers.TimeToBeReceived, TimeSpan.FromSeconds(5).ToString());
+
+                        await session.Send(new SomeMessage(), sendOptions);
+                        ctx.WasSent = true;
+                    })
+                )
+                .Run(TimeSpan.FromSeconds(5));
+
+            Assert.IsTrue(context.WasSent, "Message was sent");
+            Assert.IsFalse(context.WasReceived, "Message was processed");
+        }
+
+        [Test]
         public async Task Message_should_be_processed_when_ignoringTTBRHeaders()
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SomeEndpoint>(endpoint => endpoint
+                    .CustomConfig(e =>
+                    {
+                        var transportConfig = (MsmqTransport)e.ConfigureTransport();
+                        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = true;
+                    })
                     .When(async (session, ctx) =>
                     {
                         var sendOptions = new SendOptions();
@@ -36,10 +68,7 @@
         {
             public SomeEndpoint()
             {
-                var defaultServer = new DefaultServer();
-                ((ConfigureEndpointMsmqTransport)defaultServer.TransportConfiguration).TransportDefinition
-                    .IgnoreIncomingTimeToBeReceivedHeaders = true;
-                EndpointSetup(defaultServer, (endpointConfiguration, descriptor) => { });
+                EndpointSetup<DefaultServer>();
             }
 
             public class SomeMessageHandler : IHandleMessages<SomeMessage>
