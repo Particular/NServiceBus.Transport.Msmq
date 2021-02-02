@@ -3,6 +3,8 @@
     using System;
     using System.Messaging;
     using System.Security.Principal;
+    using System.Threading.Tasks;
+    using NServiceBus.Transport;
     using NUnit.Framework;
 
     [TestFixture]

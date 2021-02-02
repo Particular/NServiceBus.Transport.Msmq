@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal static class TimeToBeReceived
+    static class TimeToBeReceived
     {
         public static bool HasElapsed(Dictionary<string, string> headers)
         {
@@ -20,7 +20,7 @@
             var cutOff = timeSent + ttbr;
             var receiveTime = DateTimeOffset.UtcNow;
 
-            return cutOff < receiveTime;            
+            return cutOff < receiveTime;
         }
 
         static bool TryGetTtbr(Dictionary<string, string> headers, out TimeSpan ttbr)

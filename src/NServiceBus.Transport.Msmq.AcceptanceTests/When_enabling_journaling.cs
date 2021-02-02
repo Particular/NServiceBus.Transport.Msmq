@@ -23,7 +23,10 @@
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
                     var t = (MsmqTransport)c.ConfigureTransport();
-                    if (global) t.UseJournalQueue = true;
+                    if (global)
+                    {
+                         t.UseJournalQueue = true;
+                    }
                 }).When(async (session, c) =>
                 {
                     var options = new SendOptions();

@@ -4,10 +4,11 @@
     using System;
     using System.Collections.Generic;
     using System.Messaging;
+    using NServiceBus.Extensibility;
+    using NServiceBus.Performance.TimeToBeReceived;
+    using NServiceBus.Routing;
+    using NServiceBus.Transport;
     using NUnit.Framework;
-    using Performance.TimeToBeReceived;
-    using Routing;
-    using Transport;
 
     [TestFixture]
     public class MsmqMessageDispatcherTests
@@ -97,5 +98,5 @@
                 MsmqHelpers.DeleteQueue(path);
             }
         }
-    }    
+    }
 }
