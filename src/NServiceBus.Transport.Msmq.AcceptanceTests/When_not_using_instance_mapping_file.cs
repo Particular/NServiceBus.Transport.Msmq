@@ -34,8 +34,7 @@
                 {
                     c.ConfigureRouting()
                         // only configure logical endpoint
-                        .RouteToEndpoint(typeof(Message),
-                            Conventions.EndpointNamingConvention(typeof(ReceiverWithoutMappingFile)));
+                        .RouteToEndpoint(typeof(Message), typeof(ReceiverWithoutMappingFile));
                 });
             }
         }
