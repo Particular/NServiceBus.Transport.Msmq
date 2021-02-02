@@ -26,7 +26,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         var msmqSettings = (MsmqTransport)transportDefinition;
         receiveQueue = inputQueueName;
         var infrastructure = await msmqSettings.Initialize(hostSettings,
-            new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, false, errorQueueName) },
+            new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, true, errorQueueName) },
             new[] { errorQueueName });
 
         return infrastructure;
