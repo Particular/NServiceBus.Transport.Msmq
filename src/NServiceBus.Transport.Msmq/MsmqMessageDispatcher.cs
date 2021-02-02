@@ -67,7 +67,6 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    //TODO where is the usedeadletterqueue setting used?
                     using (var toSend = MsmqUtilities.Convert(message, dispatchProperties, transportSettings))
                     {
                         var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();

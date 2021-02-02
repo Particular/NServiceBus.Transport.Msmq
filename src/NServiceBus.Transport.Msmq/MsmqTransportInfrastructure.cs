@@ -6,7 +6,6 @@ namespace NServiceBus.Transport.Msmq
     using System.Transactions;
     using Transport;
 
-    //TODO how to support non-durable delivery?
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
         readonly MsmqTransport transportSettings;
@@ -15,7 +14,6 @@ namespace NServiceBus.Transport.Msmq
         {
             this.transportSettings = transportSettings;
 
-            //TODO make non-virtual in core
             Dispatcher = new MsmqMessageDispatcher(transportSettings);
         }
 
