@@ -35,7 +35,6 @@ namespace NServiceBus
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
-            var outBoxRunning = false;
             if (hostSettings.CoreSettings != null)
             {
                 // enforce an explicitly configured error queue when using MSMQ transport with NServiceBus
@@ -44,8 +43,7 @@ namespace NServiceBus
                     throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
                 }
 
-                outBoxRunning = hostSettings.CoreSettings.IsFeatureActive(typeof(Features.Outbox));
-
+                bool outBoxRunning = hostSettings.CoreSettings.IsFeatureActive(typeof(Features.Outbox));
                 if (hostSettings.CoreSettings.TryGetAuditMessageExpiration(out var auditMessageExpiration))
                 {
                     TimeToBeReceivedOverrideChecker.Check(

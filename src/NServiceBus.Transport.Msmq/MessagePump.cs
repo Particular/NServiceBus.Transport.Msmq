@@ -28,7 +28,9 @@ namespace NServiceBus.Transport.Msmq
 
         public void Dispose()
         {
-            // Injected
+            peekCircuitBreaker?.Dispose();
+            receiveCircuitBreaker?.Dispose();
+            cancellationTokenSource?.Dispose();
         }
 
         public Task Initialize(PushRuntimeSettings limitations, Func<MessageContext, Task> onMessage,

@@ -37,16 +37,16 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();
 
+        var indexOfAt = receiveQueue.IndexOf("@", StringComparison.Ordinal);
+        if (indexOfAt >= 0)
+        {
+            receiveQueue = receiveQueue.Substring(0, indexOfAt);
+        }
+        
         foreach (var messageQueue in allQueues)
         {
             using (messageQueue)
             {
-                var indexOfAt = receiveQueue.IndexOf("@", StringComparison.Ordinal);
-                if (indexOfAt >= 0)
-                {
-                    receiveQueue = receiveQueue.Substring(0, indexOfAt);
-                }
-
                 if (messageQueue.QueueName.StartsWith(@"private$\" + receiveQueue, StringComparison.OrdinalIgnoreCase))
                 {
                     queuesToBeDeleted.Add(messageQueue.Path);

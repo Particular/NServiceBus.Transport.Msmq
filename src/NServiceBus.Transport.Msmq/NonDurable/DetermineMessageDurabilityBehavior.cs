@@ -9,7 +9,6 @@
     {
         const string NonDurableHeaderName = "NServiceBus.NonDurableMessage";
 
-
         public DetermineMessageDurabilityBehavior(Func<Type, bool> convention)
         {
             this.convention = convention;
