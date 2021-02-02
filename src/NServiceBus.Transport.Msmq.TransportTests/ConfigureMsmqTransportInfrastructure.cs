@@ -42,7 +42,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         {
             receiveQueue = receiveQueue.Substring(0, indexOfAt);
         }
-        
+
         foreach (var messageQueue in allQueues)
         {
             using (messageQueue)
