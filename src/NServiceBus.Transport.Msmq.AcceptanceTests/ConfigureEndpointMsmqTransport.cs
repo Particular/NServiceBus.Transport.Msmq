@@ -5,8 +5,6 @@ using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
-using NServiceBus.Configuration.AdvancedExtensibility;
-using NServiceBus.Transport;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
@@ -14,8 +12,6 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
-        queueBindings = configuration.GetSettings().Get<QueueBindings>();
-
         transportDefinition.UseConnectionCache = false;
         transportDefinition.MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
         //transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = true;
@@ -74,6 +70,4 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 
         return Task.FromResult(0);
     }
-
-    QueueBindings queueBindings;
 }

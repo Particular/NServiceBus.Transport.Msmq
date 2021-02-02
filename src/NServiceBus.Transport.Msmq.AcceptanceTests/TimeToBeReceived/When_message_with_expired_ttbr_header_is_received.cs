@@ -37,7 +37,7 @@
             public SomeEndpoint()
             {
                 var defaultServer = new DefaultServer();
-                ((ConfigureEndpointMsmqTransport) defaultServer.TransportConfiguration).transportDefinition
+                ((ConfigureEndpointMsmqTransport)defaultServer.TransportConfiguration).transportDefinition
                     .IgnoreIncomingTimeToBeReceivedHeaders = true;
                 EndpointSetup(defaultServer, (endpointConfiguration, descriptor) => { });
             }

@@ -1,5 +1,5 @@
-﻿namespace NServiceBus 
-{ 
+﻿namespace NServiceBus
+{
     using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
     using Transport.Msmq;

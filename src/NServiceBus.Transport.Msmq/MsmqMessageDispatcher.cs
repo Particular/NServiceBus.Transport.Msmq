@@ -14,7 +14,7 @@ namespace NServiceBus.Transport.Msmq
     {
         internal const string NonDurableDispatchPropertyKey = "MSMQ.NonDurable";
 
-        private readonly MsmqTransport transportSettings;
+        readonly MsmqTransport transportSettings;
 
         public MsmqMessageDispatcher(MsmqTransport transportSettings)
         {

@@ -9,13 +9,11 @@ namespace NServiceBus.Transport.Msmq
     //TODO how to support non-durable delivery?
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        private readonly MsmqTransport transportSettings;
-        private readonly bool outboxEnabled;
+        readonly MsmqTransport transportSettings;
 
-        public MsmqTransportInfrastructure(MsmqTransport transportSettings, bool outboxEnabled)
+        public MsmqTransportInfrastructure(MsmqTransport transportSettings)
         {
             this.transportSettings = transportSettings;
-            this.outboxEnabled = outboxEnabled;
 
             //TODO make non-virtual in core
             Dispatcher = new MsmqMessageDispatcher(transportSettings);

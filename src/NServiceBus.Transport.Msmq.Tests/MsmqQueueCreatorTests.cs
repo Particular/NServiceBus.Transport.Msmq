@@ -3,8 +3,6 @@
     using System;
     using System.Messaging;
     using System.Security.Principal;
-    using System.Threading.Tasks;
-    using NServiceBus.Transport;
     using NUnit.Framework;
 
     [TestFixture]
@@ -32,7 +30,7 @@
         {
             var creator = new MsmqQueueCreator(true, WindowsIdentity.GetCurrent().Name);
 
-            creator.CreateQueueIfNecessary(new []
+            creator.CreateQueueIfNecessary(new[]
             {
                 testQueueNameForReceiving,
                 testQueueNameForSending
@@ -48,7 +46,7 @@
             var remoteQueueName = $"{testQueueNameForReceiving}@some-machine";
             var creator = new MsmqQueueCreator(true, WindowsIdentity.GetCurrent().Name);
 
-            creator.CreateQueueIfNecessary(new []
+            creator.CreateQueueIfNecessary(new[]
             {
                 remoteQueueName
             });
@@ -63,7 +61,7 @@
             // use the network service account since that one won't be in the local admin group
             var creator = new MsmqQueueCreator(true, NetworkServiceAccountName);
 
-            creator.CreateQueueIfNecessary(new []{ testQueueNameForReceiving });
+            creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving });
 
             var createdQueue = GetQueue(testQueueNameForReceiving);
 
@@ -85,7 +83,7 @@
         {
             var creator = new MsmqQueueCreator(true, WindowsIdentity.GetCurrent().Name);
 
-            creator.CreateQueueIfNecessary(new []{ testQueueNameForReceiving });
+            creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving });
 
             var queue = GetQueue(testQueueNameForReceiving);
 
@@ -97,7 +95,7 @@
         {
             var creator = new MsmqQueueCreator(false, WindowsIdentity.GetCurrent().Name);
 
-            creator.CreateQueueIfNecessary(new[] {testQueueNameForReceiving});
+            creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving });
 
             var queue = GetQueue(testQueueNameForReceiving);
 
@@ -117,7 +115,7 @@
 
             var creator = new MsmqQueueCreator(true, WindowsIdentity.GetCurrent().Name);
 
-            creator.CreateQueueIfNecessary(new[] {testQueueNameForReceiving});
+            creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving });
 
             var existingQueue = GetQueue(testQueueNameForReceiving);
             Assert.False(existingQueue.TryGetPermissions(LocalEveryoneGroupName, out _, out _));
@@ -131,7 +129,7 @@
             var creator = new MsmqQueueCreator(true, "invalidaccount");
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                creator.CreateQueueIfNecessary(new[] {testQueueNameForReceiving}));
+                creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving }));
 
             StringAssert.Contains("invalidaccount", ex.Message);
         }

@@ -27,7 +27,7 @@
                 await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.CustomConfig(c =>
                 {
-                    var t = (MsmqTransport) c.ConfigureTransport();
+                    var t = (MsmqTransport)c.ConfigureTransport();
                     if (!global)
                     {
                         t.UseDeadLetterQueue = false;

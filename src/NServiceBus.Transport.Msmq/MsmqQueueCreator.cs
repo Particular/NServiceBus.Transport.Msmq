@@ -69,7 +69,7 @@ namespace NServiceBus.Transport.Msmq
         }
 
         readonly bool useTransactionalQueues;
-        private readonly string installerUser;
+        readonly string installerUser;
 
         static readonly string LocalAdministratorsGroupName = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Translate(typeof(NTAccount)).ToString();
         static readonly ILog Logger = LogManager.GetLogger<MsmqQueueCreator>();

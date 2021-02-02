@@ -65,7 +65,7 @@ namespace NServiceBus
             {
                 var installerUser = GetInstallationUserName();
                 var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
-                this.receiveQueues = receivers
+                receiveQueues = receivers
                     .Select(r => r.ReceiveAddress)
                     .ToArray();
                 var queuesToCreate = receiveQueues
@@ -89,7 +89,7 @@ namespace NServiceBus
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue)
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, outBoxRunning);
+            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this);
             msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
             return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
@@ -211,7 +211,7 @@ namespace NServiceBus
         /// Configures whether to ignore incoming Time-To-Be-Received (TTBR) headers. By default an expired TTBR header will result in the message to be discarded.
         /// </summary>
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; } = false;
-        
+
         /// <summary>
         /// When set to <c>true</c>, disables native Time-To-Be-Received (TTBR) when combined with transactions.
         /// </summary>

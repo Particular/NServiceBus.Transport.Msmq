@@ -246,9 +246,9 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
-        private readonly Action<string, Exception> criticalErrorAction;
-        private readonly MsmqTransport transportSettings;
-        private readonly ReceiveSettings receiveSettings;
+        readonly Action<string, Exception> criticalErrorAction;
+        readonly MsmqTransport transportSettings;
+        readonly ReceiveSettings receiveSettings;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();
 

@@ -29,14 +29,14 @@ namespace NServiceBus
             ReplacementTypeOrMember = "MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived",
             RemoveInVersion = "3",
             TreatAsErrorFromVersion = "2")]
-        public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this TransportExtensions<MsmqTransport> config) => 
+        public static void UseDeadLetterQueueForMessagesWithTimeToBeReceived(this TransportExtensions<MsmqTransport> config) =>
             throw new NotImplementedException();
 
         [ObsoleteEx(
             ReplacementTypeOrMember = "MsmqTransport.ExecuteInstaller",
             RemoveInVersion = "3",
             TreatAsErrorFromVersion = "2")]
-        public static void DisableInstaller(this TransportExtensions<MsmqTransport> config) => 
+        public static void DisableInstaller(this TransportExtensions<MsmqTransport> config) =>
             throw new NotImplementedException();
 
         [ObsoleteEx(

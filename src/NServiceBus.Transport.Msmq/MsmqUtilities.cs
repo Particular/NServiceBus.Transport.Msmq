@@ -7,9 +7,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Messaging;
     using System.Text;
     using System.Xml;
-    using DeliveryConstraints;
     using Logging;
-    using Performance.TimeToBeReceived;
     using Transport;
 
     class MsmqUtilities
@@ -136,7 +134,6 @@ namespace NServiceBus.Transport.Msmq
             {
                 result.Recoverable = transportSettings.UseRecoverableMessages;
             }
-            
 
             if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
             {

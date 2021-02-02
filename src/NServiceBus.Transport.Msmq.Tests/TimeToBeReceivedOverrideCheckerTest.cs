@@ -9,7 +9,7 @@
         [Test]
         public void Should_succeed_on_non_transactional()
         {
-            Assert.DoesNotThrow(() => 
+            Assert.DoesNotThrow(() =>
                 TimeToBeReceivedOverrideChecker.Check(isTransactional: false, outBoxRunning: false, auditTTBROverridden: false));
         }
 

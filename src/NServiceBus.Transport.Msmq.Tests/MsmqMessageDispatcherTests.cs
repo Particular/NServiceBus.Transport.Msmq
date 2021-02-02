@@ -4,10 +4,9 @@
     using System;
     using System.Collections.Generic;
     using System.Messaging;
-    using NServiceBus.Extensibility;
     using NServiceBus.Performance.TimeToBeReceived;
-    using NServiceBus.Routing;
-    using NServiceBus.Transport;
+    using Routing;
+    using Transport;
     using NUnit.Framework;
 
     [TestFixture]
@@ -16,7 +15,7 @@
         [Test]
         public async Task Should_set_label_when_convention_configured()
         {
-            var transportSettings = new MsmqTransport {ApplyLabel = _ => "mylabel"};
+            var transportSettings = new MsmqTransport { ApplyLabel = _ => "mylabel" };
 
             var dispatchedMessage = await DispatchMessage("labelTest", transportSettings);
 
@@ -40,7 +39,7 @@
         public async Task Should_allow_optin_for_dlq_on_ttbr_messages()
         {
 
-            var transportSettings = new MsmqTransport {UseDeadLetterQueueForMessagesWithTimeToBeReceived = true};
+            var transportSettings = new MsmqTransport { UseDeadLetterQueueForMessagesWithTimeToBeReceived = true };
             var dispatchProperties = new DispatchProperties
             {
                 DiscardIfNotReceivedBefore = new DiscardIfNotReceivedBefore(TimeSpan.FromMinutes(10))

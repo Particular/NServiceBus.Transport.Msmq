@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Messaging;
-    using DeliveryConstraints;
     using NUnit.Framework;
     using Performance.TimeToBeReceived;
     using Support;
@@ -124,7 +123,7 @@
         public void Should_use_non_durable_setting()
         {
             var durableEnabled = new MsmqTransport();
-            var durableDisabled = new MsmqTransport {UseRecoverableMessages = false};
+            var durableDisabled = new MsmqTransport { UseRecoverableMessages = false };
 
             Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableEnabled).Recoverable);
             Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableDisabled).Recoverable);
@@ -138,8 +137,10 @@
             Assert.True(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), new DispatchProperties(), durableEnabled).Recoverable);
 
 
-            var dispatchProperties = new DispatchProperties();
-            dispatchProperties["MSMQ.NonDurable"] = bool.TrueString;
+            var dispatchProperties = new DispatchProperties
+            {
+                ["MSMQ.NonDurable"] = bool.TrueString
+            };
             Assert.False(MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]), dispatchProperties, durableEnabled).Recoverable);
         }
 

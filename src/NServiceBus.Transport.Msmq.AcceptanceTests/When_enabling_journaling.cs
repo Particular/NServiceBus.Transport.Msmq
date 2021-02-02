@@ -25,7 +25,7 @@
                     var t = (MsmqTransport)c.ConfigureTransport();
                     if (global)
                     {
-                         t.UseJournalQueue = true;
+                        t.UseJournalQueue = true;
                     }
                 }).When(async (session, c) =>
                 {

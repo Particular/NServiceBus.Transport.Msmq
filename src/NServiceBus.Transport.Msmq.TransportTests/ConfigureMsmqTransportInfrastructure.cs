@@ -8,24 +8,26 @@ using NServiceBus.TransportTests;
 
 class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
 {
-    private string receiveQueue;
+    string receiveQueue;
 
     public TransportDefinition CreateTransportDefinition()
     {
-        var msmqSettings = new MsmqTransport();
-        msmqSettings.MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
-        msmqSettings.IgnoreIncomingTimeToBeReceivedHeaders = true;
+        var msmqSettings = new MsmqTransport
+        {
+            MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10),
+            IgnoreIncomingTimeToBeReceivedHeaders = true
+        };
 
         return msmqSettings;
     }
 
     public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName)
     {
-        var msmqSettings = (MsmqTransport) transportDefinition;
+        var msmqSettings = (MsmqTransport)transportDefinition;
         receiveQueue = inputQueueName;
         var infrastructure = await msmqSettings.Initialize(hostSettings,
-            new[] {new ReceiveSettings("TestReceiver", inputQueueName, false, false, errorQueueName)},
-            new[] {errorQueueName});
+            new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, false, errorQueueName) },
+            new[] { errorQueueName });
 
         return infrastructure;
     }
