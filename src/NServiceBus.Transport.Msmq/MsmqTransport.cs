@@ -65,11 +65,10 @@ namespace NServiceBus
             {
                 var installerUser = GetInstallationUserName();
                 var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
-                receiveQueues = receivers
+                var queuesToCreate = receivers
                     .Select(r => r.ReceiveAddress)
+                    .Concat(sendingAddresses)
                     .ToArray();
-                var queuesToCreate = receiveQueues
-                    .Concat(sendingAddresses);
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
@@ -272,8 +271,11 @@ namespace NServiceBus
             return Environment.UserName;
         }
 
-        internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
+        /// <summary>
+        /// Defines the timeout used for <see cref="MessageEnumerator.MoveNext(TimeSpan)"/>.
+        /// </summary>
+        protected internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
+
         internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
-        internal string[] receiveQueues = Array.Empty<string>();
     }
 }

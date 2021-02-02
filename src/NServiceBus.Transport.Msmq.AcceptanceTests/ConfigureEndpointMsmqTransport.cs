@@ -5,18 +5,17 @@ using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
+using NServiceBus.Transport;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
-    internal readonly MsmqTransport transportDefinition = new MsmqTransport();
+    internal readonly TestableMsmqTransport TransportDefinition = new TestableMsmqTransport();
 
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
-        transportDefinition.UseConnectionCache = false;
-        transportDefinition.MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
-        //transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = true;
+        TransportDefinition.UseConnectionCache = false;
 
-        var routingConfig = configuration.UseTransport(transportDefinition);
+        var routingConfig = configuration.UseTransport(TransportDefinition);
 
         foreach (var publisher in publisherMetadata.Publishers)
         {
@@ -38,7 +37,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         {
             using (messageQueue)
             {
-                if (transportDefinition.receiveQueues.Any(ra =>
+                if (TransportDefinition.ReceiveQueues.Any(ra =>
                 {
                     var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
                     if (indexOfAt >= 0)
@@ -69,5 +68,18 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         MessageQueue.ClearConnectionCache();
 
         return Task.FromResult(0);
+    }
+}
+
+class TestableMsmqTransport : MsmqTransport
+{
+    public string[] ReceiveQueues = new string[0];
+
+    public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses)
+    {
+        MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
+        ReceiveQueues = receivers.Select(r => r.ReceiveAddress).ToArray();
+
+        return base.Initialize(hostSettings, receivers, sendingAddresses);
     }
 }

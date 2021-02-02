@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\Test.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
