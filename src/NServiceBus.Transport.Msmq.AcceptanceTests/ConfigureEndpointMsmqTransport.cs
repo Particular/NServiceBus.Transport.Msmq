@@ -14,6 +14,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
         TransportDefinition.UseConnectionCache = false;
+        TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 
