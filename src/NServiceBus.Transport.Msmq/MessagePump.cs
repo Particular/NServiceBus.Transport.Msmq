@@ -62,6 +62,11 @@ namespace NServiceBus.Transport.Msmq
 
             inputQueue.MessageReadPropertyFilter = DefaultReadPropertyFilter;
 
+            if (receiveSettings.PurgeOnStartup)
+            {
+                inputQueue.Purge();
+            }
+
             receiveStrategy = receiveStrategyFactory(transportSettings.TransportTransactionMode);
             receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, transportSettings.IgnoreIncomingTimeToBeReceivedHeaders);
 
@@ -73,11 +78,6 @@ namespace NServiceBus.Transport.Msmq
         public Task StartReceive()
         {
             MessageQueue.ClearConnectionCache();
-
-            if (receiveSettings.PurgeOnStartup)
-            {
-                inputQueue.Purge();
-            }
 
             cancellationTokenSource = new CancellationTokenSource();
             cancellationToken = cancellationTokenSource.Token;
