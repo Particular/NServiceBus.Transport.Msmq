@@ -79,12 +79,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var bodyStream = message.BodyStream)
                 {
-                    var shouldAbortMessageProcessing = await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
-
-                    if (shouldAbortMessageProcessing)
-                    {
-                        return false;
-                    }
+                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
                 }
                 return true;
             }

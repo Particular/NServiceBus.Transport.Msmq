@@ -99,19 +99,18 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
+        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
         {
             if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
             {
                 Logger.Debug($"Discarding message {messageId} due to lapsed Time To Be Received header");
-                return false;
+                return;
             }
 
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
             var messageContext = new MessageContext(messageId, headers, body, transaction, new ContextBag());
 
             await onMessage(messageContext).ConfigureAwait(false);
-            return false; //TODO can this be completely removed or will this be readded with CTS support?
         }
 
         protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
