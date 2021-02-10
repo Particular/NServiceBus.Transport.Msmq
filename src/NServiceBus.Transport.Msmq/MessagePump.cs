@@ -33,8 +33,7 @@ namespace NServiceBus.Transport.Msmq
             cancellationTokenSource?.Dispose();
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, Func<MessageContext, Task> onMessage,
-            Func<ErrorContext, Task<ErrorHandleResult>> onError)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError)
         {
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex));
