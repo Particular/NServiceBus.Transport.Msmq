@@ -114,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties, MsmqTransport transportSettings)
+        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties)
         {
             var result = new Message();
 
@@ -126,14 +126,7 @@ namespace NServiceBus.Transport.Msmq
 
             AssignMsmqNativeCorrelationId(message, result);
 
-            if (dispatchProperties.TryGetValue(MsmqMessageDispatcher.NonDurableDispatchPropertyKey, out var boolString) && bool.Parse(boolString))
-            {
-                result.Recoverable = false;
-            }
-            else
-            {
-                result.Recoverable = transportSettings.UseRecoverableMessages;
-            }
+            result.Recoverable = true;
 
             if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
             {

@@ -82,7 +82,6 @@ namespace NServiceBus
         public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
         public bool UseJournalQueue { get; set; }
         public bool UseNonNativeTimeToBeReceivedInTransactions { get; set; }
-        public bool UseRecoverableMessages { get; set; }
         public bool UseTransactionalQueues { get; set; }
         public void ConfigureTransactionScope(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
         public override System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes() { }
@@ -92,15 +91,6 @@ namespace NServiceBus
 }
 namespace NServiceBus.Transport.Msmq
 {
-    [System.AttributeUsage(System.AttributeTargets.Class | System.AttributeTargets.Interface | System.AttributeTargets.All)]
-    public sealed class ExpressAttribute : System.Attribute
-    {
-        public ExpressAttribute() { }
-    }
-    public static class ExpressMessageExtensions
-    {
-        public static void DefiningExpressMessagesAs(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> routingSettings, System.Func<System.Type, bool> expressMessageConvention) { }
-    }
     [System.Serializable]
     public class HeaderInfo
     {

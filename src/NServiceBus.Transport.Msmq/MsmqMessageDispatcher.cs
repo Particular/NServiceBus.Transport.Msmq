@@ -12,8 +12,6 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqMessageDispatcher : IMessageDispatcher
     {
-        internal const string NonDurableDispatchPropertyKey = "MSMQ.NonDurable";
-
         readonly MsmqTransport transportSettings;
 
         public MsmqMessageDispatcher(MsmqTransport transportSettings)
@@ -67,7 +65,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties, transportSettings))
+                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties))
                     {
                         var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();
                         if (useDeadLetterQueue.HasValue)
