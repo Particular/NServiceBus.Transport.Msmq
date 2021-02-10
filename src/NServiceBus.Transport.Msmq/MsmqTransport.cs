@@ -52,14 +52,14 @@ namespace NServiceBus
                         auditMessageExpiration > TimeSpan.Zero);
                 }
 
-                if (Username == null)
+                if (CreateQueuesForUser == null)
                 {
                     // try to use the configured installer user in Core:
-                    Username = hostSettings.CoreSettings.GetOrDefault<string>("Installers.UserName");
+                    CreateQueuesForUser = hostSettings.CoreSettings.GetOrDefault<string>("Installers.UserName");
                 }
             }
 
-            if (hostSettings.SetupInfrastructure && ExecuteInstaller)
+            if (hostSettings.SetupInfrastructure && CreateQueues)
             {
                 var installerUser = GetInstallationUserName();
                 var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
@@ -77,7 +77,7 @@ namespace NServiceBus
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
             {
-                ExecuteInstaller,
+                ExecuteInstaller = CreateQueues,
                 UseDeadLetterQueue,
                 UseConnectionCache,
                 UseTransactionalQueues,
@@ -144,9 +144,8 @@ namespace NServiceBus
                 TransportTransactionMode.TransactionScope,
             };
 
-        //TODO improve doc / property name
         /// <summary>
-        /// Indicates whether queues should be automatically created. Disables the automatic queue creation when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
+        /// Indicates whether queues should be automatically created. Setting this to <c>false</c> disables the automatic queue creation, even when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
         /// <remarks>
         /// With installers enabled, required queues will be created automatically at startup.While this may be convenient for development,
@@ -154,7 +153,7 @@ namespace NServiceBus
         /// The installers might still need to be enabled to fulfill the installation needs of other components, but this method allows
         /// scripts to be used for queue creation instead.
         /// </remarks>
-        public bool ExecuteInstaller { get; set; } = true;
+        public bool CreateQueues { get; set; } = true;
 
         /// <summary>
         /// This setting should be used with caution. Configures whether to store undeliverable messages in the dead letter queue. Disabling the dead letter queue should be used with caution. Setting this to <c>false</c> should only be used where loss of messages is an acceptable. 
@@ -214,12 +213,11 @@ namespace NServiceBus
         /// </summary>
         public bool DisableNativeTtbrInTransactions { get; set; } = false;
 
-        //TODO improve naming/docs
         /// <summary>
         /// The user account that will be configured with access rights to the queues created by the transport. When not set, the current user will be used.
         /// This setting is not relevant, if queue creation has been disabled.
         /// </summary>
-        public string Username { get; set; }
+        public string CreateQueuesForUser { get; set; }
 
         /// <summary>
         /// Defines whether to use recoverable or express messages. <c>true</c> by default.
@@ -256,9 +254,9 @@ namespace NServiceBus
 
         string GetInstallationUserName()
         {
-            if (Username != null)
+            if (CreateQueuesForUser != null)
             {
-                return Username;
+                return CreateQueuesForUser;
             }
 
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)

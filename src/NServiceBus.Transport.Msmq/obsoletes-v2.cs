@@ -33,7 +33,7 @@ namespace NServiceBus
             throw new NotImplementedException();
 
         [ObsoleteEx(
-            ReplacementTypeOrMember = "MsmqTransport.ExecuteInstaller",
+            ReplacementTypeOrMember = "MsmqTransport.CreateQueues",
             RemoveInVersion = "3",
             TreatAsErrorFromVersion = "2")]
         public static void DisableInstaller(this TransportExtensions<MsmqTransport> config) =>
