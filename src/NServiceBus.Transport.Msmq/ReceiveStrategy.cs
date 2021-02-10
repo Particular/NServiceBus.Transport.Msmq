@@ -4,7 +4,6 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.IO;
     using System.Messaging;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -14,7 +13,7 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, Action<string, Exception> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
@@ -108,15 +107,11 @@ namespace NServiceBus.Transport.Msmq
                 return false;
             }
 
-            using (var tokenSource = new CancellationTokenSource())
-            {
-                var body = await ReadStream(bodyStream).ConfigureAwait(false);
-                var messageContext = new MessageContext(messageId, headers, body, transaction, tokenSource, new ContextBag());
+            var body = await ReadStream(bodyStream).ConfigureAwait(false);
+            var messageContext = new MessageContext(messageId, headers, body, transaction, new ContextBag());
 
-                await onMessage(messageContext).ConfigureAwait(false);
-
-                return tokenSource.Token.IsCancellationRequested;
-            }
+            await onMessage(messageContext).ConfigureAwait(false);
+            return false; //TODO can this be completely removed or will this be readded with CTS support?
         }
 
         protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
@@ -152,8 +147,8 @@ namespace NServiceBus.Transport.Msmq
 
         MessageQueue inputQueue;
         MessageQueue errorQueue;
-        Func<MessageContext, Task> onMessage;
-        Func<ErrorContext, Task<ErrorHandleResult>> onError;
+        OnMessage onMessage;
+        OnError onError;
         Action<string, Exception> criticalError;
         bool ignoreIncomingTimeToBeReceivedHeaders;
 
