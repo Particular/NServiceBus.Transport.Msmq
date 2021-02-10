@@ -15,7 +15,7 @@
         [Test]
         public async Task Should_set_label_when_convention_configured()
         {
-            var transportSettings = new MsmqTransport { ApplyLabel = _ => "mylabel" };
+            var transportSettings = new MsmqTransport { ApplyCustomLabelToOutgoingMessages = _ => "mylabel" };
 
             var dispatchedMessage = await DispatchMessage("labelTest", transportSettings);
 

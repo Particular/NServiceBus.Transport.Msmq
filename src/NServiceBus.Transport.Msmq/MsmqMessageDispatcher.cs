@@ -168,7 +168,7 @@ namespace NServiceBus.Transport.Msmq
 
         string GetLabel(OutgoingMessage message)
         {
-            var messageLabel = transportSettings.ApplyLabel(new ReadOnlyDictionary<string, string>(message.Headers));
+            var messageLabel = transportSettings.ApplyCustomLabelToOutgoingMessages(new ReadOnlyDictionary<string, string>(message.Headers));
             if (messageLabel == null)
             {
                 throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");

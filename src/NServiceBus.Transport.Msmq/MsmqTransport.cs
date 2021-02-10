@@ -202,7 +202,7 @@ namespace NServiceBus
         /// The only exception to this rule is received messages with corrupted headers. These messages will be forwarded to the
         /// error queue with no label applied.
         /// </remarks>
-        public Func<IReadOnlyDictionary<string, string>, string> ApplyLabel { get; set; } = _ => string.Empty;
+        public Func<IReadOnlyDictionary<string, string>, string> ApplyCustomLabelToOutgoingMessages { get; set; } = _ => string.Empty;
 
         /// <summary>
         /// Configures whether to ignore incoming Time-To-Be-Received (TTBR) headers. By default an expired TTBR header will result in the message to be discarded.

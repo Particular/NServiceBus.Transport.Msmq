@@ -26,8 +26,8 @@ namespace NServiceBus
     }
     public static class MsmqConfigurationExtensions
     {
-        [System.Obsolete("Use `MsmqTransport.ApplyLabel` instead. The member currently throws a NotImplemen" +
-            "tedException. Will be removed in version 3.0.0.", true)]
+        [System.Obsolete("Use `MsmqTransport.ApplyCustomLabelToOutgoingMessages` instead. The member curren" +
+            "tly throws a NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ApplyLabelToMessages(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
         [System.Obsolete("Use `MsmqTransport.UseConnectionCache` instead. The member currently throws a Not" +
             "ImplementedException. Will be removed in version 3.0.0.", true)]
@@ -71,7 +71,7 @@ namespace NServiceBus
     public class MsmqTransport : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport
     {
         public MsmqTransport() { }
-        public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyLabel { get; set; }
+        public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyCustomLabelToOutgoingMessages { get; set; }
         public bool DisableNativeTtbrInTransactions { get; set; }
         public bool ExecuteInstaller { get; set; }
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }

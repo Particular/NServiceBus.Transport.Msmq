@@ -10,7 +10,7 @@ namespace NServiceBus
     public static partial class MsmqConfigurationExtensions
     {
         [ObsoleteEx(
-            ReplacementTypeOrMember = "MsmqTransport.ApplyLabel",
+            ReplacementTypeOrMember = "MsmqTransport.ApplyCustomLabelToOutgoingMessages",
             RemoveInVersion = "3",
             TreatAsErrorFromVersion = "2")]
         public static TransportExtensions<MsmqTransport> ApplyLabelToMessages(

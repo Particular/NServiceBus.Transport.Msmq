@@ -77,7 +77,7 @@
                 {
                     c.AuditProcessedMessagesTo("labelAuditQueue");
                     var transportSettings = (MsmqTransport)c.ConfigureTransport();
-                    transportSettings.ApplyLabel = GetMessageLabel;
+                    transportSettings.ApplyCustomLabelToOutgoingMessages = GetMessageLabel;
                 });
             }
 
