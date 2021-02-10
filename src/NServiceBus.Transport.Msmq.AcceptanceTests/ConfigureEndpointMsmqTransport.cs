@@ -5,7 +5,6 @@ using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
-using NServiceBus.Transport;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
@@ -69,18 +68,5 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         MessageQueue.ClearConnectionCache();
 
         return Task.FromResult(0);
-    }
-}
-
-class TestableMsmqTransport : MsmqTransport
-{
-    public string[] ReceiveQueues = new string[0];
-
-    public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses)
-    {
-        MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
-        ReceiveQueues = receivers.Select(r => r.ReceiveAddress).ToArray();
-
-        return base.Initialize(hostSettings, receivers, sendingAddresses);
     }
 }
