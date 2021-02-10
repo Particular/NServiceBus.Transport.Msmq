@@ -38,8 +38,8 @@ namespace NServiceBus
         [System.Obsolete("Use `MsmqTransport.CreateQueues` instead. The member currently throws a NotImplem" +
             "entedException. Will be removed in version 3.0.0.", true)]
         public static void DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
-        [System.Obsolete("Use `MsmqTransport.DisableNativeTtbrInTransactions` instead. The member currently" +
-            " throws a NotImplementedException. Will be removed in version 3.0.0.", true)]
+        [System.Obsolete("Use `MsmqTransport.UseNonNativeTimeToBeReceivedInTransactions` instead. The membe" +
+            "r currently throws a NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static void DisableNativeTimeToBeReceivedInTransactions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         [System.Obsolete("Use `MsmqTransport.UseJournalQueue` instead. The member currently throws a NotImp" +
             "lementedException. Will be removed in version 3.0.0.", true)]
@@ -74,7 +74,6 @@ namespace NServiceBus
         public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyCustomLabelToOutgoingMessages { get; set; }
         public bool CreateQueues { get; set; }
         public string CreateQueuesForUser { get; set; }
-        public bool DisableNativeTtbrInTransactions { get; set; }
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
         protected System.TimeSpan MessageEnumeratorTimeout { get; set; }
         public System.TimeSpan TimeToReachQueue { get; set; }
@@ -82,6 +81,7 @@ namespace NServiceBus
         public bool UseDeadLetterQueue { get; set; }
         public bool UseDeadLetterQueueForMessagesWithTimeToBeReceived { get; set; }
         public bool UseJournalQueue { get; set; }
+        public bool UseNonNativeTimeToBeReceivedInTransactions { get; set; }
         public bool UseRecoverableMessages { get; set; }
         public bool UseTransactionalQueues { get; set; }
         public void ConfigureTransactionScope(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }

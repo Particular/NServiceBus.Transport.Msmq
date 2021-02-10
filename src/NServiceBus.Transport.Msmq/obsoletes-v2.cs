@@ -75,7 +75,7 @@ namespace NServiceBus
             throw new NotImplementedException();
 
         [ObsoleteEx(
-            ReplacementTypeOrMember = "MsmqTransport.DisableNativeTtbrInTransactions",
+            ReplacementTypeOrMember = "MsmqTransport.UseNonNativeTimeToBeReceivedInTransactions",
             RemoveInVersion = "3",
             TreatAsErrorFromVersion = "2")]
         public static void DisableNativeTimeToBeReceivedInTransactions(this TransportExtensions<MsmqTransport> config) =>

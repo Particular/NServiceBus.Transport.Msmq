@@ -78,7 +78,7 @@
                     .CustomConfig(endpointConfiguration =>
                     {
                         var transportSettings = (MsmqTransport)endpointConfiguration.ConfigureTransport();
-                        transportSettings.DisableNativeTtbrInTransactions = true;
+                        transportSettings.UseNonNativeTimeToBeReceivedInTransactions = true;
                     })
                     .When(async (session, ctx) =>
                     {

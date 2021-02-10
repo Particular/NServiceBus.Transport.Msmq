@@ -52,7 +52,7 @@ namespace NServiceBus.Transport.Msmq
                 transportOperation.RequiredDispatchConsistency,
                 dispatchProperties))
             {
-                if (transportSettings.DisableNativeTtbrInTransactions)
+                if (transportSettings.UseNonNativeTimeToBeReceivedInTransactions)
                 {
                     dispatchProperties.DiscardIfNotReceivedBefore =
                         new DiscardIfNotReceivedBefore(Message.InfiniteTimeout);

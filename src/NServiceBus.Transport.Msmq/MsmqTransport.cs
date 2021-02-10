@@ -209,9 +209,9 @@ namespace NServiceBus
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; } = false;
 
         /// <summary>
-        /// When set to <c>true</c>, disables native Time-To-Be-Received (TTBR) when combined with transactions.
+        /// When set to <c>true</c>, disables native Time-To-Be-Received (TTBR) when combined with transactions. Instead, the receiver will discard incoming messages that have exceeded the specified Time-To-Be-Received.
         /// </summary>
-        public bool DisableNativeTtbrInTransactions { get; set; } = false;
+        public bool UseNonNativeTimeToBeReceivedInTransactions { get; set; } = false;
 
         /// <summary>
         /// The user account that will be configured with access rights to the queues created by the transport. When not set, the current user will be used.
