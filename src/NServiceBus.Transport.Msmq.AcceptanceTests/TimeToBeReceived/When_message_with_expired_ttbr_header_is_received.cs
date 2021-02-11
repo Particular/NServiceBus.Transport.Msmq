@@ -4,7 +4,6 @@
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
-    using Configuration.AdvancedExtensibility;
     using NUnit.Framework;
     using System;
     using System.Threading.Tasks;
@@ -16,12 +15,16 @@
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SomeEndpoint>(endpoint => endpoint
-                    .CustomConfig(c => c.GetSettings().Set("IgnoreIncomingTimeToBeReceivedHeaders", false))
+                    .CustomConfig(e =>
+                    {
+                        var transportConfig = (MsmqTransport)e.ConfigureTransport();
+                        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = false;
+                    })
                     .When(async (session, ctx) =>
                     {
                         var sendOptions = new SendOptions();
                         sendOptions.RouteToThisEndpoint();
-                        sendOptions.SetHeader(Headers.TimeSent, DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
+                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
                         sendOptions.SetHeader(Headers.TimeToBeReceived, TimeSpan.FromSeconds(5).ToString());
 
                         await session.Send(new SomeMessage(), sendOptions);
@@ -39,12 +42,16 @@
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SomeEndpoint>(endpoint => endpoint
-                    .CustomConfig(c => c.UseTransport<MsmqTransport>().IgnoreIncomingTimeToBeReceivedHeaders())
+                    .CustomConfig(e =>
+                    {
+                        var transportConfig = (MsmqTransport)e.ConfigureTransport();
+                        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders = true;
+                    })
                     .When(async (session, ctx) =>
                     {
                         var sendOptions = new SendOptions();
                         sendOptions.RouteToThisEndpoint();
-                        sendOptions.SetHeader(Headers.TimeSent, DateTimeExtensions.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
+                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
                         sendOptions.SetHeader(Headers.TimeToBeReceived, TimeSpan.FromSeconds(5).ToString());
 
                         await session.Send(new SomeMessage(), sendOptions);

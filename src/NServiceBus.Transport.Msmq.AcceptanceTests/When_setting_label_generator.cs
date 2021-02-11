@@ -76,7 +76,8 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.AuditProcessedMessagesTo("labelAuditQueue");
-                    c.UseTransport<MsmqTransport>().ApplyLabelToMessages(GetMessageLabel);
+                    var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                    transportSettings.ApplyCustomLabelToOutgoingMessages = GetMessageLabel;
                 });
             }
 

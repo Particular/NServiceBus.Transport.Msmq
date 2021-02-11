@@ -4,6 +4,7 @@
     using System.IO;
     using System.Xml.Schema;
     using AcceptanceTesting;
+    using Configuration.AdvancedExtensibility;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
@@ -49,7 +50,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routingSettings = c.UseTransport<MsmqTransport>().Routing();
+                    var routingSettings = new RoutingSettings<MsmqTransport>(c.GetSettings());
                     routingSettings.RouteToEndpoint(typeof(Message), "someReceiver");
                     routingSettings.InstanceMappingFile().FilePath(mappingFilePath);
                 });

@@ -68,12 +68,9 @@
             public Subscriber()
             {
                 EndpointSetup<DefaultServer>(c =>
-                    {
-                        c.DisableFeature<AutoSubscribe>();
-                        c.UseTransport<MsmqTransport>()
-                            .Routing().RegisterPublisher(typeof(MyEvent), AcceptanceTesting.Customization.Conventions.EndpointNamingConvention(typeof(Publisher)));
-                    }
-                );
+                {
+                    c.DisableFeature<AutoSubscribe>();
+                }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
             public class MyEventHandler : IHandleMessages<MyEvent>

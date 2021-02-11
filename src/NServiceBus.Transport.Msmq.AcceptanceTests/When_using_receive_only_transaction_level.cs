@@ -41,8 +41,7 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.Pipeline.Register(typeof(FailAfterBatchedDispatchBehavior), "throws after outgoing messages have been dispatched");
-                    c.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.ReceiveOnly);
+                    c.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
                 });
             }
 

@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus
 {
     using Extensibility;
+    using Transport;
     using Transport.Msmq;
 
     /// <summary>
@@ -8,7 +9,7 @@
     /// </summary>
     public static class DeadLetterQueueOptionExtensions
     {
-        internal const string KeyDeadLetterQueue = "MSMQ.UseDeadLetterQueue";
+        const string KeyDeadLetterQueue = "MSMQ.UseDeadLetterQueue";
 
         /// <summary>
         /// Enable or disable MSMQ dead letter queueing.
@@ -18,8 +19,17 @@
         public static void UseDeadLetterQueue(this ExtendableOptions options, bool enable = true)
         {
             Guard.AgainstNull(nameof(options), options);
-            var ext = options.GetExtensions();
-            ext.Set(KeyDeadLetterQueue, enable);
+            options.GetDispatchProperties()[KeyDeadLetterQueue] = enable.ToString();
+        }
+
+        internal static bool? ShouldUseDeadLetterQueue(this DispatchProperties dispatchProperties)
+        {
+            if (dispatchProperties.TryGetValue(KeyDeadLetterQueue, out var boolString))
+            {
+                return bool.Parse(boolString);
+            }
+
+            return null;
         }
     }
 }

@@ -5,21 +5,17 @@ using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
-using NServiceBus.Configuration.AdvancedExtensibility;
-using NServiceBus.Transport;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
+    internal readonly TestableMsmqTransport TransportDefinition = new TestableMsmqTransport();
+
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
-        queueBindings = configuration.GetSettings().Get<QueueBindings>();
+        TransportDefinition.UseConnectionCache = false;
+        TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
-        var transportConfig = configuration.UseTransport<MsmqTransport>();
-        transportConfig.DisableConnectionCachingForSends();
-        configuration.GetSettings().Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
-        transportConfig.IgnoreIncomingTimeToBeReceivedHeaders();
-
-        var routingConfig = transportConfig.Routing();
+        var routingConfig = configuration.UseTransport(TransportDefinition);
 
         foreach (var publisher in publisherMetadata.Publishers)
         {
@@ -41,7 +37,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         {
             using (messageQueue)
             {
-                if (queueBindings.ReceivingAddresses.Any(ra =>
+                if (TransportDefinition.ReceiveQueues.Any(ra =>
                 {
                     var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
                     if (indexOfAt >= 0)
@@ -73,6 +69,4 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 
         return Task.FromResult(0);
     }
-
-    QueueBindings queueBindings;
 }

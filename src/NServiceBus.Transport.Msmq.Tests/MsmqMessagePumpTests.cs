@@ -11,15 +11,15 @@ namespace NServiceBus.Transport.Msmq.Tests
         [Test]
         public void ShouldThrowIfConfiguredToReceiveFromRemoteQueue()
         {
-            var messagePump = new MessagePump(mode => null, TimeSpan.Zero, false);
-            var pushSettings = new PushSettings("queue@remote", "error", false, TransportTransactionMode.None);
+            var receiveSettings = new ReceiveSettings("test receiver", "queue@remote", false, false, "error");
+            var messagePump = new MessagePump(mode => null, TimeSpan.Zero, (_, __) => { }, new MsmqTransport(), receiveSettings);
 
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {
-                await messagePump.Init(context => null, context => null, null, pushSettings);
+                await messagePump.Initialize(new PushRuntimeSettings(), context => null, context => null);
             });
 
-            Assert.That(exception.Message, Does.Contain($"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{pushSettings.InputQueue}'."));
+            Assert.That(exception.Message, Does.Contain($"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{receiveSettings.ReceiveAddress}'."));
         }
     }
 }

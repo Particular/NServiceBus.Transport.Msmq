@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using Configuration.AdvancedExtensibility;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
@@ -55,8 +56,7 @@ $@"<endpoints>
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var transport = c.UseTransport<MsmqTransport>();
-                    var routing = transport.Routing();
+                    var routing = new RoutingSettings<MsmqTransport>(c.GetSettings());
 
                     // only configure logical endpoint in routing
                     routing.RouteToEndpoint(typeof(Message), ReceiverEndpointName);

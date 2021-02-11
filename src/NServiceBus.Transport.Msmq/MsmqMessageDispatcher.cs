@@ -1,26 +1,25 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Messaging;
     using System.Threading.Tasks;
     using System.Transactions;
-    using DeliveryConstraints;
-    using Extensibility;
     using Performance.TimeToBeReceived;
     using Transport;
     using Unicast.Queuing;
 
-    class MsmqMessageDispatcher : IDispatchMessages
+    class MsmqMessageDispatcher : IMessageDispatcher
     {
-        public MsmqMessageDispatcher(MsmqSettings settings)
+        readonly MsmqTransport transportSettings;
+
+        public MsmqMessageDispatcher(MsmqTransport transportSettings)
         {
-            this.settings = settings;
+            this.transportSettings = transportSettings;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction)
         {
             Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
 
@@ -31,29 +30,30 @@ namespace NServiceBus.Transport.Msmq
 
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation, context);
+                ExecuteTransportOperation(transaction, unicastTransportOperation);
             }
 
             return TaskEx.CompletedTask;
         }
 
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
+        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
 
             var destination = transportOperation.Destination;
             var destinationAddress = MsmqAddress.Parse(destination);
 
-            var deliveryConstraints = transportOperation.DeliveryConstraints;
+            var dispatchProperties = transportOperation.Properties;
 
             if (IsCombiningTimeToBeReceivedWithTransactions(
                 transaction,
                 transportOperation.RequiredDispatchConsistency,
-                transportOperation.DeliveryConstraints))
+                dispatchProperties))
             {
-                if (settings.DisableNativeTtbrInTransactions)
+                if (transportSettings.UseNonNativeTimeToBeReceivedInTransactions)
                 {
-                    deliveryConstraints = deliveryConstraints.Except(deliveryConstraints.OfType<DiscardIfNotReceivedBefore>()).ToList();
+                    dispatchProperties.DiscardIfNotReceivedBefore =
+                        new DiscardIfNotReceivedBefore(Message.InfiniteTimeout);
                 }
                 else
                 {
@@ -63,27 +63,26 @@ namespace NServiceBus.Transport.Msmq
 
             try
             {
-                using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
+                using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, deliveryConstraints))
+                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties))
                     {
-                        if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+                        var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();
+                        if (useDeadLetterQueue.HasValue)
                         {
-                            toSend.UseDeadLetterQueue = useDeadLetterQueue;
+                            toSend.UseDeadLetterQueue = useDeadLetterQueue.Value;
                         }
                         else
                         {
                             var ttbrRequested = toSend.TimeToBeReceived < MessageQueue.InfiniteTimeout;
                             toSend.UseDeadLetterQueue = ttbrRequested
-                                ? settings.UseDeadLetterQueueForMessagesWithTimeToBeReceived
-                                : settings.UseDeadLetterQueue;
+                                ? transportSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived
+                                : transportSettings.UseDeadLetterQueue;
                         }
 
-                        toSend.UseJournalQueue = context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue)
-                            ? useJournalQueue
-                            : settings.UseJournalQueue;
+                        toSend.UseJournalQueue = dispatchProperties.ShouldUseJournalQueue() ?? transportSettings.UseJournalQueue;
 
-                        toSend.TimeToReachQueue = settings.TimeToReachQueue;
+                        toSend.TimeToReachQueue = transportSettings.TimeToReachQueue;
 
                         if (message.Headers.TryGetValue(Headers.ReplyToAddress, out var replyToAddress))
                         {
@@ -127,9 +126,9 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        bool IsCombiningTimeToBeReceivedWithTransactions(TransportTransaction transaction, DispatchConsistency requiredDispatchConsistency, List<DeliveryConstraint> deliveryConstraints)
+        bool IsCombiningTimeToBeReceivedWithTransactions(TransportTransaction transaction, DispatchConsistency requiredDispatchConsistency, DispatchProperties dispatchProperties)
         {
-            if (!settings.UseTransactionalQueues)
+            if (!transportSettings.UseTransactionalQueues)
             {
                 return false;
             }
@@ -139,7 +138,7 @@ namespace NServiceBus.Transport.Msmq
                 return false;
             }
 
-            var timeToBeReceivedRequested = deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore discardIfNotReceivedBefore) && discardIfNotReceivedBefore.MaxTime < MessageQueue.InfiniteTimeout;
+            var timeToBeReceivedRequested = dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout;
 
             if (!timeToBeReceivedRequested)
             {
@@ -162,12 +161,12 @@ namespace NServiceBus.Transport.Msmq
 
         MessageQueueTransactionType GetIsolatedTransactionType()
         {
-            return settings.UseTransactionalQueues ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None;
+            return transportSettings.UseTransactionalQueues ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None;
         }
 
         string GetLabel(OutgoingMessage message)
         {
-            var messageLabel = settings.LabelGenerator(new ReadOnlyDictionary<string, string>(message.Headers));
+            var messageLabel = transportSettings.ApplyCustomLabelToOutgoingMessages(new ReadOnlyDictionary<string, string>(message.Headers));
             if (messageLabel == null)
             {
                 throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
@@ -191,7 +190,7 @@ namespace NServiceBus.Transport.Msmq
 
         MessageQueueTransactionType GetTransactionTypeForSend()
         {
-            if (!settings.UseTransactionalQueues)
+            if (!transportSettings.UseTransactionalQueues)
             {
                 return MessageQueueTransactionType.None;
             }
@@ -200,7 +199,5 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
-
-        MsmqSettings settings;
     }
 }

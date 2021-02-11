@@ -61,10 +61,7 @@
         {
             public Endpoint()
             {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.UseTransport<MsmqTransport>();
-                });
+                EndpointSetup<DefaultServer>();
             }
         }
 

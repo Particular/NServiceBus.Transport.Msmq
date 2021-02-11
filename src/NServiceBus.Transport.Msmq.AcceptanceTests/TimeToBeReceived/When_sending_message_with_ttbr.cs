@@ -75,7 +75,11 @@
         {
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Sender>(endpoint => endpoint
-                    .CustomConfig(endpointConfiguration => endpointConfiguration.UseTransport<MsmqTransport>().DisableNativeTimeToBeReceivedInTransactions())
+                    .CustomConfig(endpointConfiguration =>
+                    {
+                        var transportSettings = (MsmqTransport)endpointConfiguration.ConfigureTransport();
+                        transportSettings.UseNonNativeTimeToBeReceivedInTransactions = true;
+                    })
                     .When(async (session, ctx) =>
                     {
                         using (new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))

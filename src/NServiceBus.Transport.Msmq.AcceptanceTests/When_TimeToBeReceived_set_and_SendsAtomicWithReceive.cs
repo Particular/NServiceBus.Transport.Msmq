@@ -35,7 +35,8 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.UseTransport<MsmqTransport>().Transactions(TransportTransactionMode.SendsAtomicWithReceive);
+                    config.ConfigureTransport().TransportTransactionMode =
+                        TransportTransactionMode.SendsAtomicWithReceive;
                 });
             }
             public class MyMessageHandler : IHandleMessages<MyMessage>

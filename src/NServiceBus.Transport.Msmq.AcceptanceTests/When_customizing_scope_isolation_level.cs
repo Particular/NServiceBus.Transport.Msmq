@@ -23,9 +23,9 @@
                     {
                         g.CustomConfig(c =>
                         {
-                            c.UseTransport<MsmqTransport>()
-                                .Transactions(TransportTransactionMode.TransactionScope)
-                                .TransactionScopeOptions(isolationLevel: isolationLevel);
+                            var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                            transportSettings.TransportTransactionMode = TransportTransactionMode.TransactionScope;
+                            transportSettings.ConfigureTransactionScope(isolationLevel: isolationLevel);
                         });
                         g.When(b => b.SendLocal(new MyMessage()));
                     })
@@ -46,9 +46,9 @@
                         {
                             g.CustomConfig(c =>
                             {
-                                c.UseTransport<MsmqTransport>()
-                                    .Transactions(TransportTransactionMode.TransactionScope)
-                                    .TransactionScopeOptions(isolationLevel: IsolationLevel.Snapshot);
+                                var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                                transportSettings.TransportTransactionMode = TransportTransactionMode.TransactionScope;
+                                transportSettings.ConfigureTransactionScope(isolationLevel: IsolationLevel.Snapshot);
                             });
                             g.When(b => b.SendLocal(new MyMessage()));
                         })
@@ -69,10 +69,7 @@
         {
             public ScopeEndpoint()
             {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.UseTransport<MsmqTransport>(); // Required, to prevent runtime failure.
-                });
+                EndpointSetup<DefaultServer>();
             }
 
             class MyMessageHandler : IHandleMessages<MyMessage>

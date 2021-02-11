@@ -61,9 +61,9 @@
                 {
                     b.DisableFeature<AutoSubscribe>();
                     b.UsePersistence<MsmqPersistence>().SubscriptionQueue(StorageQueueName);
-                    b.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.None)
-                        .UseNonTransactionalQueues();
+                    var transportSettings = (MsmqTransport)b.ConfigureTransport();
+                    transportSettings.TransportTransactionMode = TransportTransactionMode.None;
+                    transportSettings.UseTransactionalQueues = false;
                 });
             }
         }
@@ -75,9 +75,9 @@
                 EndpointSetup<DefaultServer>(c =>
                 {
                     c.DisableFeature<AutoSubscribe>();
-                    c.UseTransport<MsmqTransport>()
-                        .Transactions(TransportTransactionMode.None)
-                        .UseNonTransactionalQueues();
+                    var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                    transportSettings.TransportTransactionMode = TransportTransactionMode.None;
+                    transportSettings.UseTransactionalQueues = false;
                 }, metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 

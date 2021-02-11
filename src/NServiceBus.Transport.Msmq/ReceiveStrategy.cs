@@ -4,7 +4,6 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.IO;
     using System.Messaging;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -14,14 +13,14 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, bool discardExpiredTtbrMessages)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
             this.onError = onError;
             this.criticalError = criticalError;
-            this.discardExpiredTtbrMessages = discardExpiredTtbrMessages;
+            this.ignoreIncomingTimeToBeReceivedHeaders = ignoreIncomingTimeToBeReceivedHeaders;
         }
 
         protected bool TryReceive(MessageQueueTransactionType transactionType, out Message message)
@@ -100,23 +99,18 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
+        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
         {
-            if (discardExpiredTtbrMessages && TimeToBeReceived.HasElapsed(headers))
+            if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
             {
                 Logger.Debug($"Discarding message {messageId} due to lapsed Time To Be Received header");
-                return false;
+                return;
             }
 
-            using (var tokenSource = new CancellationTokenSource())
-            {
-                var body = await ReadStream(bodyStream).ConfigureAwait(false);
-                var messageContext = new MessageContext(messageId, headers, body, transaction, tokenSource, new ContextBag());
+            var body = await ReadStream(bodyStream).ConfigureAwait(false);
+            var messageContext = new MessageContext(messageId, headers, body, transaction, new ContextBag());
 
-                await onMessage(messageContext).ConfigureAwait(false);
-
-                return tokenSource.Token.IsCancellationRequested;
-            }
+            await onMessage(messageContext).ConfigureAwait(false);
         }
 
         protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
@@ -132,7 +126,7 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (Exception ex)
             {
-                criticalError.Raise($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
+                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
 
                 //best thing we can do is roll the message back if possible
                 return ErrorHandleResult.RetryRequired;
@@ -152,10 +146,10 @@ namespace NServiceBus.Transport.Msmq
 
         MessageQueue inputQueue;
         MessageQueue errorQueue;
-        Func<MessageContext, Task> onMessage;
-        Func<ErrorContext, Task<ErrorHandleResult>> onError;
-        CriticalError criticalError;
-        bool discardExpiredTtbrMessages;
+        OnMessage onMessage;
+        OnError onError;
+        Action<string, Exception> criticalError;
+        bool ignoreIncomingTimeToBeReceivedHeaders;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }

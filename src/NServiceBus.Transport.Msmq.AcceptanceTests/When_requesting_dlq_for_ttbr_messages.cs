@@ -63,8 +63,8 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    c.UseTransport<MsmqTransport>()
-                        .UseDeadLetterQueueForMessagesWithTimeToBeReceived();
+                    var transportSettings = (MsmqTransport)c.ConfigureTransport();
+                    transportSettings.UseDeadLetterQueueForMessagesWithTimeToBeReceived = true;
                 });
             }
         }

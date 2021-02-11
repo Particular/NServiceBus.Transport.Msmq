@@ -1,48 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
-using NServiceBus.Settings;
 using NServiceBus.Transport;
 using NServiceBus.TransportTests;
 
 class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
 {
-    public TransportConfigurationResult Configure(SettingsHolder settings, TransportTransactionMode transactionMode)
+    string receiveQueue;
+
+    public TransportDefinition CreateTransportDefinition()
     {
-        var msmqTransportDefinition = new MsmqTransport();
-        settingsHolder = settings;
-        settingsHolder.Set("NServiceBus.Transport.Msmq.MessageEnumeratorTimeout", TimeSpan.FromMilliseconds(10));
-        settingsHolder.SetDefault("IgnoreIncomingTimeToBeReceivedHeaders", true); // Acual default is False
-        return new TransportConfigurationResult
+        var msmqSettings = new MsmqTransport
         {
-            TransportInfrastructure = msmqTransportDefinition.Initialize(settingsHolder, null),
-            PurgeInputQueueOnStartup = true
+            MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10),
+            IgnoreIncomingTimeToBeReceivedHeaders = true
         };
+
+        return msmqSettings;
+    }
+
+    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName)
+    {
+        var msmqSettings = (MsmqTransport)transportDefinition;
+        receiveQueue = inputQueueName;
+        var infrastructure = await msmqSettings.Initialize(hostSettings,
+            new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, true, errorQueueName) },
+            new[] { errorQueueName });
+
+        return infrastructure;
     }
 
     public Task Cleanup()
     {
-        var queueBindings = settingsHolder.Get<QueueBindings>();
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();
+
+        var indexOfAt = receiveQueue.IndexOf("@", StringComparison.Ordinal);
+        if (indexOfAt >= 0)
+        {
+            receiveQueue = receiveQueue.Substring(0, indexOfAt);
+        }
 
         foreach (var messageQueue in allQueues)
         {
             using (messageQueue)
             {
-                if (queueBindings.ReceivingAddresses.Any(ra =>
-                {
-                    var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
-                    if (indexOfAt >= 0)
-                    {
-                        ra = ra.Substring(0, indexOfAt);
-                    }
-
-                    return messageQueue.QueueName.StartsWith(@"private$\" + ra, StringComparison.OrdinalIgnoreCase);
-                }))
+                if (messageQueue.QueueName.StartsWith(@"private$\" + receiveQueue, StringComparison.OrdinalIgnoreCase))
                 {
                     queuesToBeDeleted.Add(messageQueue.Path);
                 }
@@ -66,6 +71,4 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
 
         return Task.FromResult(0);
     }
-
-    SettingsHolder settingsHolder;
 }

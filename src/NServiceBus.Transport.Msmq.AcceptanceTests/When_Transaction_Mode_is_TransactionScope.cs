@@ -48,8 +48,7 @@
             {
                 EndpointSetup<DefaultServer>((config, context) =>
                 {
-                    config.UseTransport<MsmqTransport>()
-                            .Transactions(TransportTransactionMode.TransactionScope);
+                    config.ConfigureTransport().TransportTransactionMode = TransportTransactionMode.TransactionScope;
                 });
             }
         }

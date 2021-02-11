@@ -3,6 +3,7 @@
     using System;
     using System.IO;
     using AcceptanceTesting;
+    using Configuration.AdvancedExtensibility;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
@@ -56,7 +57,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routingSettings = c.UseTransport<MsmqTransport>().Routing();
+                    var routingSettings = new RoutingSettings<MsmqTransport>(c.GetSettings());
                     routingSettings.InstanceMappingFile().FilePath(mappingFilePath);
                 });
             }
@@ -68,7 +69,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routingSettings = c.UseTransport<MsmqTransport>().Routing();
+                    var routingSettings = new RoutingSettings<MsmqTransport>(c.GetSettings());
                     routingSettings.InstanceMappingFile().FilePath(mappingFilePath).EnforceStrictSchemaValidation();
                 });
             }

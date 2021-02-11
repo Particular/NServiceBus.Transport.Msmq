@@ -62,7 +62,7 @@
             {
                 EndpointSetup<DefaultServer>(c =>
                 {
-                    var routing = c.UseTransport<MsmqTransport>().Routing();
+                    var routing = c.ConfigureRouting();
                     routing.RouteToEndpoint(typeof(RequestA), ReceiverAEndpoint);
                     routing.RouteToEndpoint(typeof(RequestB), ReceiverBEndpoint);
 

@@ -7,9 +7,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Messaging;
     using System.Text;
     using System.Xml;
-    using DeliveryConstraints;
     using Logging;
-    using Performance.TimeToBeReceived;
     using Transport;
 
     class MsmqUtilities
@@ -116,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, List<DeliveryConstraint> deliveryConstraints)
+        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties)
         {
             var result = new Message();
 
@@ -127,11 +125,12 @@ namespace NServiceBus.Transport.Msmq
 
 
             AssignMsmqNativeCorrelationId(message, result);
-            result.Recoverable = !deliveryConstraints.Any(c => c is NonDurableDelivery);
 
-            if (deliveryConstraints.TryGet(out DiscardIfNotReceivedBefore timeToBeReceived) && timeToBeReceived.MaxTime < MessageQueue.InfiniteTimeout)
+            result.Recoverable = true;
+
+            if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
             {
-                result.TimeToBeReceived = timeToBeReceived.MaxTime;
+                result.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
             }
 
             var addCorrIdHeader = !message.Headers.ContainsKey("CorrId");
