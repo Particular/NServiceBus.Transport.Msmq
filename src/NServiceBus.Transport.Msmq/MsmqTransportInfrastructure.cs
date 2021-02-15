@@ -2,6 +2,7 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Threading.Tasks;
     using System.Transactions;
     using Transport;
@@ -36,7 +37,7 @@ namespace NServiceBus.Transport.Msmq
 
         public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception> criticalErrorAction)
         {
-            var messagePumps = new List<IMessageReceiver>(receivers.Length);
+            var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
 
             foreach (var receiver in receivers)
             {
@@ -56,15 +57,15 @@ namespace NServiceBus.Transport.Msmq
                     criticalErrorAction,
                     transportSettings,
                     receiver);
-                messagePumps.Add(pump);
+                messagePumps.Add(pump.Id, pump);
             }
 
-            Receivers = messagePumps.AsReadOnly();
+            Receivers = new ReadOnlyDictionary<string, IMessageReceiver>(messagePumps);
         }
 
-        public override Task DisposeAsync()
+        public override Task Shutdown()
         {
-            foreach (var receiver in Receivers)
+            foreach (var receiver in Receivers.Values)
             {
                 (receiver as MessagePump)?.Dispose();
             }
