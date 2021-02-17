@@ -2,7 +2,6 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
     using System.Threading.Tasks;
     using System.Transactions;
     using Transport;
@@ -60,7 +59,7 @@ namespace NServiceBus.Transport.Msmq
                 messagePumps.Add(pump.Id, pump);
             }
 
-            Receivers = new ReadOnlyDictionary<string, IMessageReceiver>(messagePumps);
+            Receivers = messagePumps;
         }
 
         public override Task Shutdown()
