@@ -5,6 +5,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Messaging;
     using System.Threading.Tasks;
     using System.Transactions;
+    using NServiceBus.Extensibility;
     using Transport;
 
     class TransactionScopeStrategy : ReceiveStrategy
@@ -15,7 +16,7 @@ namespace NServiceBus.Transport.Msmq
             this.failureInfoStorage = failureInfoStorage;
         }
 
-        public override async Task ReceiveMessage()
+        public override async Task ReceiveMessage(ContextBag context)
         {
             Message message = null;
             try
@@ -35,7 +36,7 @@ namespace NServiceBus.Transport.Msmq
                         return;
                     }
 
-                    var shouldCommit = await ProcessMessage(message, headers).ConfigureAwait(false);
+                    var shouldCommit = await ProcessMessage(message, headers, context).ConfigureAwait(false);
 
                     if (!shouldCommit)
                     {
@@ -56,18 +57,18 @@ namespace NServiceBus.Transport.Msmq
                     throw;
                 }
 
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
             }
         }
 
-        async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers)
+        async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers, ContextBag context)
         {
             var transportTransaction = new TransportTransaction();
             transportTransaction.Set(Transaction.Current);
 
             if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
             {
-                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
+                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts, context).ConfigureAwait(false);
 
                 if (errorHandleResult == ErrorHandleResult.Handled)
                 {
@@ -79,13 +80,13 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var bodyStream = message.BodyStream)
                 {
-                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
+                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context).ConfigureAwait(false);
                 }
                 return true;
             }
             catch (Exception exception)
             {
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
                 return false;
             }
         }

@@ -6,6 +6,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Threading;
     using System.Threading.Tasks;
     using Logging;
+    using NServiceBus.Extensibility;
     using Support;
     using Transport;
 
@@ -33,8 +34,9 @@ namespace NServiceBus.Transport.Msmq
             cancellationTokenSource?.Dispose();
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, OnCompleted onCompleted, CancellationToken cancellationToken)
         {
+            this.onCompleted = onCompleted;
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
@@ -174,10 +176,12 @@ namespace NServiceBus.Transport.Msmq
             return TaskEx.Run(async state =>
             {
                 var messagePump = (MessagePump)state;
+                var context = new ContextBag();
+                var startedAt = DateTimeOffset.UtcNow;
 
                 try
                 {
-                    await messagePump.receiveStrategy.ReceiveMessage().ConfigureAwait(false);
+                    await messagePump.receiveStrategy.ReceiveMessage(context).ConfigureAwait(false);
                     messagePump.receiveCircuitBreaker.Success();
                 }
                 catch (OperationCanceledException)
@@ -191,6 +195,15 @@ namespace NServiceBus.Transport.Msmq
                 }
                 finally
                 {
+                    try
+                    {
+                        await onCompleted(new CompleteContext("", true, new System.Collections.Generic.Dictionary<string, string>(), startedAt, DateTimeOffset.UtcNow, true, context), CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn("onComplete failed", ex);
+                    }
+
                     messagePump.concurrencyLimiter.Release();
                 }
             }, this);
@@ -238,7 +251,7 @@ namespace NServiceBus.Transport.Msmq
         SemaphoreSlim concurrencyLimiter;
         MessageQueue errorQueue;
         MessageQueue inputQueue;
-
+        OnCompleted onCompleted;
         Task messagePumpTask;
 
         ReceiveStrategy receiveStrategy;

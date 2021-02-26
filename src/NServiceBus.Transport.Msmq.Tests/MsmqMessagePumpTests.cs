@@ -17,7 +17,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {
-                await messagePump.Initialize(new PushRuntimeSettings(), (context, ct) => null, (context, ct) => null, CancellationToken.None);
+                await messagePump.Initialize(new PushRuntimeSettings(), (context, ct) => null, (context, ct) => null, (context, ct) => null, CancellationToken.None);
             });
 
             Assert.That(exception.Message, Does.Contain($"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{receiveSettings.ReceiveAddress}'."));
