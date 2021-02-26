@@ -62,7 +62,7 @@ namespace NServiceBus.Persistence.Msmq
             }
         }
 
-        public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
+        public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken)
         {
             var messagelist = messageTypes.ToArray();
             var result = new HashSet<Subscriber>();
@@ -91,7 +91,7 @@ namespace NServiceBus.Persistence.Msmq
             return Task.FromResult<IEnumerable<Subscriber>>(result);
         }
 
-        public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
+        public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken)
         {
             var body = $"{messageType.TypeName}, Version={messageType.Version}";
             var label = Serialize(subscriber);
@@ -104,7 +104,7 @@ namespace NServiceBus.Persistence.Msmq
             return TaskEx.CompletedTask;
         }
 
-        public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context)
+        public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken)
         {
             var messageId = RemoveFromLookup(subscriber, messageType);
 

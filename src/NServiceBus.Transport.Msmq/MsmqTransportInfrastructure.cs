@@ -2,6 +2,7 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
     using Transport;
@@ -34,7 +35,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception> criticalErrorAction)
+        public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
         {
             var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
 
@@ -62,7 +63,7 @@ namespace NServiceBus.Transport.Msmq
             Receivers = messagePumps;
         }
 
-        public override Task Shutdown()
+        public override Task Shutdown(CancellationToken cancellationToken)
         {
             foreach (var receiver in Receivers.Values)
             {

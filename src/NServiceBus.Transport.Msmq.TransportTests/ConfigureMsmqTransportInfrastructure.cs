@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Messaging;
+using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Transport;
@@ -21,18 +22,19 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         return msmqSettings;
     }
 
-    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName)
+    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName, CancellationToken cancellationToken)
     {
         var msmqSettings = (MsmqTransport)transportDefinition;
         receiveQueue = inputQueueName;
         var infrastructure = await msmqSettings.Initialize(hostSettings,
             new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, true, errorQueueName) },
-            new[] { errorQueueName });
+            new[] { errorQueueName },
+            cancellationToken);
 
         return infrastructure;
     }
 
-    public Task Cleanup()
+    public Task Cleanup(CancellationToken cancellationToken)
     {
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();
