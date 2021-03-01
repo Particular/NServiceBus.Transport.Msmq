@@ -79,7 +79,7 @@ namespace NServiceBus.Transport.Msmq
             MessageQueue.ClearConnectionCache();
 
             cancellationTokenSource = new CancellationTokenSource();
-            cancellationToken = cancellationTokenSource.Token;
+            this.cancellationToken = cancellationTokenSource.Token;
 
             // LongRunning is useless combined with async/await
             messagePumpTask = Task.Run(() => ProcessMessages(), CancellationToken.None);
