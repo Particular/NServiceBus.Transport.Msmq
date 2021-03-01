@@ -14,7 +14,7 @@ namespace NServiceBus.Transport.Msmq
         public MessagePump(
             Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
             TimeSpan messageEnumeratorTimeout,
-            Action<string, Exception> criticalErrorAction,
+            Action<string, Exception, CancellationToken> criticalErrorAction,
             MsmqTransport transportSettings,
             ReceiveSettings receiveSettings)
         {
@@ -33,12 +33,12 @@ namespace NServiceBus.Transport.Msmq
             cancellationTokenSource?.Dispose();
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
         {
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex));
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex));
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
 
             var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
@@ -74,12 +74,12 @@ namespace NServiceBus.Transport.Msmq
             return TaskEx.CompletedTask;
         }
 
-        public Task StartReceive()
+        public Task StartReceive(CancellationToken cancellationToken)
         {
             MessageQueue.ClearConnectionCache();
 
             cancellationTokenSource = new CancellationTokenSource();
-            cancellationToken = cancellationTokenSource.Token;
+            this.cancellationToken = cancellationTokenSource.Token;
 
             // LongRunning is useless combined with async/await
             messagePumpTask = Task.Run(() => ProcessMessages(), CancellationToken.None);
@@ -87,7 +87,7 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        public async Task StopReceive()
+        public async Task StopReceive(CancellationToken cancellationToken)
         {
             cancellationTokenSource.Cancel();
 
@@ -247,7 +247,7 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
-        readonly Action<string, Exception> criticalErrorAction;
+        readonly Action<string, Exception, CancellationToken> criticalErrorAction;
         readonly MsmqTransport transportSettings;
         readonly ReceiveSettings receiveSettings;
 

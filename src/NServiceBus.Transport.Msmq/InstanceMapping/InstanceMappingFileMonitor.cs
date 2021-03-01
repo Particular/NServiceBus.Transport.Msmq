@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Features;
     using Logging;
@@ -21,10 +22,10 @@ namespace NServiceBus.Transport.Msmq
 
         internal Task Start(IMessageSession session)
         {
-            return OnStart(session);
+            return OnStart(session, CancellationToken.None);
         }
 
-        protected override Task OnStart(IMessageSession session)
+        protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
         {
             timer.Start(() =>
             {
@@ -97,7 +98,7 @@ namespace NServiceBus.Transport.Msmq
             return count > 1 ? $"{count} instances" : $"{count} instance";
         }
 
-        protected override Task OnStop(IMessageSession session) => timer.Stop();
+        protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken) => timer.Stop();
 
         TimeSpan checkInterval;
         IInstanceMappingLoader loader;

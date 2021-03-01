@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
@@ -50,7 +51,7 @@
                     this.dispatcher = dispatcher;
                 }
 
-                protected override Task OnStart(IMessageSession session)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
                 {
                     // Simulating a v3.3 control message
                     var body = Encoding.UTF8.GetBytes(@"<?xml version=""1.0""?>
@@ -67,10 +68,10 @@
                     }, body);
 
                     var endpoint = Conventions.EndpointNamingConvention(typeof(TestingEndpoint));
-                    return dispatcher.Dispatch(new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(endpoint))), new TransportTransaction());
+                    return dispatcher.Dispatch(new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(endpoint))), new TransportTransaction(), cancellationToken);
                 }
 
-                protected override Task OnStop(IMessageSession session)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken)
                 {
                     return Task.FromResult(0);
                 }

@@ -5,6 +5,7 @@ namespace NServiceBus
     using System.Linq;
     using System.Messaging;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
@@ -26,7 +27,7 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses)
+        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken)
         {
             Guard.AgainstNull(nameof(hostSettings), hostSettings);
             Guard.AgainstNull(nameof(receivers), receivers);

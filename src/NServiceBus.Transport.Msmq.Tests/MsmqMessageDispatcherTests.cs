@@ -4,6 +4,7 @@
     using System;
     using System.Collections.Generic;
     using System.Messaging;
+    using System.Threading;
     using NServiceBus.Performance.TimeToBeReceived;
     using Routing;
     using Transport;
@@ -84,7 +85,7 @@
                 dispatchProperties = dispatchProperties ?? new DispatchProperties();
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), dispatchProperties);
 
-                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction());
+                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), CancellationToken.None);
 
                 using (var queue = new MessageQueue(path))
                 using (var message = queue.Receive(TimeSpan.FromSeconds(5)))

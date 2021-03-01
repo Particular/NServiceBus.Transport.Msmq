@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Transport;
@@ -11,11 +12,11 @@ class TestableMsmqTransport : MsmqTransport
 {
     public string[] ReceiveQueues = new string[0];
 
-    public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses)
+    public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken)
     {
         MessageEnumeratorTimeout = TimeSpan.FromMilliseconds(10);
         ReceiveQueues = receivers.Select(r => r.ReceiveAddress).ToArray();
 
-        return base.Initialize(hostSettings, receivers, sendingAddresses);
+        return base.Initialize(hostSettings, receivers, sendingAddresses, cancellationToken);
     }
 }

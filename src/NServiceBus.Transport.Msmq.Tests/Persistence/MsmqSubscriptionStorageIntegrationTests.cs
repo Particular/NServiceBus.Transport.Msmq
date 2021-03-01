@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests.Persistence
 {
     using System.Messaging;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using NServiceBus.Persistence.Msmq;
@@ -10,24 +11,24 @@
 
     public class MsmqSubscriptionStorageIntegrationTests
     {
-        const string testQueueName = "NServiceBus.Core.Tests.MsmqSubscriptionStorageIntegrationTests";
+        const string TestQueueName = "NServiceBus.Core.Tests.MsmqSubscriptionStorageIntegrationTests";
 
         [SetUp]
         public void Setup()
         {
-            DeleteQueueIfPresent(testQueueName);
+            DeleteQueueIfPresent(TestQueueName);
         }
 
         [TearDown]
         public void TearDown()
         {
-            DeleteQueueIfPresent(testQueueName);
+            DeleteQueueIfPresent(TestQueueName);
         }
 
         [Test]
         public async Task ShouldRemoveSubscriptionsInTransactionalMode()
         {
-            var address = MsmqAddress.Parse(testQueueName);
+            var address = MsmqAddress.Parse(TestQueueName);
             var queuePath = address.PathWithoutPrefix;
 
             MessageQueue.Create(queuePath, true);
@@ -45,7 +46,7 @@
 
             storage.Init();
 
-            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
+            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag(), CancellationToken.None);
 
             using (var queue = new MessageQueue(queuePath))
             {
@@ -56,7 +57,7 @@
         [Test]
         public async Task ShouldRemoveSubscriptionsInNonTransactionalMode()
         {
-            var address = MsmqAddress.Parse(testQueueName);
+            var address = MsmqAddress.Parse(TestQueueName);
             var queuePath = address.PathWithoutPrefix;
 
             MessageQueue.Create(queuePath, false);
@@ -74,7 +75,7 @@
 
             storage.Init();
 
-            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
+            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag(), CancellationToken.None);
 
             using (var queue = new MessageQueue(queuePath))
             {

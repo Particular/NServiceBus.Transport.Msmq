@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.IO;
     using System.Messaging;
+    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
@@ -13,7 +14,7 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage();
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
@@ -110,7 +111,7 @@ namespace NServiceBus.Transport.Msmq
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
             var messageContext = new MessageContext(messageId, headers, body, transaction, new ContextBag());
 
-            await onMessage(messageContext).ConfigureAwait(false);
+            await onMessage(messageContext, CancellationToken.None).ConfigureAwait(false);
         }
 
         protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
@@ -122,11 +123,11 @@ namespace NServiceBus.Transport.Msmq
 
                 var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts);
 
-                return await onError(errorContext).ConfigureAwait(false);
+                return await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex);
+                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex, CancellationToken.None);
 
                 //best thing we can do is roll the message back if possible
                 return ErrorHandleResult.RetryRequired;
@@ -148,7 +149,7 @@ namespace NServiceBus.Transport.Msmq
         MessageQueue errorQueue;
         OnMessage onMessage;
         OnError onError;
-        Action<string, Exception> criticalError;
+        Action<string, Exception, CancellationToken> criticalError;
         bool ignoreIncomingTimeToBeReceivedHeaders;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();

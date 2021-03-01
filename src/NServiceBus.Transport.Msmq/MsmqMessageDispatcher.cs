@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Messaging;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
     using Performance.TimeToBeReceived;
@@ -19,7 +20,7 @@ namespace NServiceBus.Transport.Msmq
             this.transportSettings = transportSettings;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken)
         {
             Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
 
