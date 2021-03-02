@@ -14,7 +14,7 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task<(string, Dictionary<string, string>, bool)> ReceiveMessage(ContextBag context);
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
+        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders, CancellationToken cancellationToken)
         {
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
@@ -22,6 +22,7 @@ namespace NServiceBus.Transport.Msmq
             this.onError = onError;
             this.criticalError = criticalError;
             this.ignoreIncomingTimeToBeReceivedHeaders = ignoreIncomingTimeToBeReceivedHeaders;
+            this.cancellationToken = cancellationToken;
         }
 
         protected bool TryReceive(MessageQueueTransactionType transactionType, out Message message)
@@ -111,7 +112,7 @@ namespace NServiceBus.Transport.Msmq
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
             var messageContext = new MessageContext(messageId, headers, body, transaction, context);
 
-            await onMessage(messageContext, CancellationToken.None).ConfigureAwait(false);
+            await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
 
         protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts, ContextBag context)
@@ -123,7 +124,7 @@ namespace NServiceBus.Transport.Msmq
 
                 var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts, context);
 
-                return await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+                return await onError(errorContext, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -134,16 +135,17 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        static async Task<byte[]> ReadStream(Stream bodyStream)
+        async Task<byte[]> ReadStream(Stream bodyStream)
         {
             bodyStream.Seek(0, SeekOrigin.Begin);
             var length = (int)bodyStream.Length;
             var body = new byte[length];
-            await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
+            await bodyStream.ReadAsync(body, 0, length, cancellationToken).ConfigureAwait(false);
             return body;
         }
 
         protected bool IsQueuesTransactional => errorQueue.Transactional;
+        protected CancellationToken cancellationToken;
 
         MessageQueue inputQueue;
         MessageQueue errorQueue;
