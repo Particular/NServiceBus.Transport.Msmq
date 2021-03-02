@@ -32,7 +32,7 @@ namespace NServiceBus.Transport.Msmq
         {
             peekCircuitBreaker?.Dispose();
             receiveCircuitBreaker?.Dispose();
-            cancellationTokenSource?.Dispose();
+            messagePumpCancellationTokenSource?.Dispose();
         }
 
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, OnCompleted onCompleted, CancellationToken cancellationToken)
@@ -81,18 +81,17 @@ namespace NServiceBus.Transport.Msmq
         {
             MessageQueue.ClearConnectionCache();
 
-            cancellationTokenSource = new CancellationTokenSource();
-            this.cancellationToken = cancellationTokenSource.Token;
+            messagePumpCancellationTokenSource = new CancellationTokenSource();
 
             // LongRunning is useless combined with async/await
-            messagePumpTask = Task.Run(() => ProcessMessages(), CancellationToken.None);
+            messagePumpTask = Task.Run(() => ProcessMessages(messagePumpCancellationTokenSource.Token), CancellationToken.None);
 
             return Task.CompletedTask;
         }
 
         public async Task StopReceive(CancellationToken cancellationToken)
         {
-            cancellationTokenSource.Cancel();
+            messagePumpCancellationTokenSource.Cancel();
 
             await messagePumpTask.ConfigureAwait(false);
 
@@ -117,13 +116,13 @@ namespace NServiceBus.Transport.Msmq
         }
 
         [DebuggerNonUserCode]
-        async Task ProcessMessages()
+        async Task ProcessMessages(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await InnerProcessMessages().ConfigureAwait(false);
+                    await InnerProcessMessages(cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -137,11 +136,11 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        async Task InnerProcessMessages()
+        async Task InnerProcessMessages(CancellationToken cancellationToken)
         {
             using (var enumerator = inputQueue.GetMessageEnumerator2())
             {
-                while (!cancellationTokenSource.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
@@ -160,7 +159,7 @@ namespace NServiceBus.Transport.Msmq
                         continue;
                     }
 
-                    if (cancellationTokenSource.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
                         return;
                     }
@@ -249,8 +248,7 @@ namespace NServiceBus.Transport.Msmq
 
         public string Id { get; }
 
-        CancellationToken cancellationToken;
-        CancellationTokenSource cancellationTokenSource;
+        CancellationTokenSource messagePumpCancellationTokenSource;
         int maxConcurrency;
         SemaphoreSlim concurrencyLimiter;
         MessageQueue errorQueue;
