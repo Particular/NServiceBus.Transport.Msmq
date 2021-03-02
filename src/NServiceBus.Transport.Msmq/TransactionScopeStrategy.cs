@@ -16,42 +16,44 @@ namespace NServiceBus.Transport.Msmq
             this.failureInfoStorage = failureInfoStorage;
         }
 
-        public override async Task ReceiveMessage(ContextBag context)
+        public override async Task<(string, Dictionary<string, string>, bool)> ReceiveMessage(ContextBag context)
         {
             Message message = null;
+            Dictionary<string, string> headers = null;
+            var onMessageFailed = false;
+
             try
             {
                 using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                 {
                     if (!TryReceive(MessageQueueTransactionType.Automatic, out message))
                     {
-                        return;
+                        return (null, null, true);
                     }
 
-                    if (!TryExtractHeaders(message, out var headers))
+                    if (!TryExtractHeaders(message, out headers))
                     {
                         MovePoisonMessageToErrorQueue(message, MessageQueueTransactionType.Automatic);
 
                         scope.Complete();
-                        return;
+                        return (message.Id, null, true);
                     }
 
                     var shouldCommit = await ProcessMessage(message, headers, context).ConfigureAwait(false);
 
-                    if (!shouldCommit)
+                    if (shouldCommit)
                     {
-                        return;
+                        scope.Complete();
+                        failureInfoStorage.ClearFailureInfoForMessage(message.Id);
                     }
-
-                    scope.Complete();
                 }
-
-                failureInfoStorage.ClearFailureInfoForMessage(message.Id);
             }
             // We'll only get here if Complete/Dispose throws which should be rare.
             // Note: If that happens the attempts counter will be inconsistent since the message might be picked up again before we can register the failure in the LRU cache.
             catch (Exception exception)
             {
+                onMessageFailed = true;
+
                 if (message == null)
                 {
                     throw;
@@ -59,6 +61,8 @@ namespace NServiceBus.Transport.Msmq
 
                 failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
             }
+
+            return (message.Id, headers, onMessageFailed);
         }
 
         async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers, ContextBag context)

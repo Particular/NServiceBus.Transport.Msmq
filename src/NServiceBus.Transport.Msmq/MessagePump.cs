@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Messaging;
     using System.Threading;
@@ -178,10 +179,13 @@ namespace NServiceBus.Transport.Msmq
                 var messagePump = (MessagePump)state;
                 var context = new ContextBag();
                 var startedAt = DateTimeOffset.UtcNow;
+                Dictionary<string, string> headers = null;
+                var onMessageFailed = false;
+                string messageId = null;
 
                 try
                 {
-                    await messagePump.receiveStrategy.ReceiveMessage(context).ConfigureAwait(false);
+                    (messageId, headers, onMessageFailed) = await messagePump.receiveStrategy.ReceiveMessage(context).ConfigureAwait(false);
                     messagePump.receiveCircuitBreaker.Success();
                 }
                 catch (OperationCanceledException)
@@ -197,7 +201,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     try
                     {
-                        await onCompleted(new CompleteContext("", true, new System.Collections.Generic.Dictionary<string, string>(), startedAt, DateTimeOffset.UtcNow, true, context), CancellationToken.None).ConfigureAwait(false);
+                        await onCompleted(new CompleteContext(messageId, true, headers ?? new Dictionary<string, string>(), startedAt, DateTimeOffset.UtcNow, onMessageFailed, context), CancellationToken.None).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {

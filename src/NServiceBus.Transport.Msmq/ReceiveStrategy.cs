@@ -12,7 +12,7 @@ namespace NServiceBus.Transport.Msmq
 
     abstract class ReceiveStrategy
     {
-        public abstract Task ReceiveMessage(ContextBag context);
+        public abstract Task<(string, Dictionary<string, string>, bool)> ReceiveMessage(ContextBag context);
 
         public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {

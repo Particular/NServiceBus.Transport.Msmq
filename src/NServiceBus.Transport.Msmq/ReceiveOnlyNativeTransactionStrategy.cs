@@ -14,9 +14,11 @@
             this.failureInfoStorage = failureInfoStorage;
         }
 
-        public override async Task ReceiveMessage(ContextBag context)
+        public override async Task<(string, Dictionary<string, string>, bool)> ReceiveMessage(ContextBag context)
         {
             Message message = null;
+            Dictionary<string, string> headers = null;
+            var onMessageFailed = false;
 
             try
             {
@@ -26,15 +28,15 @@
 
                     if (!TryReceive(msmqTransaction, out message))
                     {
-                        return;
+                        return (null, null, true);
                     }
 
-                    if (!TryExtractHeaders(message, out var headers))
+                    if (!TryExtractHeaders(message, out headers))
                     {
                         MovePoisonMessageToErrorQueue(message, IsQueuesTransactional ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None);
 
                         msmqTransaction.Commit();
-                        return;
+                        return (message.Id, null, true);
                     }
 
                     var shouldCommit = await ProcessMessage(message, headers, context).ConfigureAwait(false);
@@ -54,6 +56,8 @@
             // Note: If that happens the attempts counter will be inconsistent since the message might be picked up again before we can register the failure in the LRU cache.
             catch (Exception exception)
             {
+                onMessageFailed = true;
+
                 if (message == null)
                 {
                     throw;
@@ -61,6 +65,8 @@
 
                 failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
             }
+
+            return (message.Id, headers, onMessageFailed);
         }
 
         async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers, ContextBag context)
