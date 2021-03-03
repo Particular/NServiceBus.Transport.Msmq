@@ -1,25 +1,26 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using System.Messaging;
     using System.Threading;
     using System.Threading.Tasks;
     using Logging;
+    using NServiceBus.Extensibility;
     using Support;
     using Transport;
 
     class MessagePump : IMessageReceiver, IDisposable
     {
         public MessagePump(
-            Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
             TimeSpan messageEnumeratorTimeout,
             Action<string, Exception, CancellationToken> criticalErrorAction,
             MsmqTransport transportSettings,
             ReceiveSettings receiveSettings)
         {
             Id = receiveSettings.Id;
-            this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
             this.criticalErrorAction = criticalErrorAction;
             this.transportSettings = transportSettings;
@@ -35,6 +36,9 @@ namespace NServiceBus.Transport.Msmq
 
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
         {
+            this.onMessage = onMessage;
+            this.onError = onError;
+
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
@@ -66,11 +70,11 @@ namespace NServiceBus.Transport.Msmq
                 inputQueue.Purge();
             }
 
-            receiveStrategy = receiveStrategyFactory(transportSettings.TransportTransactionMode);
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, transportSettings.IgnoreIncomingTimeToBeReceivedHeaders);
-
             maxConcurrency = limitations.MaxConcurrency;
             concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
+
+            failureInfoStorage = new MsmqFailureInfoStorage(1000);
+
             return TaskEx.CompletedTask;
         }
 
@@ -177,7 +181,104 @@ namespace NServiceBus.Transport.Msmq
 
                 try
                 {
-                    await messagePump.receiveStrategy.ReceiveMessage().ConfigureAwait(false);
+                    var transportTransaction = new TransportTransaction();
+
+                    using (var transaction = CreateReceiveTransaction(transportTransaction))
+                    {
+                        transportTransaction.Set(transaction);
+
+                        if (!TryReceiveMessage(transaction, out var message))
+                        {
+                            return;
+                        }
+
+                        if (!TryExtractHeaders(message, out var headers))
+                        {
+                            var error = $"Message '{message.Id}' is classified as a poison message and will be moved to the configured error queue.";
+
+                            Logger.Error(error);
+
+                            transaction.SendMessage(errorQueue, message);
+
+                            transaction.Commit();
+                            return;
+                        }
+
+                        if (!transportSettings.IgnoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
+                        {
+                            Logger.Debug($"Discarding message {message.Id} due to lapsed Time To Be Received header");
+                            return;
+                        }
+
+                        var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
+
+                        if (transaction.RollbackBeforeErrorHandlingRequired)
+                        {
+
+                            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
+                            {
+                                var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts);
+
+                                var errorHandleResult = await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+
+                                if (errorHandleResult == ErrorHandleResult.Handled)
+                                {
+                                    transaction.Commit();
+                                }
+                                else
+                                {
+                                    transaction.Rollback();
+                                }
+
+                                return;
+                            }
+                        }
+
+                        var messageContext = new MessageContext(message.Id, headers, body, transportTransaction, new ContextBag());
+
+                        try
+                        {
+                            await onMessage(messageContext, CancellationToken.None).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (transaction.RollbackBeforeErrorHandlingRequired)
+                            {
+                                failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex);
+
+                                transaction.Rollback();
+
+                                return;
+                            }
+
+                            message.BodyStream.Position = 0;
+
+                            // we re-extact headers and body since they might have been changed during the failed processing attempt
+                            var errorHeaders = MsmqUtilities.ExtractHeaders(message);
+                            var errorBody = await ReadStream(message.BodyStream).ConfigureAwait(false);
+
+                            var errorContext = new ErrorContext(ex, headers, message.Id, body, transportTransaction, 1);
+
+                            var onErrorResult = await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+
+                            if (onErrorResult == ErrorHandleResult.RetryRequired)
+                            {
+                                transaction.Rollback();
+
+                                return;
+                            }
+                        }
+
+                        if (transaction.RollbackBeforeErrorHandlingRequired)
+                        {
+                            failureInfoStorage.ClearFailureInfoForMessage(message.Id);
+                        }
+
+                        transaction.Commit();
+
+                        //onComplete
+                    }
+
                     messagePump.receiveCircuitBreaker.Success();
                 }
                 catch (OperationCanceledException)
@@ -194,6 +295,44 @@ namespace NServiceBus.Transport.Msmq
                     messagePump.concurrencyLimiter.Release();
                 }
             }, this);
+        }
+
+        IMsmqTransaction CreateReceiveTransaction(TransportTransaction transportTransaction)
+        {
+            switch (transportSettings.TransportTransactionMode)
+            {
+                case TransportTransactionMode.None:
+                    return new NoTransaction();
+                case TransportTransactionMode.ReceiveOnly:
+                    return new NativeMsmqTransaction(false, transportTransaction);
+                case TransportTransactionMode.SendsAtomicWithReceive:
+                    return new NativeMsmqTransaction(true, transportTransaction);
+                case TransportTransactionMode.TransactionScope:
+                    return new TransactionScopeTransaction(transportTransaction, transportSettings.TransactionScopeOptions.TransactionOptions);
+                default:
+                    throw new InvalidOperationException($"Unknown transaction mode {transportSettings.TransportTransactionMode}");
+            }
+        }
+
+
+        bool TryReceiveMessage(IMsmqTransaction transaction, out Message message)
+        {
+            try
+            {
+                message = transaction.Receive(inputQueue, TimeSpan.FromMilliseconds(10));
+
+                return true;
+            }
+            catch (MessageQueueException ex)
+            {
+                if (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+                {
+                    //We should only get an IOTimeout exception here if another process removed the message between us peeking and now.
+                    message = null;
+                    return false;
+                }
+                throw;
+            }
         }
 
         bool QueueIsTransactional()
@@ -228,6 +367,33 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        bool TryExtractHeaders(Message message, out Dictionary<string, string> headers)
+        {
+            try
+            {
+                headers = MsmqUtilities.ExtractHeaders(message);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var error = $"Message '{message.Id}' has corrupted headers";
+
+                Logger.Warn(error, ex);
+
+                headers = null;
+                return false;
+            }
+        }
+
+        static async Task<byte[]> ReadStream(Stream bodyStream)
+        {
+            bodyStream.Seek(0, SeekOrigin.Begin);
+            var length = (int)bodyStream.Length;
+            var body = new byte[length];
+            await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
+            return body;
+        }
+
         public ISubscriptionManager Subscriptions => null;
 
         public string Id { get; }
@@ -239,17 +405,18 @@ namespace NServiceBus.Transport.Msmq
         MessageQueue errorQueue;
         MessageQueue inputQueue;
 
-        Task messagePumpTask;
+        OnMessage onMessage;
+        OnError onError;
 
-        ReceiveStrategy receiveStrategy;
+        Task messagePumpTask;
 
         RepeatedFailuresOverTimeCircuitBreaker peekCircuitBreaker;
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
-        Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
         readonly Action<string, Exception, CancellationToken> criticalErrorAction;
         readonly MsmqTransport transportSettings;
         readonly ReceiveSettings receiveSettings;
+        MsmqFailureInfoStorage failureInfoStorage;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();
 

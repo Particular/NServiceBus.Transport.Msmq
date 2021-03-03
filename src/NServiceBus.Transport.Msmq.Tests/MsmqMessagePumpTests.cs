@@ -8,12 +8,11 @@ namespace NServiceBus.Transport.Msmq.Tests
     [TestFixture]
     public class MsmqMessagePumpTests
     {
-
         [Test]
         public void ShouldThrowIfConfiguredToReceiveFromRemoteQueue()
         {
             var receiveSettings = new ReceiveSettings("test receiver", "queue@remote", false, false, "error");
-            var messagePump = new MessagePump(mode => null, TimeSpan.Zero, (_, __, ___) => { }, new MsmqTransport(), receiveSettings);
+            var messagePump = new MessagePump(TimeSpan.Zero, (_, __, ___) => { }, new MsmqTransport(), receiveSettings);
 
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {

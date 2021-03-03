@@ -4,7 +4,6 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Transactions;
     using Transport;
 
     class MsmqTransportInfrastructure : TransportInfrastructure
@@ -16,23 +15,6 @@ namespace NServiceBus.Transport.Msmq
             this.transportSettings = transportSettings;
 
             Dispatcher = new MsmqMessageDispatcher(transportSettings);
-        }
-
-        ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
-        {
-            switch (minimumConsistencyGuarantee)
-            {
-                case TransportTransactionMode.TransactionScope:
-                    return new TransactionScopeStrategy(transactionOptions, new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.SendsAtomicWithReceive:
-                    return new SendsAtomicWithReceiveNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.ReceiveOnly:
-                    return new ReceiveOnlyNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.None:
-                    return new NoTransactionStrategy();
-                default:
-                    throw new NotSupportedException($"TransportTransactionMode {minimumConsistencyGuarantee} is not supported by the MSMQ transport");
-            }
         }
 
         public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
@@ -51,8 +33,6 @@ namespace NServiceBus.Transport.Msmq
                 QueuePermissions.CheckQueue(receiver.ReceiveAddress);
 
                 var pump = new MessagePump(
-                    transactionMode =>
-                        SelectReceiveStrategy(transactionMode, transportSettings.TransactionScopeOptions.TransactionOptions),
                     transportSettings.MessageEnumeratorTimeout,
                     criticalErrorAction,
                     transportSettings,
