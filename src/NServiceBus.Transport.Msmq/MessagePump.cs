@@ -214,7 +214,6 @@ namespace NServiceBus.Transport.Msmq
 
                         if (transaction.RollbackBeforeErrorHandlingRequired)
                         {
-
                             if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
                             {
                                 var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts);
@@ -224,13 +223,10 @@ namespace NServiceBus.Transport.Msmq
                                 if (errorHandleResult == ErrorHandleResult.Handled)
                                 {
                                     transaction.Commit();
-                                }
-                                else
-                                {
-                                    transaction.Rollback();
-                                }
+                                    failureInfoStorage.ClearFailureInfoForMessage(message.Id);
 
-                                return;
+                                    return;
+                                }
                             }
                         }
 
