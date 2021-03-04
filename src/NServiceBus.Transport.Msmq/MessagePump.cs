@@ -34,10 +34,11 @@ namespace NServiceBus.Transport.Msmq
             messagePumpCancellationTokenSource?.Dispose();
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, OnReceiveCompleted onReceiveCompleted, CancellationToken cancellationToken)
         {
             this.onMessage = onMessage;
             this.onError = onError;
+            this.onReceiveCompleted = onReceiveCompleted;
 
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
@@ -188,6 +189,7 @@ namespace NServiceBus.Transport.Msmq
                 try
                 {
                     var transportTransaction = new TransportTransaction();
+                    var startedAt = DateTimeOffset.UtcNow;
 
                     using (var transaction = CreateReceiveTransaction(transportTransaction))
                     {
@@ -222,11 +224,11 @@ namespace NServiceBus.Transport.Msmq
                         {
                             if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
                             {
-                                var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts);
+                                var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts, new ContextBag());
 
                                 var errorHandleResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
 
-                                if (errorHandleResult == ErrorHandleResult.Handled)
+                                if (errorHandleResult == ReceiveResult.Succeeded)
                                 {
                                     transaction.Commit();
                                     failureInfoStorage.ClearFailureInfoForMessage(message.Id);
@@ -271,11 +273,11 @@ namespace NServiceBus.Transport.Msmq
                             var errorHeaders = MsmqUtilities.ExtractHeaders(message);
                             var errorBody = await ReadStream(message.BodyStream).ConfigureAwait(false);
 
-                            var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1);
+                            var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1, new ContextBag());
 
                             var onErrorResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
 
-                            if (onErrorResult == ErrorHandleResult.RetryRequired)
+                            if (onErrorResult == ReceiveResult.RetryRequired)
                             {
                                 transaction.Rollback();
 
@@ -290,7 +292,8 @@ namespace NServiceBus.Transport.Msmq
                             failureInfoStorage.ClearFailureInfoForMessage(message.Id);
                         }
 
-                        //onComplete
+                        var receiveCompletedContext = new ReceiveCompletedContext(message.Id, ReceiveResult.Succeeded, headers, startedAt, DateTimeOffset.UtcNow, new ContextBag());
+                        await onReceiveCompleted(receiveCompletedContext, cancellationToken).ConfigureAwait(false);
                     }
 
                     messagePump.receiveCircuitBreaker.Success();
@@ -328,7 +331,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        async Task<ErrorHandleResult> InvokeOnError(ErrorContext errorContext, CancellationToken cancellationToken)
+        async Task<ReceiveResult> InvokeOnError(ErrorContext errorContext, CancellationToken cancellationToken)
         {
             try
             {
@@ -336,13 +339,13 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                return ErrorHandleResult.RetryRequired;
+                return ReceiveResult.RetryRequired;
             }
             catch (Exception ex)
             {
                 criticalErrorAction($"Failed to execute recoverability policy for message with native ID: `{errorContext.Message.NativeMessageId}`", ex, CancellationToken.None);
 
-                return ErrorHandleResult.RetryRequired;
+                return ReceiveResult.RetryRequired;
             }
         }
 
@@ -438,6 +441,7 @@ namespace NServiceBus.Transport.Msmq
 
         OnMessage onMessage;
         OnError onError;
+        OnReceiveCompleted onReceiveCompleted;
 
         Task messagePumpTask;
 
