@@ -265,12 +265,12 @@ namespace NServiceBus.Transport.Msmq
                             }
                         }
 
+                        transaction.Commit();
+
                         if (transaction.RollbackBeforeErrorHandlingRequired)
                         {
                             failureInfoStorage.ClearFailureInfoForMessage(message.Id);
                         }
-
-                        transaction.Commit();
 
                         //onComplete
                     }

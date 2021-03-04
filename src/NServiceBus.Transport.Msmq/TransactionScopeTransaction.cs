@@ -9,7 +9,7 @@
         public TransactionScopeTransaction(TransportTransaction transportTransaction, TransactionOptions transactionOptions)
         {
             transactionScope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled);
-            transportTransaction.Set(transactionScope);
+            transportTransaction.Set(Transaction.Current);
         }
 
         public bool RollbackBeforeErrorHandlingRequired => true;
