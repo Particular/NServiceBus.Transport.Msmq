@@ -248,6 +248,12 @@ namespace NServiceBus.Transport.Msmq
                         {
                             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
                         }
+                        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                        {
+                            Logger.Info("Message processing cancelled. Rolling back transaction.", ex);
+                            transaction.Rollback();
+                            return;
+                        }
                         catch (Exception ex)
                         {
                             if (transaction.RollbackBeforeErrorHandlingRequired)
@@ -327,6 +333,10 @@ namespace NServiceBus.Transport.Msmq
             try
             {
                 return await onError(errorContext, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return ErrorHandleResult.RetryRequired;
             }
             catch (Exception ex)
             {
