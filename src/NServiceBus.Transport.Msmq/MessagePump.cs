@@ -313,7 +313,7 @@ namespace NServiceBus.Transport.Msmq
                             }
                             else
                             {
-                                //just return null here to signal to not tread this as a completed receive operation since this was the first failure for this message
+                                // just return null here to signal to not treat this as a completed receive operation since this was the first failure for this message so we need to go back to the queue before we can invoke onError
                                 return (null, null, default);
                             }
                         }
@@ -359,7 +359,7 @@ namespace NServiceBus.Transport.Msmq
                 }
                 else
                 {
-                    //just return null here to signal to not tread this as a completed receive operation since this was the first failure for this message
+                    // just return null here to signal to not treat this as a completed receive operation since this was the first failure for this message so we need to go back to the queue before we can invoke onError
                     return (null, null, default);
                 }
             }
