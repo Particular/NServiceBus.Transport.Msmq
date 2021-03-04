@@ -215,7 +215,7 @@ namespace NServiceBus.Transport.Msmq
                         {
                             concurrencyLimiter.Release();
                         }
-                    }, cancellationToken);
+                    }, CancellationToken.None); // we pass CancellationToken.None here intentionally since not allowing the task to complete might not decrement the concurrency limiter and cause hangs on shutdown
                 }
             }
         }
@@ -225,6 +225,8 @@ namespace NServiceBus.Transport.Msmq
             Message message = null;
             Dictionary<string, string> headers = null;
             bool rollbackBeforeErrorHandlingRequired = false;
+            bool rolledbackMessageForErrorHandling = false;
+
             try
             {
                 var transportTransaction = new TransportTransaction();
@@ -255,6 +257,7 @@ namespace NServiceBus.Transport.Msmq
                     if (!transportSettings.IgnoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
                     {
                         Logger.Debug($"Discarding message {message.Id} due to lapsed Time To Be Received header");
+                        transaction.Commit();
                         return (message.Id, headers, ReceiveResult.Expired);
                     }
 
@@ -264,15 +267,16 @@ namespace NServiceBus.Transport.Msmq
                     {
                         if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
                         {
+                            rolledbackMessageForErrorHandling = true;
                             var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts, context);
 
-                            var errorHandleResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
+                            var receiveResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
 
-                            if (errorHandleResult != ReceiveResult.RetryRequired)
+                            if (receiveResult != ReceiveResult.RetryRequired)
                             {
                                 transaction.Commit();
                                 failureInfoStorage.ClearFailureInfoForMessage(message.Id);
-                                return (message.Id, headers, errorHandleResult);
+                                return (message.Id, headers, receiveResult);
                             }
 
                             message.BodyStream.Position = 0;
@@ -303,7 +307,15 @@ namespace NServiceBus.Transport.Msmq
 
                             transaction.Rollback();
 
-                            return (null, null, default);
+                            if (rolledbackMessageForErrorHandling)
+                            {
+                                return (message.Id, headers, ReceiveResult.RetryRequired);
+                            }
+                            else
+                            {
+                                //just return null here to signal to not tread this as a completed receive operation since this was the first failure for this message
+                                return (null, null, default);
+                            }
                         }
 
                         message.BodyStream.Position = 0;
@@ -341,7 +353,15 @@ namespace NServiceBus.Transport.Msmq
                     failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex);
                 }
 
-                return (message?.Id, headers ?? new Dictionary<string, string>(), ReceiveResult.RetryRequired);
+                if (rolledbackMessageForErrorHandling)
+                {
+                    return (message?.Id, headers ?? new Dictionary<string, string>(), ReceiveResult.RetryRequired);
+                }
+                else
+                {
+                    //just return null here to signal to not tread this as a completed receive operation since this was the first failure for this message
+                    return (null, null, default);
+                }
             }
         }
 
