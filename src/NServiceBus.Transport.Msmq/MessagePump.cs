@@ -175,141 +175,138 @@ namespace NServiceBus.Transport.Msmq
 
                     await concurrencyLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    _ = ReceiveMessage(messageProcessingCancellationTokenSource.Token);
+                    _ = Task.Run(() => ReceiveMessage(messageProcessingCancellationTokenSource.Token), cancellationToken);
                 }
             }
         }
 
-        Task ReceiveMessage(CancellationToken cancellationToken)
+        async Task ReceiveMessage(CancellationToken cancellationToken)
         {
-            return TaskEx.Run(async _ =>
+            try
             {
-                try
+                var transportTransaction = new TransportTransaction();
+                var startedAt = DateTimeOffset.UtcNow;
+
+                using (var transaction = CreateReceiveTransaction(transportTransaction))
                 {
-                    var transportTransaction = new TransportTransaction();
-                    var startedAt = DateTimeOffset.UtcNow;
+                    transportTransaction.Set(transaction);
 
-                    using (var transaction = CreateReceiveTransaction(transportTransaction))
+                    if (!TryReceiveMessage(transaction, out var message))
                     {
-                        transportTransaction.Set(transaction);
+                        return;
+                    }
 
-                        if (!TryReceiveMessage(transaction, out var message))
+                    if (!TryExtractHeaders(message, out var headers))
+                    {
+                        var error = $"Message '{message.Id}' is classified as a poison message and will be moved to the configured error queue.";
+
+                        Logger.Error(error);
+
+                        transaction.SendMessage(errorQueue, message);
+
+                        transaction.Commit();
+                        return;
+                    }
+
+                    if (!transportSettings.IgnoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
+                    {
+                        Logger.Debug($"Discarding message {message.Id} due to lapsed Time To Be Received header");
+                        return;
+                    }
+
+                    var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
+
+                    if (transaction.RollbackBeforeErrorHandlingRequired)
+                    {
+                        if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
                         {
-                            return;
-                        }
+                            var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts, new ContextBag());
 
-                        if (!TryExtractHeaders(message, out var headers))
-                        {
-                            var error = $"Message '{message.Id}' is classified as a poison message and will be moved to the configured error queue.";
+                            var errorHandleResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
 
-                            Logger.Error(error);
-
-                            transaction.SendMessage(errorQueue, message);
-
-                            transaction.Commit();
-                            return;
-                        }
-
-                        if (!transportSettings.IgnoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
-                        {
-                            Logger.Debug($"Discarding message {message.Id} due to lapsed Time To Be Received header");
-                            return;
-                        }
-
-                        var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
-
-                        if (transaction.RollbackBeforeErrorHandlingRequired)
-                        {
-                            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
+                            if (errorHandleResult == ReceiveResult.Succeeded)
                             {
-                                var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts, new ContextBag());
-
-                                var errorHandleResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
-
-                                if (errorHandleResult == ReceiveResult.Succeeded)
-                                {
-                                    transaction.Commit();
-                                    failureInfoStorage.ClearFailureInfoForMessage(message.Id);
-
-                                    return;
-                                }
-
-                                message.BodyStream.Position = 0;
-
-                                // we re-extract headers and body since they might have been changed during error handling
-                                headers = MsmqUtilities.ExtractHeaders(message);
-                                body = await ReadStream(message.BodyStream).ConfigureAwait(false);
-                            }
-                        }
-
-                        var messageContext = new MessageContext(message.Id, headers, body, transportTransaction, new ContextBag());
-
-                        try
-                        {
-                            await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-                        {
-                            Logger.Info("Message processing cancelled. Rolling back transaction.", ex);
-                            transaction.Rollback();
-                            return;
-                        }
-                        catch (Exception ex)
-                        {
-                            if (transaction.RollbackBeforeErrorHandlingRequired)
-                            {
-                                failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex);
-
-                                transaction.Rollback();
+                                transaction.Commit();
+                                failureInfoStorage.ClearFailureInfoForMessage(message.Id);
 
                                 return;
                             }
 
                             message.BodyStream.Position = 0;
 
-                            // we re-extract headers and body since they might have been changed during the failed processing attempt
-                            var errorHeaders = MsmqUtilities.ExtractHeaders(message);
-                            var errorBody = await ReadStream(message.BodyStream).ConfigureAwait(false);
-
-                            var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1, new ContextBag());
-
-                            var onErrorResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
-
-                            if (onErrorResult == ReceiveResult.RetryRequired)
-                            {
-                                transaction.Rollback();
-
-                                return;
-                            }
+                            // we re-extract headers and body since they might have been changed during error handling
+                            headers = MsmqUtilities.ExtractHeaders(message);
+                            body = await ReadStream(message.BodyStream).ConfigureAwait(false);
                         }
-
-                        transaction.Commit();
-
-                        if (transaction.RollbackBeforeErrorHandlingRequired)
-                        {
-                            failureInfoStorage.ClearFailureInfoForMessage(message.Id);
-                        }
-
-                        var receiveCompletedContext = new ReceiveCompletedContext(message.Id, ReceiveResult.Succeeded, headers, startedAt, DateTimeOffset.UtcNow, new ContextBag());
-                        await onReceiveCompleted(receiveCompletedContext, cancellationToken).ConfigureAwait(false);
                     }
 
-                    receiveCircuitBreaker.Success();
+                    var messageContext = new MessageContext(message.Id, headers, body, transportTransaction, new ContextBag());
+
+                    try
+                    {
+                        await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    {
+                        Logger.Info("Message processing cancelled. Rolling back transaction.", ex);
+                        transaction.Rollback();
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (transaction.RollbackBeforeErrorHandlingRequired)
+                        {
+                            failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex);
+
+                            transaction.Rollback();
+
+                            return;
+                        }
+
+                        message.BodyStream.Position = 0;
+
+                        // we re-extract headers and body since they might have been changed during the failed processing attempt
+                        var errorHeaders = MsmqUtilities.ExtractHeaders(message);
+                        var errorBody = await ReadStream(message.BodyStream).ConfigureAwait(false);
+
+                        var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1, new ContextBag());
+
+                        var onErrorResult = await InvokeOnError(errorContext, cancellationToken).ConfigureAwait(false);
+
+                        if (onErrorResult == ReceiveResult.RetryRequired)
+                        {
+                            transaction.Rollback();
+
+                            return;
+                        }
+                    }
+
+                    transaction.Commit();
+
+                    if (transaction.RollbackBeforeErrorHandlingRequired)
+                    {
+                        failureInfoStorage.ClearFailureInfoForMessage(message.Id);
+                    }
+
+                    var receiveCompletedContext = new ReceiveCompletedContext(message.Id, ReceiveResult.Succeeded, headers, startedAt, DateTimeOffset.UtcNow, new ContextBag());
+                    await onReceiveCompleted(receiveCompletedContext, cancellationToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
-                {
-                    // Intentionally ignored
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn("MSMQ receive operation failed", ex);
-                    await receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
-                }
-                finally
-                {
-                    concurrencyLimiter.Release();
-                }
-            }, this);
+
+                receiveCircuitBreaker.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                // Intentionally ignored
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("MSMQ receive operation failed", ex);
+                await receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
+            }
+            finally
+            {
+                concurrencyLimiter.Release();
+            }
         }
 
         IMsmqTransaction CreateReceiveTransaction(TransportTransaction transportTransaction)
