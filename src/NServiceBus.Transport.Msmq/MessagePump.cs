@@ -182,10 +182,8 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage(CancellationToken cancellationToken)
         {
-            return TaskEx.Run(async state =>
+            return TaskEx.Run(async _ =>
             {
-                var messagePump = (MessagePump)state;
-
                 try
                 {
                     var transportTransaction = new TransportTransaction();
@@ -296,7 +294,7 @@ namespace NServiceBus.Transport.Msmq
                         await onReceiveCompleted(receiveCompletedContext, cancellationToken).ConfigureAwait(false);
                     }
 
-                    messagePump.receiveCircuitBreaker.Success();
+                    receiveCircuitBreaker.Success();
                 }
                 catch (OperationCanceledException)
                 {
@@ -305,11 +303,11 @@ namespace NServiceBus.Transport.Msmq
                 catch (Exception ex)
                 {
                     Logger.Warn("MSMQ receive operation failed", ex);
-                    await messagePump.receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
+                    await receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
                 }
                 finally
                 {
-                    messagePump.concurrencyLimiter.Release();
+                    concurrencyLimiter.Release();
                 }
             }, this);
         }
