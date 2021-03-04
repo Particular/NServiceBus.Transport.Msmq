@@ -218,7 +218,7 @@ namespace NServiceBus.Transport.Msmq
                             {
                                 var errorContext = new ErrorContext(failureInfo.Exception, headers, message.Id, body, transportTransaction, failureInfo.NumberOfProcessingAttempts);
 
-                                var errorHandleResult = await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+                                var errorHandleResult = await InvokeOnError(errorContext).ConfigureAwait(false);
 
                                 if (errorHandleResult == ErrorHandleResult.Handled)
                                 {
@@ -255,7 +255,7 @@ namespace NServiceBus.Transport.Msmq
 
                             var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1);
 
-                            var onErrorResult = await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+                            var onErrorResult = await InvokeOnError(errorContext).ConfigureAwait(false);
 
                             if (onErrorResult == ErrorHandleResult.RetryRequired)
                             {
@@ -310,6 +310,19 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        async Task<ErrorHandleResult> InvokeOnError(ErrorContext errorContext)
+        {
+            try
+            {
+                return await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                criticalErrorAction($"Failed to execute recoverability policy for message with native ID: `{errorContext.Message.NativeMessageId}`", ex, CancellationToken.None);
+
+                return ErrorHandleResult.RetryRequired;
+            }
+        }
 
         bool TryReceiveMessage(IMsmqTransaction transaction, out Message message)
         {
