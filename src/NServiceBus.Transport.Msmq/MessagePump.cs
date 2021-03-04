@@ -253,11 +253,11 @@ namespace NServiceBus.Transport.Msmq
 
                             message.BodyStream.Position = 0;
 
-                            // we re-extact headers and body since they might have been changed during the failed processing attempt
+                            // we re-extract headers and body since they might have been changed during the failed processing attempt
                             var errorHeaders = MsmqUtilities.ExtractHeaders(message);
                             var errorBody = await ReadStream(message.BodyStream).ConfigureAwait(false);
 
-                            var errorContext = new ErrorContext(ex, headers, message.Id, body, transportTransaction, 1);
+                            var errorContext = new ErrorContext(ex, errorHeaders, message.Id, errorBody, transportTransaction, 1);
 
                             var onErrorResult = await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
 
