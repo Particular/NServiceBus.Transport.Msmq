@@ -3,6 +3,7 @@ namespace NServiceBus.Transport.Msmq
     using System;
     using System.Messaging;
     using System.Threading.Tasks;
+    using Extensibility;
     using Transport;
 
     class NoTransactionStrategy : ReceiveStrategy
@@ -22,17 +23,18 @@ namespace NServiceBus.Transport.Msmq
 
             var transportTransaction = new TransportTransaction();
 
+            var context = new ContextBag();
             using (var bodyStream = message.BodyStream)
             {
                 try
                 {
-                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
+                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context).ConfigureAwait(false);
                 }
                 catch (Exception exception)
                 {
                     message.BodyStream.Position = 0;
 
-                    await HandleError(message, exception, transportTransaction, 1).ConfigureAwait(false);
+                    await HandleError(message, exception, transportTransaction, 1, context).ConfigureAwait(false);
                 }
             }
         }

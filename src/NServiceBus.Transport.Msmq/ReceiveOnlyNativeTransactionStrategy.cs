@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Messaging;
     using System.Threading.Tasks;
+    using Extensibility;
     using Transport;
 
     class ReceiveOnlyNativeTransactionStrategy : ReceiveStrategy
@@ -16,7 +17,7 @@
         public override async Task ReceiveMessage()
         {
             Message message = null;
-
+            var context = new ContextBag();
             try
             {
                 using (var msmqTransaction = new MessageQueueTransaction())
@@ -36,7 +37,7 @@
                         return;
                     }
 
-                    var shouldCommit = await ProcessMessage(message, headers).ConfigureAwait(false);
+                    var shouldCommit = await ProcessMessage(message, headers, context).ConfigureAwait(false);
 
                     if (shouldCommit)
                     {
@@ -58,15 +59,15 @@
                     throw;
                 }
 
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
             }
         }
 
-        async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers)
+        async Task<bool> ProcessMessage(Message message, Dictionary<string, string> headers, ContextBag contextBag)
         {
             if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
             {
-                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts).ConfigureAwait(false);
+                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts, failureInfo.ContextBag).ConfigureAwait(false);
 
                 if (errorHandleResult == ErrorHandleResult.Handled)
                 {
@@ -78,13 +79,13 @@
             {
                 using (var bodyStream = message.BodyStream)
                 {
-                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
+                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, contextBag).ConfigureAwait(false);
                 }
                 return true;
             }
             catch (Exception exception)
             {
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, contextBag);
 
                 return false;
             }

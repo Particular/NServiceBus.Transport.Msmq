@@ -100,7 +100,7 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
+        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag contextBag)
         {
             if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
             {
@@ -109,19 +109,19 @@ namespace NServiceBus.Transport.Msmq
             }
 
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
-            var messageContext = new MessageContext(messageId, headers, body, transaction, new ContextBag());
+            var messageContext = new MessageContext(messageId, headers, body, transaction, contextBag);
 
             await onMessage(messageContext, CancellationToken.None).ConfigureAwait(false);
         }
 
-        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts)
+        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts, ContextBag context)
         {
             try
             {
                 var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
                 var headers = MsmqUtilities.ExtractHeaders(message);
 
-                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts);
+                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts, context);
 
                 return await onError(errorContext, CancellationToken.None).ConfigureAwait(false);
             }
