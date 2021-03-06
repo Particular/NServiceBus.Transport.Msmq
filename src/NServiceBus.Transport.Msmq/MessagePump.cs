@@ -117,6 +117,9 @@ namespace NServiceBus.Transport.Msmq
             concurrencyLimiter.Dispose();
             inputQueue.Dispose();
             errorQueue.Dispose();
+
+            messagePumpCancellationTokenSource?.Dispose();
+            messageProcessingCancellationTokenSource?.Dispose();
         }
 
         [DebuggerNonUserCode]
