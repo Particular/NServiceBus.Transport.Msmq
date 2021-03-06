@@ -132,7 +132,7 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (Exception ex)
             {
-                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex, CancellationToken.None);
+                criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex, cancellationToken);
 
                 //best thing we can do is roll the message back if possible
                 return ErrorHandleResult.RetryRequired;
