@@ -35,10 +35,12 @@ namespace NServiceBus.Transport.Msmq
 
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
         {
+            messagePumpCancellationTokenSource = new CancellationTokenSource();
+
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, messagePumpCancellationTokenSource.Token));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, CancellationToken.None));
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messagePumpCancellationTokenSource.Token));
 
             var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
@@ -78,7 +80,6 @@ namespace NServiceBus.Transport.Msmq
         {
             MessageQueue.ClearConnectionCache();
 
-            messagePumpCancellationTokenSource = new CancellationTokenSource();
             messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
             // LongRunning is useless combined with async/await
