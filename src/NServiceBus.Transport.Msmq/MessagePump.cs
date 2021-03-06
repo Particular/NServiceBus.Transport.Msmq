@@ -82,7 +82,7 @@ namespace NServiceBus.Transport.Msmq
             messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
             // LongRunning is useless combined with async/await
-            messagePumpTask = Task.Run(() => ProcessMessages(messagePumpCancellationTokenSource.Token), messagePumpCancellationTokenSource.Token);
+            messagePumpTask = Task.Run(() => ProcessMessages(messagePumpCancellationTokenSource.Token), cancellationToken);
 
             return Task.CompletedTask;
         }
@@ -176,7 +176,7 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage()
         {
-            return TaskEx.Run(async state =>
+            return Task.Run(async () =>
             {
                 try
                 {
@@ -196,7 +196,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     concurrencyLimiter.Release();
                 }
-            }, this);
+            }, CancellationToken.None); // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
         }
 
         bool QueueIsTransactional()
