@@ -180,7 +180,7 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage()
         {
-            return TaskEx.Run(async _ =>
+            return Task.Factory.StartNew(async _ =>
             {
                 try
                 {
@@ -200,7 +200,13 @@ namespace NServiceBus.Transport.Msmq
                 {
                     concurrencyLimiter.Release();
                 }
-            }, CancellationToken.None); // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
+            },
+            null,
+            CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
+            TaskCreationOptions.DenyChildAttach,
+            TaskScheduler.Default)
+                .Unwrap();
+
         }
 
         bool QueueIsTransactional()
