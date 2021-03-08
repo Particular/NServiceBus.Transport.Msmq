@@ -83,7 +83,7 @@ namespace NServiceBus.Transport.Msmq
             messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
             // LongRunning is useless combined with async/await
-            messagePumpTask = Task.Run(() => ProcessMessages(messagePumpCancellationTokenSource.Token), cancellationToken);
+            messagePumpTask = Task.Run(() => ProcessMessages(), cancellationToken);
 
             return Task.CompletedTask;
         }
@@ -123,13 +123,13 @@ namespace NServiceBus.Transport.Msmq
         }
 
         [DebuggerNonUserCode]
-        async Task ProcessMessages(CancellationToken cancellationToken)
+        async Task ProcessMessages()
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!messagePumpCancellationTokenSource.IsCancellationRequested)
             {
                 try
                 {
-                    await InnerProcessMessages(cancellationToken).ConfigureAwait(false);
+                    await InnerProcessMessages().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -143,7 +143,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        async Task InnerProcessMessages(CancellationToken cancellationToken)
+        async Task InnerProcessMessages()
         {
             using (var enumerator = inputQueue.GetMessageEnumerator2())
             {
@@ -171,7 +171,7 @@ namespace NServiceBus.Transport.Msmq
                         return;
                     }
 
-                    await concurrencyLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    await concurrencyLimiter.WaitAsync(messagePumpCancellationTokenSource.Token).ConfigureAwait(false);
 
                     _ = ReceiveMessage();
                 }
