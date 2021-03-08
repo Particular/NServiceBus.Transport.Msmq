@@ -180,7 +180,7 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage()
         {
-            return Task.Run(async () =>
+            return TaskEx.Run(async _ =>
             {
                 try
                 {
