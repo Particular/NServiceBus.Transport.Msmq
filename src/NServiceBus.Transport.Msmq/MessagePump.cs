@@ -182,8 +182,12 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage()
         {
-            return Task.Factory.StartNew(async _ =>
+            // We pass a fake state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+            var statePassedToAvoidLamdaDelegateCaching = this;
+
+            return Task.Factory.StartNew(async state =>
             {
+                var accessStateForPerfReasons = (MessagePump)state;
                 try
                 {
                     await receiveStrategy.ReceiveMessage(messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
@@ -203,7 +207,7 @@ namespace NServiceBus.Transport.Msmq
                     concurrencyLimiter.Release();
                 }
             },
-            null,
+            statePassedToAvoidLamdaDelegateCaching,
             CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
             TaskCreationOptions.DenyChildAttach,
             TaskScheduler.Default)
