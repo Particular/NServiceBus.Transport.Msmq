@@ -37,10 +37,12 @@ namespace NServiceBus.Transport.Msmq
         {
             messagePumpCancellationTokenSource = new CancellationTokenSource();
 
+            var tokenForCriticalErrorAction = messageProcessingCancellationTokenSource.Token; // Prevent ObjectDisposed after endpoint shut down by using a local variable
+
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, messagePumpCancellationTokenSource.Token));
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, tokenForCriticalErrorAction));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messagePumpCancellationTokenSource.Token));
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, tokenForCriticalErrorAction));
 
             var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
