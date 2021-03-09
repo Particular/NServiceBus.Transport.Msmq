@@ -36,6 +36,7 @@ namespace NServiceBus.Transport.Msmq
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
         {
             messagePumpCancellationTokenSource = new CancellationTokenSource();
+            messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
             var tokenForCriticalErrorAction = messageProcessingCancellationTokenSource.Token; // Prevent ObjectDisposed after endpoint shut down by using a local variable
 
@@ -81,8 +82,6 @@ namespace NServiceBus.Transport.Msmq
         public Task StartReceive(CancellationToken cancellationToken)
         {
             MessageQueue.ClearConnectionCache();
-
-            messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
             // LongRunning is useless combined with async/await
             messagePumpTask = Task.Run(() => PumpMessages(), cancellationToken);
