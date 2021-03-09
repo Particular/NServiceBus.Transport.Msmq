@@ -194,9 +194,9 @@ namespace NServiceBus.Transport.Msmq
                     await receiveStrategy.ReceiveMessage(messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
                     receiveCircuitBreaker.Success();
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (messageProcessingCancellationTokenSource.IsCancellationRequested)
                 {
-                    // Intentionally ignored
+                    // Graceful shutdown
                 }
                 catch (Exception ex)
                 {
