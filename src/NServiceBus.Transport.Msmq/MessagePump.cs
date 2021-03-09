@@ -188,6 +188,7 @@ namespace NServiceBus.Transport.Msmq
             return Task.Factory.StartNew(async state =>
             {
                 var accessStateForPerfReasons = (MessagePump)state;
+
                 try
                 {
                     await receiveStrategy.ReceiveMessage(messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
