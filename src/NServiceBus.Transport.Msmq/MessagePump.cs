@@ -166,45 +166,37 @@ namespace NServiceBus.Transport.Msmq
 
                     await concurrencyLimiter.WaitAsync(messagePumpCancellationTokenSource.Token).ConfigureAwait(false);
 
-                    _ = ReceiveMessage();
+                    _ = Task.Factory.StartNew(state => InnerReceiveMessages((MessagePump)state),
+                        this,  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+                        CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
+                        TaskCreationOptions.DenyChildAttach,
+                        TaskScheduler.Default)
+                        .Unwrap();
                 }
             }
         }
 
-        Task ReceiveMessage()
+        // This is static to prevent the method from accessing feilds in the pump since that causes variable capturing and cause extra allocations
+        static async Task InnerReceiveMessages(MessagePump messagePump)
         {
-            // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
-            var statePassedToAvoidLamdaDelegateCaching = this;
-
-            return Task.Factory.StartNew(async state =>
+            try
             {
-                var accessStateForPerfReasons = (MessagePump)state;
-
-                try
-                {
-                    await receiveStrategy.ReceiveMessage(messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
-                    receiveCircuitBreaker.Success();
-                }
-                catch (OperationCanceledException) when (messageProcessingCancellationTokenSource.IsCancellationRequested)
-                {
-                    // Graceful shutdown
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn("MSMQ receive operation failed", ex);
-                    await receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
-                }
-                finally
-                {
-                    concurrencyLimiter.Release();
-                }
-            },
-            statePassedToAvoidLamdaDelegateCaching,
-            CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
-            TaskCreationOptions.DenyChildAttach,
-            TaskScheduler.Default)
-                .Unwrap();
-
+                await messagePump.receiveStrategy.ReceiveMessage(messagePump.messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
+                messagePump.receiveCircuitBreaker.Success();
+            }
+            catch (OperationCanceledException) when (messagePump.messageProcessingCancellationTokenSource.IsCancellationRequested)
+            {
+                // Graceful shutdown
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("MSMQ receive operation failed", ex);
+                await messagePump.receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
+            }
+            finally
+            {
+                messagePump.concurrencyLimiter.Release();
+            }
         }
 
         bool QueueIsTransactional()
