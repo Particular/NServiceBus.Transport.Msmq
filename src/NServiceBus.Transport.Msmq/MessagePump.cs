@@ -113,6 +113,8 @@ namespace NServiceBus.Transport.Msmq
             receiveCircuitBreaker?.Dispose();
             messagePumpCancellationTokenSource?.Dispose();
             messageProcessingCancellationTokenSource?.Dispose();
+
+            messageProcessingCancellationTokenSource = null; // to prevent ObjectDisposedException should the user passed token be canceled after this method returns
         }
 
         [DebuggerNonUserCode]
