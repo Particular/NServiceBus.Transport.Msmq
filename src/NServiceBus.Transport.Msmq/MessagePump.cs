@@ -9,7 +9,7 @@ namespace NServiceBus.Transport.Msmq
     using Support;
     using Transport;
 
-    class MessagePump : IMessageReceiver, IDisposable
+    class MessagePump : IMessageReceiver
     {
         public MessagePump(
             Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
@@ -26,24 +26,15 @@ namespace NServiceBus.Transport.Msmq
             this.receiveSettings = receiveSettings;
         }
 
-        public void Dispose()
-        {
-            peekCircuitBreaker?.Dispose();
-            receiveCircuitBreaker?.Dispose();
-            messagePumpCancellationTokenSource?.Dispose();
-        }
-
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
         {
             messagePumpCancellationTokenSource = new CancellationTokenSource();
             messageProcessingCancellationTokenSource = new CancellationTokenSource();
 
-            var tokenForCriticalErrorAction = messageProcessingCancellationTokenSource.Token; // Prevent ObjectDisposed after endpoint shut down by using a local variable
-
             peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, tokenForCriticalErrorAction));
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, tokenForCriticalErrorAction));
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
 
             var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
@@ -115,10 +106,11 @@ namespace NServiceBus.Transport.Msmq
                     .ConfigureAwait(false);
             }
 
-            concurrencyLimiter.Dispose();
-            inputQueue.Dispose();
-            errorQueue.Dispose();
-
+            concurrencyLimiter?.Dispose();
+            inputQueue?.Dispose();
+            errorQueue?.Dispose();
+            peekCircuitBreaker?.Dispose();
+            receiveCircuitBreaker?.Dispose();
             messagePumpCancellationTokenSource?.Dispose();
             messageProcessingCancellationTokenSource?.Dispose();
         }
