@@ -181,7 +181,7 @@ namespace NServiceBus.Transport.Msmq
 
         Task ReceiveMessage()
         {
-            // We pass a fake state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+            // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
             var statePassedToAvoidLamdaDelegateCaching = this;
 
             return Task.Factory.StartNew(async state =>
