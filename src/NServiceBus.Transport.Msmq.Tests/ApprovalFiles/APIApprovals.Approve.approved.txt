@@ -62,6 +62,10 @@ namespace NServiceBus
         [System.Obsolete("Use `MsmqTransport.UseTransactionalQueues` instead. The member currently throws a" +
             " NotImplementedException. Will be removed in version 3.0.0.", true)]
         public static void UseNonTransactionalQueues(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
+        [System.Obsolete("Use `EndpointConfiguration.UseTransport(TransportDefinition)` instead. Will be tr" +
+            "eated as an error from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public static NServiceBus.MsmqTransportSettings UseTransport<TTransport>(this NServiceBus.EndpointConfiguration endpointConfiguration)
+            where TTransport : NServiceBus.MsmqTransport { }
     }
     public class MsmqPersistence : NServiceBus.Persistence.PersistenceDefinition { }
     public static class MsmqSubscriptionStorageConfigurationExtensions
@@ -87,6 +91,42 @@ namespace NServiceBus
         public override System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes() { }
         public override System.Threading.Tasks.Task<NServiceBus.Transport.TransportInfrastructure> Initialize(NServiceBus.Transport.HostSettings hostSettings, NServiceBus.Transport.ReceiveSettings[] receivers, string[] sendingAddresses, System.Threading.CancellationToken cancellationToken) { }
         public override string ToTransportAddress(NServiceBus.Transport.QueueAddress address) { }
+    }
+    public class MsmqTransportSettings : NServiceBus.TransportSettings<NServiceBus.MsmqTransport>
+    {
+        [System.Obsolete("Use `MsmqTransport.ApplyCustomLabelToOutgoingMessages` instead. Will be treated a" +
+            "s an error from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings ApplyLabelToMessages(System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
+        [System.Obsolete("Use `MsmqTransport.UseConnectionCache` instead. Will be treated as an error from " +
+            "version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings DisableConnectionCachingForSends() { }
+        [System.Obsolete("Use `MsmqTransport.UseDeadLetterQueue` instead. Will be treated as an error from " +
+            "version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings DisableDeadLetterQueueing() { }
+        [System.Obsolete("Use `MsmqTransport.CreateQueues` instead. Will be treated as an error from versio" +
+            "n 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings DisableInstaller() { }
+        [System.Obsolete("Use `MsmqTransport.UseNonNativeTimeToBeReceivedInTransactions` instead. Will be t" +
+            "reated as an error from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings DisableNativeTimeToBeReceivedInTransactions() { }
+        [System.Obsolete("Use `MsmqTransport.UseJournalQueue` instead. Will be treated as an error from ver" +
+            "sion 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings EnableJournaling() { }
+        [System.Obsolete("Use `MsmqTransport.IgnoreIncomingTimeToBeReceivedHeaders` instead. Will be treate" +
+            "d as an error from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings IgnoreIncomingTimeToBeReceivedHeaders() { }
+        [System.Obsolete("Use `MsmqTransport.TimeToReachQueue` instead. Will be treated as an error from ve" +
+            "rsion 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings TimeToReachQueue(System.TimeSpan timeToReachQueue) { }
+        [System.Obsolete("Use `MsmqTransport.ConfigureTransactionScope` instead. Will be treated as an erro" +
+            "r from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings TransactionScopeOptions(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
+        [System.Obsolete("Use `MsmqTransport.UseDeadLetterQueueForMessagesWithTimeToBeReceived` instead. Wi" +
+            "ll be treated as an error from version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings UseDeadLetterQueueForMessagesWithTimeToBeReceived() { }
+        [System.Obsolete("Use `MsmqTransport.UseTransactionalQueues` instead. Will be treated as an error f" +
+            "rom version 3.0.0. Will be removed in version 4.0.0.", false)]
+        public NServiceBus.MsmqTransportSettings UseNonTransactionalQueues() { }
     }
 }
 namespace NServiceBus.Transport.Msmq
