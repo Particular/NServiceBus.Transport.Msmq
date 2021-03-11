@@ -65,11 +65,6 @@ namespace NServiceBus.Transport.Msmq
 
         public override Task Shutdown(CancellationToken cancellationToken)
         {
-            foreach (var receiver in Receivers.Values)
-            {
-                (receiver as MessagePump)?.Dispose();
-            }
-
             return Task.CompletedTask;
         }
     }

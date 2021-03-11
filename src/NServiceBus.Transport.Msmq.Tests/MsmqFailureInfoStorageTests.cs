@@ -2,25 +2,28 @@ namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Collections.Generic;
+    using NServiceBus.Extensibility;
     using NUnit.Framework;
 
     public class MsmqFailureInfoStorageTests
     {
         [Test]
-        public void When_recording_failure_initially_should_store_one_failed_attempt_and_exception()
+        public void When_recording_failure_initially_should_store_one_failed_attempt_exception_and_context()
         {
             var messageId = Guid.NewGuid().ToString("D");
             var exception = new Exception();
+            var context = new ContextBag();
 
             var storage = GetFailureInfoStorage();
 
-            storage.RecordFailureInfoForMessage(messageId, exception);
+            storage.RecordFailureInfoForMessage(messageId, exception, context);
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
             Assert.NotNull(failureInfo);
             Assert.AreEqual(1, failureInfo.NumberOfProcessingAttempts);
             Assert.AreSame(exception, failureInfo.Exception);
+            Assert.AreSame(context, failureInfo.Context);
         }
 
         [Test]
@@ -31,8 +34,8 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             var storage = GetFailureInfoStorage();
 
-            storage.RecordFailureInfoForMessage(messageId, new Exception());
-            storage.RecordFailureInfoForMessage(messageId, secondException);
+            storage.RecordFailureInfoForMessage(messageId, new Exception(), new ContextBag());
+            storage.RecordFailureInfoForMessage(messageId, secondException, new ContextBag());
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
@@ -48,7 +51,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             var storage = GetFailureInfoStorage();
 
-            storage.RecordFailureInfoForMessage(messageId, new Exception());
+            storage.RecordFailureInfoForMessage(messageId, new Exception(), new ContextBag());
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
             Assert.NotNull(failureInfo);
@@ -67,14 +70,14 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             var lruMessageId = Guid.NewGuid().ToString("D");
 
-            storage.RecordFailureInfoForMessage(lruMessageId, new Exception());
+            storage.RecordFailureInfoForMessage(lruMessageId, new Exception(), new ContextBag());
 
             for (var i = 0; i < MaxElements; ++i)
             {
                 var messageId = Guid.NewGuid().ToString("D");
                 var exception = new Exception();
 
-                storage.RecordFailureInfoForMessage(messageId, exception);
+                storage.RecordFailureInfoForMessage(messageId, exception, new ContextBag());
             }
 
             storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
@@ -90,7 +93,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             var lruMessageId = Guid.NewGuid().ToString("D");
 
-            storage.RecordFailureInfoForMessage(lruMessageId, new Exception());
+            storage.RecordFailureInfoForMessage(lruMessageId, new Exception(), new ContextBag());
 
             var messageIds = new List<string>(MaxElements);
             for (var i = 0; i < MaxElements; ++i)
@@ -100,12 +103,12 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             for (var i = 0; i < MaxElements - 1; ++i)
             {
-                storage.RecordFailureInfoForMessage(messageIds[i], new Exception());
+                storage.RecordFailureInfoForMessage(messageIds[i], new Exception(), new ContextBag());
             }
 
-            storage.RecordFailureInfoForMessage(lruMessageId, new Exception());
+            storage.RecordFailureInfoForMessage(lruMessageId, new Exception(), new ContextBag());
 
-            storage.RecordFailureInfoForMessage(messageIds[MaxElements - 1], new Exception());
+            storage.RecordFailureInfoForMessage(messageIds[MaxElements - 1], new Exception(), new ContextBag());
 
             storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
 
