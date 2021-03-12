@@ -11,6 +11,21 @@
     public static partial class MsmqConfigurationExtensions
     {
         /// <summary>
+        /// Configures the endpoint to use MSMQ to send and receive messages.
+        /// </summary>
+        [ObsoleteEx(
+            ReplacementTypeOrMember = "EndpointConfiguration.UseTransport(TransportDefinition)",
+            RemoveInVersion = "4",
+            TreatAsErrorFromVersion = "3")]
+        public static MsmqTransportSettings UseTransport<TTransport>(this EndpointConfiguration endpointConfiguration)
+            where TTransport : MsmqTransport
+        {
+            var msmqTransport = new MsmqTransport();
+            var routingSettings = endpointConfiguration.UseTransport(msmqTransport);
+            return new MsmqTransportSettings(msmqTransport, routingSettings);
+        }
+
+        /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
         /// <param name="config">MSMQ Transport configuration object.</param>
