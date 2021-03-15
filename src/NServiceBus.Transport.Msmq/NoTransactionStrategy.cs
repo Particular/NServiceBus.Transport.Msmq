@@ -9,7 +9,7 @@ namespace NServiceBus.Transport.Msmq
 
     class NoTransactionStrategy : ReceiveStrategy
     {
-        public override async Task ReceiveMessage(CancellationToken cancellationToken)
+        public override async Task ReceiveMessage(CancellationToken cancellationToken = default)
         {
             if (!TryReceive(MessageQueueTransactionType.None, out var message))
             {

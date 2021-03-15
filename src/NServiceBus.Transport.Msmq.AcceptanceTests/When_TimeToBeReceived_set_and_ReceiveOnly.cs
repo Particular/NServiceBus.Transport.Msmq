@@ -56,7 +56,7 @@
                 {
                     testContext.ReceivedTtbrMessage = true;
                     testContext.TimeToBeReceived = context.MessageHeaders[Headers.TimeToBeReceived];
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
             }
         }

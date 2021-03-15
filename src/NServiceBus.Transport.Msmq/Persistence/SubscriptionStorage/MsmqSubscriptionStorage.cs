@@ -7,7 +7,6 @@ namespace NServiceBus.Persistence.Msmq
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
-    using Transport.Msmq;
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
     using MessageType = Unicast.Subscriptions.MessageType;
 
@@ -62,7 +61,7 @@ namespace NServiceBus.Persistence.Msmq
             }
         }
 
-        public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken)
+        public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken = default)
         {
             var messagelist = messageTypes.ToArray();
             var result = new HashSet<Subscriber>();
@@ -91,7 +90,7 @@ namespace NServiceBus.Persistence.Msmq
             return Task.FromResult<IEnumerable<Subscriber>>(result);
         }
 
-        public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken)
+        public Task Subscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken = default)
         {
             var body = $"{messageType.TypeName}, Version={messageType.Version}";
             var label = Serialize(subscriber);
@@ -101,10 +100,10 @@ namespace NServiceBus.Persistence.Msmq
 
             log.DebugFormat($"Subscriber {subscriber.TransportAddress} added for message {messageType}.");
 
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken)
+        public Task Unsubscribe(Subscriber subscriber, MessageType messageType, ContextBag context, CancellationToken cancellationToken = default)
         {
             var messageId = RemoveFromLookup(subscriber, messageType);
 
@@ -115,7 +114,7 @@ namespace NServiceBus.Persistence.Msmq
 
             log.Debug($"Subscriber {subscriber.TransportAddress} removed for message {messageType}.");
 
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
         static string Serialize(Subscriber subscriber)

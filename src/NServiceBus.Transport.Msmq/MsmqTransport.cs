@@ -27,7 +27,7 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken)
+        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(hostSettings), hostSettings);
             Guard.AgainstNull(nameof(receivers), receivers);

@@ -12,7 +12,7 @@ namespace NServiceBus.Transport.Msmq
 
     abstract class ReceiveStrategy
     {
-        public abstract Task ReceiveMessage(CancellationToken token);
+        public abstract Task ReceiveMessage(CancellationToken token = default);
 
         public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
@@ -100,7 +100,7 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag context, CancellationToken cancellationToken)
+        protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag context, CancellationToken cancellationToken = default)
         {
             if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
             {
@@ -114,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
 
-        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts, ContextBag context, CancellationToken cancellationToken)
+        protected async Task<ErrorHandleResult> HandleError(Message message, Exception exception, TransportTransaction transportTransaction, int processingAttempts, ContextBag context, CancellationToken cancellationToken = default)
         {
             try
             {

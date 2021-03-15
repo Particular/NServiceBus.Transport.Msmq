@@ -20,7 +20,7 @@ namespace NServiceBus.Transport.Msmq
             this.transportSettings = transportSettings;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
 
@@ -34,7 +34,7 @@ namespace NServiceBus.Transport.Msmq
                 ExecuteTransportOperation(transaction, unicastTransportOperation);
             }
 
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)

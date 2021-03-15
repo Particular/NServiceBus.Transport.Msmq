@@ -51,7 +51,7 @@
                     this.dispatcher = dispatcher;
                 }
 
-                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+                protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     // Simulating a v3.3 control message
                     var body = Encoding.UTF8.GetBytes(@"<?xml version=""1.0""?>
@@ -71,7 +71,7 @@
                     return dispatcher.Dispatch(new TransportOperations(new TransportOperation(outgoingMessage, new UnicastAddressTag(endpoint))), new TransportTransaction(), cancellationToken);
                 }
 
-                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken)
+                protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
                 {
                     return Task.FromResult(0);
                 }

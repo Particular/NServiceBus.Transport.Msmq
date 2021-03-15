@@ -20,19 +20,19 @@ namespace NServiceBus.Transport.Msmq
             this.endpointInstances = endpointInstances;
         }
 
-        internal Task Start(IMessageSession session)
+        internal Task Start(IMessageSession session, CancellationToken cancellationToken = default)
         {
-            return OnStart(session, CancellationToken.None);
+            return OnStart(session, cancellationToken);
         }
 
-        protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+        protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
         {
             timer.Start(() =>
             {
                 ReloadData();
-                return TaskEx.CompletedTask;
+                return Task.CompletedTask;
             }, checkInterval, ex => log.Error("Unable to update instance mapping information because the instance mapping file couldn't be read.", ex));
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
         public void ReloadData()
@@ -98,7 +98,7 @@ namespace NServiceBus.Transport.Msmq
             return count > 1 ? $"{count} instances" : $"{count} instance";
         }
 
-        protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken) => timer.Stop();
+        protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default) => timer.Stop();
 
         TimeSpan checkInterval;
         IInstanceMappingLoader loader;

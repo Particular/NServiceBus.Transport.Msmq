@@ -124,7 +124,7 @@
                         return context.Send(new RequestA());
                     }
 
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
             }
         }
