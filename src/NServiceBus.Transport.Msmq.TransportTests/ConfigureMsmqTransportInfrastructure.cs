@@ -22,7 +22,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         return msmqSettings;
     }
 
-    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName, CancellationToken cancellationToken)
+    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName, CancellationToken cancellationToken = default)
     {
         var msmqSettings = (MsmqTransport)transportDefinition;
         receiveQueue = inputQueueName;
@@ -34,7 +34,7 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         return infrastructure;
     }
 
-    public Task Cleanup(CancellationToken cancellationToken)
+    public Task Cleanup(CancellationToken cancellationToken = default)
     {
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();

@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using NServiceBus.Persistence.Msmq;
@@ -21,14 +20,14 @@
             var messageType = new MessageType(typeof(SomeMessage));
             var storage = CreateAndInit(queue);
 
-            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub2", "endpointA"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub2", "endpointA"), messageType, new ContextBag());
 
             var storedMessages = queue.GetAllMessages().ToArray();
             Assert.That(storedMessages.Length, Is.EqualTo(2));
 
             storage = CreateAndInit(queue);
-            var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag(), CancellationToken.None)).ToArray();
+            var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
             Assert.That(subscribers, Has.Exactly(1).Matches<Subscriber>(s => s.TransportAddress == "sub1" && s.Endpoint == null));
             Assert.That(subscribers, Has.Exactly(1).Matches<Subscriber>(s => s.TransportAddress == "sub2" && s.Endpoint == "endpointA"));
         }
@@ -40,14 +39,14 @@
             var storage = CreateAndInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
-            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
             storage = CreateAndInit(queue);
 
-            await storage.Unsubscribe(new Subscriber("sub1", "endpointA"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Unsubscribe(new Subscriber("sub1", "endpointA"), messageType, new ContextBag());
             Assert.That(queue.GetAllMessages(), Is.Empty);
 
             storage = CreateAndInit(queue);
-            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag());
             Assert.AreEqual(0, subscribers.Count());
         }
 
@@ -58,12 +57,12 @@
             var storage = CreateAndInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
-            await storage.Subscribe(new Subscriber("sub1", "1"), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", "2"), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", "3"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", "1"), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", "2"), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", "3"), messageType, new ContextBag());
 
             storage = CreateAndInit(queue);
-            var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag(), CancellationToken.None)).ToArray();
+            var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
 
             Assert.That(subscribers.Length, Is.EqualTo(1));
             Assert.That(subscribers[0].TransportAddress, Is.EqualTo("sub1"));
@@ -78,10 +77,10 @@
             var storage = CreateAndInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
-            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("SUB1", null), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("SUB1", null), messageType, new ContextBag());
 
-            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag());
             Assert.AreEqual(1, subscribers.Count());
         }
 
@@ -92,10 +91,10 @@
             var storage = CreateAndInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
-            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub2", null), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub2", null), messageType, new ContextBag());
 
-            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag());
             Assert.AreEqual(2, subscribers.Count());
         }
 
@@ -107,10 +106,10 @@
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
-            await storage.Subscribe(new Subscriber("legacy", null), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("new", "endpoint"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("legacy", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("new", "endpoint"), messageType, new ContextBag());
 
-            var subscribers = (await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag(), CancellationToken.None)).ToArray();
+            var subscribers = (await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag())).ToArray();
 
             Assert.AreEqual(2, subscribers.Length);
             Assert.IsTrue(subscribers.Any(s => s.TransportAddress == "legacy" && s.Endpoint == null));
@@ -125,13 +124,13 @@
 
             var someMessageType = new MessageType(typeof(SomeMessage));
             var otherMessageType = new MessageType(typeof(OtherMessage));
-            await storage.Subscribe(new Subscriber("sub1", null), someMessageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", null), otherMessageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), someMessageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", null), otherMessageType, new ContextBag());
 
-            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { someMessageType }, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { someMessageType }, new ContextBag());
             Assert.AreEqual(1, subscribers.Count());
 
-            subscribers = await storage.GetSubscriberAddressesForMessage(new[] { otherMessageType }, new ContextBag(), CancellationToken.None);
+            subscribers = await storage.GetSubscriberAddressesForMessage(new[] { otherMessageType }, new ContextBag());
             Assert.AreEqual(1, subscribers.Count());
         }
 
@@ -143,14 +142,14 @@
 
             var someMessageType = new MessageType(typeof(SomeMessage));
             var otherMessageType = new MessageType(typeof(OtherMessage));
-            await storage.Subscribe(new Subscriber("sub1", null), someMessageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", null), otherMessageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), someMessageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", null), otherMessageType, new ContextBag());
 
             var subscribers = await storage.GetSubscriberAddressesForMessage(new[]
             {
                 someMessageType,
                 otherMessageType
-            }, new ContextBag(), CancellationToken.None);
+            }, new ContextBag());
 
             Assert.AreEqual(1, subscribers.Count());
         }
@@ -163,10 +162,10 @@
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
-            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", "endpoint"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", "endpoint"), messageType, new ContextBag());
 
-            var subscribers = await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag());
 
             var subscriber = subscribers.Single();
             Assert.AreEqual("sub1", subscriber.TransportAddress);
@@ -181,12 +180,12 @@
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
-            await storage.Subscribe(new Subscriber("sub1", "e1"), messageType, new ContextBag(), CancellationToken.None);
-            await storage.Subscribe(new Subscriber("sub1", "e2"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Subscribe(new Subscriber("sub1", "e1"), messageType, new ContextBag());
+            await storage.Subscribe(new Subscriber("sub1", "e2"), messageType, new ContextBag());
 
-            await storage.Unsubscribe(new Subscriber("sub1", "e3"), messageType, new ContextBag(), CancellationToken.None);
+            await storage.Unsubscribe(new Subscriber("sub1", "e3"), messageType, new ContextBag());
 
-            var subscribers = await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag(), CancellationToken.None);
+            var subscribers = await storage.GetSubscriberAddressesForMessage(messageTypes, new ContextBag());
             Assert.AreEqual(0, subscribers.Count());
         }
 
@@ -255,7 +254,7 @@
             var subscribers = await subscriptionStorage.GetSubscriberAddressesForMessage(new[]
             {
                 new MessageType("SomeMessage", "2.0.0")
-            }, new ContextBag(), CancellationToken.None);
+            }, new ContextBag());
 
             Assert.AreEqual("subscriberA", subscribers.Single().Endpoint);
         }

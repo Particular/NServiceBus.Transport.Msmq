@@ -46,7 +46,7 @@
 
             storage.Init();
 
-            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag(), CancellationToken.None);
+            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
 
             using (var queue = new MessageQueue(queuePath))
             {
@@ -75,7 +75,7 @@
 
             storage.Init();
 
-            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag(), CancellationToken.None);
+            await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
 
             using (var queue = new MessageQueue(queuePath))
             {

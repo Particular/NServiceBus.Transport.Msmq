@@ -71,7 +71,7 @@
                     {
                         testContext.ReceivedOutgoingMessage = true;
                     }
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
             }
 

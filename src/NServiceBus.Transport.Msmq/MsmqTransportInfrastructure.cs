@@ -63,7 +63,7 @@ namespace NServiceBus.Transport.Msmq
             Receivers = messagePumps;
         }
 
-        public override Task Shutdown(CancellationToken cancellationToken)
+        public override Task Shutdown(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;
         }

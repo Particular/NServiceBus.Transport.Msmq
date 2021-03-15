@@ -26,16 +26,8 @@ namespace NServiceBus.Transport.Msmq
             this.receiveSettings = receiveSettings;
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
         {
-            messagePumpCancellationTokenSource = new CancellationTokenSource();
-            messageProcessingCancellationTokenSource = new CancellationTokenSource();
-
-            peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
-            receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
-                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
-
             var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
 
@@ -67,12 +59,21 @@ namespace NServiceBus.Transport.Msmq
 
             maxConcurrency = limitations.MaxConcurrency;
             concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
-            return TaskEx.CompletedTask;
+            return Task.CompletedTask;
         }
 
-        public Task StartReceive(CancellationToken cancellationToken)
+        public Task StartReceive(CancellationToken cancellationToken = default)
         {
             MessageQueue.ClearConnectionCache();
+
+            messagePumpCancellationTokenSource = new CancellationTokenSource();
+            messageProcessingCancellationTokenSource = new CancellationTokenSource();
+
+            peekCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqPeek", TimeSpan.FromSeconds(30),
+                ex => criticalErrorAction("Failed to peek " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
+
+            receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
+                ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
 
             // LongRunning is useless combined with async/await
             messagePumpTask = Task.Run(() => PumpMessages(), cancellationToken);
@@ -80,10 +81,20 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        public async Task StopReceive(CancellationToken cancellationToken)
+        public async Task StopReceive(CancellationToken cancellationToken = default)
         {
             messagePumpCancellationTokenSource?.Cancel();
-            cancellationToken.Register(() => messageProcessingCancellationTokenSource?.Cancel());
+
+            _ = cancellationToken.Register(() =>
+            {
+                try
+                {
+                    messageProcessingCancellationTokenSource?.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            });
 
             await messagePumpTask.ConfigureAwait(false);
 
@@ -113,8 +124,6 @@ namespace NServiceBus.Transport.Msmq
             receiveCircuitBreaker?.Dispose();
             messagePumpCancellationTokenSource?.Dispose();
             messageProcessingCancellationTokenSource?.Dispose();
-
-            messageProcessingCancellationTokenSource = null; // to prevent ObjectDisposedException should the user passed token be canceled after this method returns
         }
 
         [DebuggerNonUserCode]

@@ -158,7 +158,7 @@
                 theErrorCallback = errorCallback;
             }
 
-            public Task Stop() => TaskEx.CompletedTask;
+            public Task Stop() => Task.CompletedTask;
         }
     }
 }

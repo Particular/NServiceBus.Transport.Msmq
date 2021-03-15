@@ -15,7 +15,7 @@
             this.failureInfoStorage = failureInfoStorage;
         }
 
-        public override async Task ReceiveMessage(CancellationToken cancellationToken)
+        public override async Task ReceiveMessage(CancellationToken cancellationToken = default)
         {
             Message message = null;
             var context = new ContextBag();

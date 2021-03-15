@@ -59,7 +59,7 @@
             Assert.True(dispatchedMessage.UseDeadLetterQueue);
         }
 
-        static async Task<Message> DispatchMessage(string queueName, MsmqTransport settings = null, DispatchProperties dispatchProperties = null)
+        static async Task<Message> DispatchMessage(string queueName, MsmqTransport settings = null, DispatchProperties dispatchProperties = null, CancellationToken cancellationToken = default)
         {
             if (settings == null)
             {
@@ -85,7 +85,7 @@
                 dispatchProperties = dispatchProperties ?? new DispatchProperties();
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), dispatchProperties);
 
-                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), CancellationToken.None);
+                await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), cancellationToken);
 
                 using (var queue = new MessageQueue(path))
                 using (var message = queue.Receive(TimeSpan.FromSeconds(5)))

@@ -83,7 +83,7 @@
                 public Task Handle(SomeMessage message, IMessageHandlerContext context)
                 {
                     scenarioContext.WasReceived = true;
-                    return TaskEx.CompletedTask;
+                    return Task.CompletedTask;
                 }
             }
         }

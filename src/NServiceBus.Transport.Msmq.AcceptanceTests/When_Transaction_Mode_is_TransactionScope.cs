@@ -2,6 +2,7 @@
 {
     using System;
     using System.Management;
+    using System.Threading.Tasks;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
@@ -32,7 +33,7 @@
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {
                 await Scenario.Define<ScenarioContext>()
-                    .WithEndpoint<TransactionalEndpoint>(b => b.When((session, c) => TaskEx.CompletedTask))
+                    .WithEndpoint<TransactionalEndpoint>(b => b.When((session, c) => Task.CompletedTask))
                     .Run();
             });
 
