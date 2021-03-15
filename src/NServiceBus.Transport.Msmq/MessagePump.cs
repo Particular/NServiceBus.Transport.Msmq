@@ -85,36 +85,28 @@ namespace NServiceBus.Transport.Msmq
         {
             messagePumpCancellationTokenSource?.Cancel();
 
-            _ = cancellationToken.Register(() =>
+            using (cancellationToken.Register(() => messageProcessingCancellationTokenSource?.Cancel()))
             {
-                try
-                {
-                    messageProcessingCancellationTokenSource?.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-            });
+                await messagePumpTask.ConfigureAwait(false);
 
-            await messagePumpTask.ConfigureAwait(false);
-
-            while (concurrencyLimiter.CurrentCount != maxConcurrency)
-            {
-                // We are deliberately not forwarding the cancellation token here because
-                // this loop is our way of waiting for all pending messaging operations
-                // to participate in cooperative cancellation or not.
-                // We do not want to rudely abort them because the cancellation token has been cancelled.
-                // This allows us to preserve the same behaviour in v8 as in v7 in that,
-                // if CancellationToken.None is passed to this method,
-                // the method will only return when all in flight messages have been processed.
-                // If, on the other hand, a non-default CancellationToken is passed,
-                // all message processing operations have the opportunity to
-                // participate in cooperative cancellation.
-                // If we ever require a method of stopping the endpoint such that
-                // all message processing is cancelled immediately,
-                // we can provide that as a separate feature.
-                await Task.Delay(50, CancellationToken.None)
-                    .ConfigureAwait(false);
+                while (concurrencyLimiter.CurrentCount != maxConcurrency)
+                {
+                    // We are deliberately not forwarding the cancellation token here because
+                    // this loop is our way of waiting for all pending messaging operations
+                    // to participate in cooperative cancellation or not.
+                    // We do not want to rudely abort them because the cancellation token has been cancelled.
+                    // This allows us to preserve the same behaviour in v8 as in v7 in that,
+                    // if CancellationToken.None is passed to this method,
+                    // the method will only return when all in flight messages have been processed.
+                    // If, on the other hand, a non-default CancellationToken is passed,
+                    // all message processing operations have the opportunity to
+                    // participate in cooperative cancellation.
+                    // If we ever require a method of stopping the endpoint such that
+                    // all message processing is cancelled immediately,
+                    // we can provide that as a separate feature.
+                    await Task.Delay(50, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
             }
 
             concurrencyLimiter?.Dispose();
