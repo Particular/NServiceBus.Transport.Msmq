@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests.Persistence
 {
     using System.Messaging;
-    using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using NServiceBus.Persistence.Msmq;
@@ -44,8 +43,6 @@
 
             var storage = new MsmqSubscriptionStorage(new MsmqSubscriptionStorageQueue(address, true));
 
-            storage.Init();
-
             await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
 
             using (var queue = new MessageQueue(queuePath))
@@ -72,8 +69,6 @@
             }
 
             var storage = new MsmqSubscriptionStorage(new MsmqSubscriptionStorageQueue(address, false));
-
-            storage.Init();
 
             await storage.Unsubscribe(new Subscriber("subscriber", "subscriber"), new MessageType(typeof(MyMessage)), new ContextBag());
 
