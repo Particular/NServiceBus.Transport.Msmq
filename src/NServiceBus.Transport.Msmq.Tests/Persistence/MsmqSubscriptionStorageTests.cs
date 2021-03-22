@@ -210,7 +210,6 @@
             };
 
             var queue1 = new FakeStorageQueue();
-            var storage1 = new MsmqSubscriptionStorage(queue1);
             queue1.Messages.AddRange(new[]
             {
                 msg1,
@@ -218,19 +217,21 @@
             });
 
             var queue2 = new FakeStorageQueue();
-            var storage2 = new MsmqSubscriptionStorage(queue2);
             queue2.Messages.AddRange(new[]
             {
                 msg2, // inverted order
                 msg1,
             });
 
+            var storage1 = new MsmqSubscriptionStorage(queue1);
+            var storage2 = new MsmqSubscriptionStorage(queue2);
+
             //GetSubscriberAddressesForMessage ensures storage is initialized
-            await storage1.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
-            await storage2.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
+            _ = await storage1.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
+            _ = await storage2.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
 
             // both endpoints should delete the same message although they have the same timestamp and are read in different order from the queue.
-            Assert.That(queue1.Messages.Count, Is.EqualTo(1));
+            Assert.That(queue1.Messages.Count, Is.EqualTo(1), "Message count");
             Assert.AreEqual(queue1.Messages.Single(), queue2.Messages.Single());
         }
 
@@ -246,9 +247,9 @@
             };
 
             var storageQueue = new FakeStorageQueue();
-            var subscriptionStorage = new MsmqSubscriptionStorage(storageQueue);
-
             storageQueue.Messages.Add(subscriptionMessage);
+
+            var subscriptionStorage = new MsmqSubscriptionStorage(storageQueue);
 
             var subscribers = await subscriptionStorage.GetSubscriberAddressesForMessage(new[]
             {
