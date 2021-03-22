@@ -15,6 +15,7 @@ namespace NServiceBus.Persistence.Msmq
         public MsmqSubscriptionStorage(IMsmqSubscriptionStorageQueue storageQueue)
         {
             this.storageQueue = storageQueue;
+            LoadSubscriptions();
         }
 
         public void Dispose()
@@ -22,7 +23,7 @@ namespace NServiceBus.Persistence.Msmq
             // Filled in by Janitor.fody
         }
 
-        void EnsureInitialized()
+        void LoadSubscriptions()
         {
             if (lookup != null)
             {
@@ -64,18 +65,6 @@ namespace NServiceBus.Persistence.Msmq
             var messagelist = messageTypes.ToArray();
             var result = new HashSet<Subscriber>();
 
-            if (lookup == null)
-            {
-                try
-                {
-                    rwLock.EnterWriteLock();
-                    EnsureInitialized();
-                }
-                finally
-                {
-                    rwLock.ExitWriteLock();
-                }
-            }
             try
             {
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
@@ -154,8 +143,6 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
 
-                EnsureInitialized();
-
                 if (!lookup.TryGetValue(subscriber, out var dictionary))
                 {
                     dictionary = new Dictionary<MessageType, string>();
@@ -181,8 +168,6 @@ namespace NServiceBus.Persistence.Msmq
             {
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
-
-                EnsureInitialized();
 
                 if (lookup.TryGetValue(subscriber, out var subscriptions))
                 {
