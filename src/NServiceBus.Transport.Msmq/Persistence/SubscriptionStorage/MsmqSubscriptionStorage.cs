@@ -25,11 +25,6 @@ namespace NServiceBus.Persistence.Msmq
 
         void LoadSubscriptions()
         {
-            if (lookup != null)
-            {
-                return;
-            }
-
             lookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
 
             var messages = storageQueue.GetAllMessages()
