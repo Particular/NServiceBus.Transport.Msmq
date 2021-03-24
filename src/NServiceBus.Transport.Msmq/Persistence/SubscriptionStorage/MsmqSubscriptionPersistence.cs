@@ -24,7 +24,6 @@
             var storage = new MsmqSubscriptionStorage(queue);
 
             context.Services.AddSingleton<ISubscriptionStorage>(storage);
-            context.Services.AddSingleton<IInitializableSubscriptionStorage>(storage);
         }
 
         internal static string DetermineStorageQueueName(ReadOnlySettings settings)

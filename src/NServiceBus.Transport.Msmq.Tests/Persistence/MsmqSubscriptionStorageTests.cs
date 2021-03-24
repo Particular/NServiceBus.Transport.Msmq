@@ -18,7 +18,7 @@
         {
             var queue = new FakeStorageQueue();
             var messageType = new MessageType(typeof(SomeMessage));
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
             await storage.Subscribe(new Subscriber("sub2", "endpointA"), messageType, new ContextBag());
@@ -26,7 +26,7 @@
             var storedMessages = queue.GetAllMessages().ToArray();
             Assert.That(storedMessages.Length, Is.EqualTo(2));
 
-            storage = CreateAndInit(queue);
+            storage = CreateInit(queue);
             var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
             Assert.That(subscribers, Has.Exactly(1).Matches<Subscriber>(s => s.TransportAddress == "sub1" && s.Endpoint == null));
             Assert.That(subscribers, Has.Exactly(1).Matches<Subscriber>(s => s.TransportAddress == "sub2" && s.Endpoint == "endpointA"));
@@ -36,16 +36,16 @@
         public async Task Unsubscribe_is_persistent()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
-            storage = CreateAndInit(queue);
+            storage = CreateInit(queue);
 
             await storage.Unsubscribe(new Subscriber("sub1", "endpointA"), messageType, new ContextBag());
             Assert.That(queue.GetAllMessages(), Is.Empty);
 
-            storage = CreateAndInit(queue);
+            storage = CreateInit(queue);
             var subscribers = await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag());
             Assert.AreEqual(0, subscribers.Count());
         }
@@ -54,14 +54,14 @@
         public async Task Remove_outdated_subscriptions_on_initialization()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             await storage.Subscribe(new Subscriber("sub1", "1"), messageType, new ContextBag());
             await storage.Subscribe(new Subscriber("sub1", "2"), messageType, new ContextBag());
             await storage.Subscribe(new Subscriber("sub1", "3"), messageType, new ContextBag());
 
-            storage = CreateAndInit(queue);
+            storage = CreateInit(queue);
             var subscribers = (await storage.GetSubscriberAddressesForMessage(new[] { messageType }, new ContextBag())).ToArray();
 
             Assert.That(subscribers.Length, Is.EqualTo(1));
@@ -74,7 +74,7 @@
         public async Task Subscribers_are_deduplicated_based_on_transport_address_comparison_case_invariant()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
@@ -88,7 +88,7 @@
         public async Task Can_have_multiple_subscribers_to_same_event_type()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             await storage.Subscribe(new Subscriber("sub1", null), messageType, new ContextBag());
@@ -102,7 +102,7 @@
         public async Task Can_handle_legacy_and_new_format()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
@@ -120,7 +120,7 @@
         public async Task Can_subscribe_to_multiple_events()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var someMessageType = new MessageType(typeof(SomeMessage));
             var otherMessageType = new MessageType(typeof(OtherMessage));
@@ -138,7 +138,7 @@
         public async Task Same_subscriber_for_multiple_message_types_is_returned_only_once()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var someMessageType = new MessageType(typeof(SomeMessage));
             var otherMessageType = new MessageType(typeof(OtherMessage));
@@ -158,7 +158,7 @@
         public async Task Two_subscribers_with_same_address_but_different_endpoint_are_considered_duplicates()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
@@ -176,7 +176,7 @@
         public async Task Unsubscribing_removes_all_subscriptions_with_same_address_but_different_endpoint_names()
         {
             var queue = new FakeStorageQueue();
-            var storage = CreateAndInit(queue);
+            var storage = CreateInit(queue);
 
             var messageType = new MessageType(typeof(SomeMessage));
             var messageTypes = new[] { messageType };
@@ -190,7 +190,7 @@
         }
 
         [Test]
-        public void Messages_with_the_same_timestamp_have_repeatedly_same_order()
+        public async Task Messages_with_the_same_timestamp_have_repeatedly_same_order()
         {
             var now = DateTime.Now;
 
@@ -210,7 +210,6 @@
             };
 
             var queue1 = new FakeStorageQueue();
-            var storage1 = new MsmqSubscriptionStorage(queue1);
             queue1.Messages.AddRange(new[]
             {
                 msg1,
@@ -218,18 +217,21 @@
             });
 
             var queue2 = new FakeStorageQueue();
-            var storage2 = new MsmqSubscriptionStorage(queue2);
             queue2.Messages.AddRange(new[]
             {
                 msg2, // inverted order
                 msg1,
             });
 
-            storage1.Init();
-            storage2.Init();
+            var storage1 = new MsmqSubscriptionStorage(queue1);
+            var storage2 = new MsmqSubscriptionStorage(queue2);
+
+            //GetSubscriberAddressesForMessage ensures storage is initialized
+            _ = await storage1.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
+            _ = await storage2.GetSubscriberAddressesForMessage(new MessageType[0], new ContextBag());
 
             // both endpoints should delete the same message although they have the same timestamp and are read in different order from the queue.
-            Assert.That(queue1.Messages.Count, Is.EqualTo(1));
+            Assert.That(queue1.Messages.Count, Is.EqualTo(1), "Message count");
             Assert.AreEqual(queue1.Messages.Single(), queue2.Messages.Single());
         }
 
@@ -245,11 +247,9 @@
             };
 
             var storageQueue = new FakeStorageQueue();
-            var subscriptionStorage = new MsmqSubscriptionStorage(storageQueue);
-
             storageQueue.Messages.Add(subscriptionMessage);
 
-            subscriptionStorage.Init();
+            var subscriptionStorage = new MsmqSubscriptionStorage(storageQueue);
 
             var subscribers = await subscriptionStorage.GetSubscriberAddressesForMessage(new[]
             {
@@ -259,10 +259,9 @@
             Assert.AreEqual("subscriberA", subscribers.Single().Endpoint);
         }
 
-        static MsmqSubscriptionStorage CreateAndInit(FakeStorageQueue queue)
+        static MsmqSubscriptionStorage CreateInit(FakeStorageQueue queue)
         {
             var storage = new MsmqSubscriptionStorage(queue);
-            storage.Init();
             return storage;
         }
 

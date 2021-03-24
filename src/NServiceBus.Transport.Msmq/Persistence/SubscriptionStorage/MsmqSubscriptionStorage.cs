@@ -10,11 +10,14 @@ namespace NServiceBus.Persistence.Msmq
     using Unicast.Subscriptions.MessageDrivenSubscriptions;
     using MessageType = Unicast.Subscriptions.MessageType;
 
-    class MsmqSubscriptionStorage : IInitializableSubscriptionStorage, IDisposable
+    class MsmqSubscriptionStorage : ISubscriptionStorage, IDisposable
     {
         public MsmqSubscriptionStorage(IMsmqSubscriptionStorageQueue storageQueue)
         {
             this.storageQueue = storageQueue;
+
+            // Required to be lazy loaded as the queue might not exist yet
+            lookup = new Lazy<Dictionary<Subscriber, Dictionary<MessageType, string>>>(CreateLookup);
         }
 
         public void Dispose()
@@ -22,43 +25,38 @@ namespace NServiceBus.Persistence.Msmq
             // Filled in by Janitor.fody
         }
 
-        public void Init()
+        Dictionary<Subscriber, Dictionary<MessageType, string>> CreateLookup()
         {
+            var output = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
+
             var messages = storageQueue.GetAllMessages()
                 .OrderByDescending(m => m.ArrivedTime)
                 .ThenBy(x => x.Id) // ensure same order of messages with same timestamp across all endpoints
                 .ToArray();
 
-            try
+            foreach (var m in messages)
             {
-                rwLock.EnterWriteLock();
+                var messageTypeString = m.Body as string;
+                var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
+                var subscriber = Deserialize(m.Label);
 
-                foreach (var m in messages)
+                if (!output.TryGetValue(subscriber, out var endpointSubscriptions))
                 {
-                    var messageTypeString = m.Body as string;
-                    var messageType = new MessageType(messageTypeString); //this will parse both 2.6 and 3.0 type strings
-                    var subscriber = Deserialize(m.Label);
+                    output[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
+                }
 
-                    if (!lookup.TryGetValue(subscriber, out var endpointSubscriptions))
-                    {
-                        lookup[subscriber] = endpointSubscriptions = new Dictionary<MessageType, string>();
-                    }
-
-                    if (endpointSubscriptions.ContainsKey(messageType))
-                    {
-                        // this message is stale and can be removed
-                        storageQueue.TryReceiveById(m.Id);
-                    }
-                    else
-                    {
-                        endpointSubscriptions[messageType] = m.Id;
-                    }
+                if (endpointSubscriptions.ContainsKey(messageType))
+                {
+                    // this message is stale and can be removed
+                    storageQueue.TryReceiveById(m.Id);
+                }
+                else
+                {
+                    endpointSubscriptions[messageType] = m.Id;
                 }
             }
-            finally
-            {
-                rwLock.ExitWriteLock();
-            }
+
+            return output;
         }
 
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken = default)
@@ -71,7 +69,7 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterReadLock();
 
-                foreach (var subscribers in lookup)
+                foreach (var subscribers in lookup.Value)
                 {
                     foreach (var messageType in messagelist)
                     {
@@ -144,18 +142,18 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
 
-                if (!lookup.TryGetValue(subscriber, out var dictionary))
+                if (!lookup.Value.TryGetValue(subscriber, out var dictionary))
                 {
                     dictionary = new Dictionary<MessageType, string>();
                 }
                 else
                 {
                     // replace existing subscriber
-                    lookup.Remove(subscriber);
+                    lookup.Value.Remove(subscriber);
                 }
 
                 dictionary[typeName] = messageId;
-                lookup[subscriber] = dictionary;
+                lookup.Value[subscriber] = dictionary;
             }
             finally
             {
@@ -170,14 +168,14 @@ namespace NServiceBus.Persistence.Msmq
                 // note: ReaderWriterLockSlim has a thread affinity and cannot be used with await!
                 rwLock.EnterWriteLock();
 
-                if (lookup.TryGetValue(subscriber, out var subscriptions))
+                if (lookup.Value.TryGetValue(subscriber, out var subscriptions))
                 {
                     if (subscriptions.TryGetValue(typeName, out var messageId))
                     {
                         subscriptions.Remove(typeName);
                         if (subscriptions.Count == 0)
                         {
-                            lookup.Remove(subscriber);
+                            lookup.Value.Remove(subscriber);
                         }
 
                         return messageId;
@@ -192,7 +190,7 @@ namespace NServiceBus.Persistence.Msmq
             return null;
         }
 
-        Dictionary<Subscriber, Dictionary<MessageType, string>> lookup = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
+        Lazy<Dictionary<Subscriber, Dictionary<MessageType, string>>> lookup;
         IMsmqSubscriptionStorageQueue storageQueue;
         ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
 
