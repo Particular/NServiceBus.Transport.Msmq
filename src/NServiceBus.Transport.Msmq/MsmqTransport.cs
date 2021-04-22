@@ -22,7 +22,7 @@ namespace NServiceBus
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
         /// </summary>
-        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, false, false, true)
+        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, true, false, true)
         {
         }
 

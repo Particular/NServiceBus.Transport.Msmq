@@ -20,7 +20,8 @@ namespace NServiceBus.Transport.Msmq
             this.transportSettings = transportSettings;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction,
+            CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
 
@@ -37,11 +38,36 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
+        const string Expire = "NServiceBus.Timeout.Expire";
+        const string RouteExpiredTimeoutTo = "NServiceBus.Timeout.RouteExpiredTimeoutTo";
+
+        const string timeoutManagerAddress = "particular.timeoutmanager";
+
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
 
-            var destination = transportOperation.Destination;
+            DateTimeOffset deliverAt;
+
+            string destination = timeoutManagerAddress;
+
+            if (transportOperation.Properties.DelayDeliveryWith != null)
+            {
+                deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
+                transportOperation.Message.Headers[Expire] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+                transportOperation.Message.Headers[RouteExpiredTimeoutTo] = transportOperation.Destination;
+            }
+            else if (transportOperation.Properties.DoNotDeliverBefore != null)
+            {
+                deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
+                transportOperation.Message.Headers[Expire] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+                transportOperation.Message.Headers[RouteExpiredTimeoutTo] = transportOperation.Destination;
+            }
+            else
+            {
+                destination = transportOperation.Destination;
+            }
+
             var destinationAddress = MsmqAddress.Parse(destination);
 
             var dispatchProperties = transportOperation.Properties;
@@ -58,13 +84,15 @@ namespace NServiceBus.Transport.Msmq
                 }
                 else
                 {
-                    throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
+                    throw new Exception(
+                        $"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
                 }
             }
 
             try
             {
-                using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
+                using (var q = new MessageQueue(destinationAddress.FullPath, false,
+                    transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
                     using (var toSend = MsmqUtilities.Convert(message, dispatchProperties))
                     {
@@ -81,7 +109,8 @@ namespace NServiceBus.Transport.Msmq
                                 : transportSettings.UseDeadLetterQueue;
                         }
 
-                        toSend.UseJournalQueue = dispatchProperties.ShouldUseJournalQueue() ?? transportSettings.UseJournalQueue;
+                        toSend.UseJournalQueue = dispatchProperties.ShouldUseJournalQueue() ??
+                                                 transportSettings.UseJournalQueue;
 
                         toSend.TimeToReachQueue = transportSettings.TimeToReachQueue;
 
@@ -127,7 +156,8 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        bool IsCombiningTimeToBeReceivedWithTransactions(TransportTransaction transaction, DispatchConsistency requiredDispatchConsistency, DispatchProperties dispatchProperties)
+        bool IsCombiningTimeToBeReceivedWithTransactions(TransportTransaction transaction,
+            DispatchConsistency requiredDispatchConsistency, DispatchProperties dispatchProperties)
         {
             if (!transportSettings.UseTransactionalQueues)
             {
@@ -139,7 +169,8 @@ namespace NServiceBus.Transport.Msmq
                 return false;
             }
 
-            var timeToBeReceivedRequested = dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout;
+            var timeToBeReceivedRequested =
+                dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout;
 
             if (!timeToBeReceivedRequested)
             {
@@ -155,27 +186,36 @@ namespace NServiceBus.Transport.Msmq
             return TryGetNativeTransaction(transaction, out _);
         }
 
-        static bool TryGetNativeTransaction(TransportTransaction transportTransaction, out MessageQueueTransaction transaction)
+        static bool TryGetNativeTransaction(TransportTransaction transportTransaction,
+            out MessageQueueTransaction transaction)
         {
             return transportTransaction.TryGet(out transaction);
         }
 
         MessageQueueTransactionType GetIsolatedTransactionType()
         {
-            return transportSettings.UseTransactionalQueues ? MessageQueueTransactionType.Single : MessageQueueTransactionType.None;
+            return transportSettings.UseTransactionalQueues
+                ? MessageQueueTransactionType.Single
+                : MessageQueueTransactionType.None;
         }
 
         string GetLabel(OutgoingMessage message)
         {
-            var messageLabel = transportSettings.ApplyCustomLabelToOutgoingMessages(new ReadOnlyDictionary<string, string>(message.Headers));
+            var messageLabel =
+                transportSettings.ApplyCustomLabelToOutgoingMessages(
+                    new ReadOnlyDictionary<string, string>(message.Headers));
             if (messageLabel == null)
             {
-                throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
+                throw new Exception(
+                    "MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
             }
+
             if (messageLabel.Length > 240)
             {
-                throw new Exception("MSMQ label convention returned a value longer than 240 characters. This is not supported.");
+                throw new Exception(
+                    "MSMQ label convention returned a value longer than 240 characters. This is not supported.");
             }
+
             return messageLabel;
         }
 
