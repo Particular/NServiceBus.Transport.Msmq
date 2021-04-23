@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Messaging;
     using NUnit.Framework;
     using Performance.TimeToBeReceived;
@@ -11,6 +12,14 @@
     [TestFixture]
     public class MsmqUtilitiesTests
     {
+        [Test]
+        [RetryEx(5, typeof(InvalidOperationException))]
+        public void Test()
+        {
+            Debug.WriteLine("!!!");
+            throw new Exception("AA");
+        }
+
         [Test]
         public void Should_convert_a_message_back_even_if_special_characters_are_contained_in_the_headers()
         {
