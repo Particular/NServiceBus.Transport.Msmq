@@ -12,7 +12,7 @@ namespace NServiceBus.Transport.Msmq
 
     abstract class ReceiveStrategy
     {
-        public abstract Task ReceiveMessage(CancellationToken token = default);
+        public abstract Task ReceiveMessage(CancellationToken cancellationToken = default);
 
         public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
@@ -108,7 +108,7 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
-            var body = await ReadStream(bodyStream).ConfigureAwait(false);
+            var body = await ReadStream(bodyStream, cancellationToken).ConfigureAwait(false);
             var messageContext = new MessageContext(messageId, headers, body, transaction, context);
 
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
@@ -118,7 +118,7 @@ namespace NServiceBus.Transport.Msmq
         {
             try
             {
-                var body = await ReadStream(message.BodyStream).ConfigureAwait(false);
+                var body = await ReadStream(message.BodyStream, cancellationToken).ConfigureAwait(false);
                 var headers = MsmqUtilities.ExtractHeaders(message);
 
                 var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts, context);
@@ -139,12 +139,12 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        static async Task<byte[]> ReadStream(Stream bodyStream)
+        static async Task<byte[]> ReadStream(Stream bodyStream, CancellationToken cancellationToken)
         {
             bodyStream.Seek(0, SeekOrigin.Begin);
             var length = (int)bodyStream.Length;
             var body = new byte[length];
-            await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
+            await bodyStream.ReadAsync(body, 0, length, cancellationToken).ConfigureAwait(false);
             return body;
         }
 

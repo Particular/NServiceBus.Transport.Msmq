@@ -10,6 +10,7 @@
     using Routing;
     using NUnit.Framework;
     using Testing;
+    using System.Threading;
 
     [TestFixture]
     public class InstanceMappingFileMonitorTests
@@ -130,7 +131,7 @@
 
         class FakeTimer : IAsyncTimer
         {
-            Func<Task> theCallback;
+            Func<CancellationToken, Task> theCallback;
             Action<Exception> theErrorCallback;
             Action<Exception> errorSpyCallback;
 
@@ -139,11 +140,11 @@
                 this.errorSpyCallback = errorSpyCallback;
             }
 
-            public async Task Trigger()
+            public async Task Trigger(CancellationToken cancellationToken = default)
             {
                 try
                 {
-                    await theCallback().ConfigureAwait(false);
+                    await theCallback(cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -152,13 +153,13 @@
                 }
             }
 
-            public void Start(Func<Task> callback, TimeSpan interval, Action<Exception> errorCallback)
+            public void Start(Func<CancellationToken, Task> callback, TimeSpan interval, Action<Exception> errorCallback)
             {
                 theCallback = callback;
                 theErrorCallback = errorCallback;
             }
 
-            public Task Stop() => Task.CompletedTask;
+            public Task Stop(CancellationToken cancellationToken = default) => Task.CompletedTask;
         }
     }
 }

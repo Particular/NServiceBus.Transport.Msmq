@@ -29,7 +29,7 @@ namespace NServiceBus.Transport.Msmq
             Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
         }
 
-        public Task Failure(Exception exception)
+        public Task Failure(Exception exception, CancellationToken cancellationToken = default)
         {
             lastException = exception;
             var newValue = Interlocked.Increment(ref failureCount);
@@ -40,7 +40,7 @@ namespace NServiceBus.Transport.Msmq
                 Logger.WarnFormat("The circuit breaker for {0} is now in the armed state", name);
             }
 
-            return Task.Delay(TimeSpan.FromSeconds(1));
+            return Task.Delay(TimeSpan.FromSeconds(1), CancellationToken.None);
         }
 
         public void Dispose()
