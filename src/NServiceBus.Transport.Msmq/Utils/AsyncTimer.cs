@@ -6,7 +6,7 @@ namespace NServiceBus.Transport.Msmq
 
     class AsyncTimer : IAsyncTimer
     {
-        public void Start(Func<Task> callback, TimeSpan interval, Action<Exception> errorCallback)
+        public void Start(Func<CancellationToken, Task> callback, TimeSpan interval, Action<Exception> errorCallback)
         {
             tokenSource = new CancellationTokenSource();
             var token = tokenSource.Token;
@@ -18,7 +18,7 @@ namespace NServiceBus.Transport.Msmq
                     try
                     {
                         await Task.Delay(interval, token).ConfigureAwait(false);
-                        await callback().ConfigureAwait(false);
+                        await callback(token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -32,7 +32,7 @@ namespace NServiceBus.Transport.Msmq
             });
         }
 
-        public Task Stop()
+        public Task Stop(CancellationToken cancellationToken = default)
         {
             if (tokenSource == null)
             {

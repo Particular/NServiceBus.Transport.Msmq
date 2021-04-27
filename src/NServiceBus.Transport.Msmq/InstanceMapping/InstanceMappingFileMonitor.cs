@@ -27,7 +27,7 @@ namespace NServiceBus.Transport.Msmq
 
         protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
         {
-            timer.Start(() =>
+            timer.Start(_ =>
             {
                 ReloadData();
                 return Task.CompletedTask;
@@ -98,7 +98,7 @@ namespace NServiceBus.Transport.Msmq
             return count > 1 ? $"{count} instances" : $"{count} instance";
         }
 
-        protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default) => timer.Stop();
+        protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default) => timer.Stop(cancellationToken);
 
         TimeSpan checkInterval;
         IInstanceMappingLoader loader;

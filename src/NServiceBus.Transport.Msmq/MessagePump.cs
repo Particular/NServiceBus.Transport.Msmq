@@ -76,7 +76,7 @@ namespace NServiceBus.Transport.Msmq
                 ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
 
             // LongRunning is useless combined with async/await
-            messagePumpTask = Task.Run(() => PumpMessages(), cancellationToken);
+            messagePumpTask = Task.Run(() => PumpMessages(messagePumpCancellationTokenSource.Token), CancellationToken.None);
 
             return Task.CompletedTask;
         }
@@ -119,13 +119,13 @@ namespace NServiceBus.Transport.Msmq
         }
 
         [DebuggerNonUserCode]
-        async Task PumpMessages()
+        async Task PumpMessages(CancellationToken messagePumpCancellationToken)
         {
-            while (!messagePumpCancellationTokenSource.IsCancellationRequested)
+            while (!messagePumpCancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await InnerPumpMessages().ConfigureAwait(false);
+                    await InnerPumpMessages(messagePumpCancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -134,16 +134,16 @@ namespace NServiceBus.Transport.Msmq
                 catch (Exception ex)
                 {
                     Logger.Error("MSMQ Message pump failed", ex);
-                    await peekCircuitBreaker.Failure(ex).ConfigureAwait(false);
+                    await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
                 }
             }
         }
 
-        async Task InnerPumpMessages()
+        async Task InnerPumpMessages(CancellationToken messagePumpCancellationToken)
         {
             using (var enumerator = inputQueue.GetMessageEnumerator2())
             {
-                while (!messagePumpCancellationTokenSource.IsCancellationRequested)
+                while (!messagePumpCancellationToken.IsCancellationRequested)
                 {
                     try
                     {
@@ -158,19 +158,23 @@ namespace NServiceBus.Transport.Msmq
                     catch (Exception ex)
                     {
                         Logger.Warn("MSMQ receive operation failed", ex);
-                        await peekCircuitBreaker.Failure(ex).ConfigureAwait(false);
+                        await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
                         continue;
                     }
 
-                    if (messagePumpCancellationTokenSource.IsCancellationRequested)
+                    if (messagePumpCancellationToken.IsCancellationRequested)
                     {
                         return;
                     }
 
-                    await concurrencyLimiter.WaitAsync(messagePumpCancellationTokenSource.Token).ConfigureAwait(false);
+                    await concurrencyLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
 
-                    _ = Task.Factory.StartNew(state => InnerReceiveMessages((MessagePump)state),
-                        this,  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+                    _ = Task.Factory.StartNew(state =>
+                        {
+                            var (messagePump, cancellationToken) = ((MessagePump, CancellationToken))state;
+                            return InnerReceiveMessages(messagePump, cancellationToken);
+                        },
+                        (this, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
                         CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
                         TaskCreationOptions.DenyChildAttach,
                         TaskScheduler.Default)
@@ -180,25 +184,33 @@ namespace NServiceBus.Transport.Msmq
         }
 
         // This is static to prevent the method from accessing feilds in the pump since that causes variable capturing and cause extra allocations
-        static async Task InnerReceiveMessages(MessagePump messagePump)
+        static async Task InnerReceiveMessages(MessagePump messagePump, CancellationToken messagePumpCancellationToken)
         {
             try
             {
-                await messagePump.receiveStrategy.ReceiveMessage(messagePump.messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
-                messagePump.receiveCircuitBreaker.Success();
-            }
-            catch (OperationCanceledException) when (messagePump.messageProcessingCancellationTokenSource.IsCancellationRequested)
-            {
-                // Graceful shutdown
+                await ProcessMessage(messagePump, messagePump.messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 Logger.Warn("MSMQ receive operation failed", ex);
-                await messagePump.receiveCircuitBreaker.Failure(ex).ConfigureAwait(false);
+                await messagePump.receiveCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 messagePump.concurrencyLimiter.Release();
+            }
+        }
+
+        static async Task ProcessMessage(MessagePump messagePump, CancellationToken messageProcessingCancellationToken)
+        {
+            try
+            {
+                await messagePump.receiveStrategy.ReceiveMessage(messageProcessingCancellationToken).ConfigureAwait(false);
+                messagePump.receiveCircuitBreaker.Success();
+            }
+            catch (OperationCanceledException) when (messageProcessingCancellationToken.IsCancellationRequested)
+            {
+                // Graceful shutdown
             }
         }
 
