@@ -123,7 +123,6 @@ namespace NServiceBus.Transport.Msmq
                 result.BodyStream = new MemoryStream(message.Body);
             }
 
-
             AssignMsmqNativeCorrelationId(message, result);
 
             result.Recoverable = true;
@@ -165,6 +164,47 @@ namespace NServiceBus.Transport.Msmq
 
             result.AppSpecific = (int)messageIntent;
 
+
+            return result;
+        }
+
+        public static Message ConvertTimeout(OutgoingMessage message, DispatchProperties dispatchProperties)
+        {
+            var result = new Message();
+
+            if (message.Body != null)
+            {
+                result.BodyStream = new MemoryStream(message.Body);
+            }
+
+            result.Recoverable = true;
+
+            if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
+            {
+                result.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
+            }
+
+            using (var stream = new MemoryStream())
+            {
+                var headers = message.Headers.Select(pair => new HeaderInfo
+                {
+                    Key = pair.Key,
+                    Value = pair.Value
+                }).ToList();
+
+                headerSerializer.Serialize(stream, headers);
+                headerSerializer.Serialize(stream, dispatchProperties);
+                result.Extension = stream.ToArray();
+            }
+
+            var messageIntent = default(MessageIntentEnum);
+
+            if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
+            {
+                Enum.TryParse(messageIntentString, true, out messageIntent);
+            }
+
+            result.AppSpecific = (int)messageIntent;
 
             return result;
         }

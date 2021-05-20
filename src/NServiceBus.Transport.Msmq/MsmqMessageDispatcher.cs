@@ -38,30 +38,19 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        const string Expire = "NServiceBus.Timeout.Expire";
-        const string RouteExpiredTimeoutTo = "NServiceBus.Timeout.RouteExpiredTimeoutTo";
-
-        const string timeoutManagerAddress = "particular.timeoutmanager";
+        const string TimeoutDestination = "NServiceBus.Timeout.Destination";
+        const string TimeoutManagerAddress = "particular.timeoutmanager";
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
+            bool isDelayedMessage = false;
+            string destination = TimeoutManagerAddress;
 
-            DateTimeOffset deliverAt;
-
-            string destination = timeoutManagerAddress;
-
-            if (transportOperation.Properties.DelayDeliveryWith != null)
+            if (transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null)
             {
-                deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
-                transportOperation.Message.Headers[Expire] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
-                transportOperation.Message.Headers[RouteExpiredTimeoutTo] = transportOperation.Destination;
-            }
-            else if (transportOperation.Properties.DoNotDeliverBefore != null)
-            {
-                deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
-                transportOperation.Message.Headers[Expire] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
-                transportOperation.Message.Headers[RouteExpiredTimeoutTo] = transportOperation.Destination;
+                transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
+                isDelayedMessage = true;
             }
             else
             {
@@ -94,7 +83,8 @@ namespace NServiceBus.Transport.Msmq
                 using (var q = new MessageQueue(destinationAddress.FullPath, false,
                     transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties))
+                    using (var toSend = isDelayedMessage ? MsmqUtilities.ConvertTimeout(message, dispatchProperties) : MsmqUtilities.Convert(message, dispatchProperties))
+                        // TODO: do we want to apply the same logic to timeout messages?
                     {
                         var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();
                         if (useDeadLetterQueue.HasValue)
