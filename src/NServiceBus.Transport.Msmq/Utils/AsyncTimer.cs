@@ -3,49 +3,60 @@ namespace NServiceBus.Transport.Msmq
     using System;
     using System.Threading;
     using System.Threading.Tasks;
+    using NServiceBus.Logging;
 
     class AsyncTimer : IAsyncTimer
     {
         public void Start(Func<CancellationToken, Task> callback, TimeSpan interval, Action<Exception> errorCallback)
         {
             tokenSource = new CancellationTokenSource();
-            var token = tokenSource.Token;
 
-            task = Task.Run(async () =>
+            // no Task.Run() here because RunAndSwallowExceptions immediately yields with an await
+            task = RunAndSwallowExceptions(callback, interval, errorCallback, tokenSource.Token);
+        }
+
+        static async Task RunAndSwallowExceptions(Func<CancellationToken, Task> callback, TimeSpan interval, Action<Exception> errorCallback, CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
             {
-                while (!token.IsCancellationRequested)
+                try
+                {
+                    await Task.Delay(interval, cancellationToken).ConfigureAwait(false);
+                    await callback(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex.IsCausedBy(cancellationToken))
+                {
+                    // private token, sender is being stopped, log the exception in case the stack trace is ever needed for debugging
+                    Logger.Debug("Operation canceled while stopping timer.", ex);
+                    break;
+                }
+                catch (Exception ex)
                 {
                     try
                     {
-                        await Task.Delay(interval, token).ConfigureAwait(false);
-                        await callback(token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // no-op
-                    }
-                    catch (Exception ex)
-                    {
                         errorCallback(ex);
                     }
+                    catch (Exception errorCallbackEx)
+                    {
+                        Logger.Error("Error callback failed.", errorCallbackEx);
+                    }
                 }
-            });
+            }
         }
 
-        public Task Stop(CancellationToken cancellationToken = default)
+        public async Task Stop(CancellationToken cancellationToken = default)
         {
-            if (tokenSource == null)
-            {
-                return Task.CompletedTask;
-            }
+            tokenSource?.Cancel();
 
-            tokenSource.Cancel();
-            tokenSource.Dispose();
+            // await the task before disposing to avoid an ObjectDisposedException when passing the token to Task.Delay or elsewhere
+            await (task ?? Task.CompletedTask).ConfigureAwait(false);
 
-            return task ?? Task.CompletedTask;
+            tokenSource?.Dispose();
         }
 
         Task task;
         CancellationTokenSource tokenSource;
+
+        static readonly ILog Logger = LogManager.GetLogger<MessagePump>();
     }
 }

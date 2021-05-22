@@ -31,15 +31,11 @@ namespace NServiceBus.Transport.Msmq
                 {
                     await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context, cancellationToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    //no-op since we don't call OnError when cancellation happens on shutdown since the message is lost anyway
-                }
-                catch (Exception exception)
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
                     message.BodyStream.Position = 0;
 
-                    await HandleError(message, exception, transportTransaction, 1, context, cancellationToken).ConfigureAwait(false);
+                    await HandleError(message, ex, transportTransaction, 1, context, cancellationToken).ConfigureAwait(false);
                 }
             }
         }

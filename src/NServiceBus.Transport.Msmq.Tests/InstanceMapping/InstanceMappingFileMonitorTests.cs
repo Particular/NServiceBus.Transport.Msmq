@@ -146,7 +146,7 @@
                 {
                     await theCallback(cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
                     theErrorCallback(ex);
                     errorSpyCallback?.Invoke(ex);
