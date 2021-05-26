@@ -39,18 +39,31 @@ namespace NServiceBus.Transport.Msmq
         }
 
         const string TimeoutDestination = "NServiceBus.Timeout.Destination";
+        const string TimeoutAt = "NServiceBus.Timeout.Expire";
         const string TimeoutManagerAddress = "particular.timeoutmanager";
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
-            bool isDelayedMessage = false;
+            //bool isDelayedMessage = false;
             string destination = TimeoutManagerAddress;
 
             if (transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null)
             {
                 transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
-                isDelayedMessage = true;
+                DateTimeOffset deliverAt;
+
+                if (transportOperation.Properties.DelayDeliveryWith != null)
+                {
+                    deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
+                }
+                else // transportOperation.Properties.DoNotDeliverBefore != null
+                {
+                    deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
+                }
+
+                transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
+                transportOperation.Properties[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
             }
             else
             {
@@ -80,11 +93,9 @@ namespace NServiceBus.Transport.Msmq
 
             try
             {
-                using (var q = new MessageQueue(destinationAddress.FullPath, false,
-                    transportSettings.UseConnectionCache, QueueAccessMode.Send))
+                using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = isDelayedMessage ? MsmqUtilities.ConvertTimeout(message, dispatchProperties) : MsmqUtilities.Convert(message, dispatchProperties))
-                        // TODO: do we want to apply the same logic to timeout messages?
+                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties, isDelayedMessage))
                     {
                         var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();
                         if (useDeadLetterQueue.HasValue)
