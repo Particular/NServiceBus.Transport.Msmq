@@ -22,6 +22,7 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
+
             var transportTransaction = new TransportTransaction();
             var context = new ContextBag();
 

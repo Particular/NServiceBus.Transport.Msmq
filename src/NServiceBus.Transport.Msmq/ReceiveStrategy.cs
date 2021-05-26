@@ -100,6 +100,8 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
+        ITimeoutStorage TimeoutStorage;
+
         protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag context, CancellationToken cancellationToken = default)
         {
             if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
@@ -109,8 +111,24 @@ namespace NServiceBus.Transport.Msmq
             }
 
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
-            var messageContext = new MessageContext(messageId, headers, body, transaction, context);
 
+            var isTimeout = headers.ContainsKey(MsmqUtilities.PropertyHeaderPrefix);
+
+            if (isTimeout)
+            {
+                var timeout = new TimeoutItem
+                {
+                    Destination = "",
+                    Id = messageId,
+                    State = body,
+                    Time = 
+                };
+
+                await TimeoutStorage.Store(timeout);
+                return;
+            }
+
+            var messageContext = new MessageContext(messageId, headers, body, transaction, context);
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
 
@@ -147,6 +165,7 @@ namespace NServiceBus.Transport.Msmq
             await bodyStream.ReadAsync(body, 0, length).ConfigureAwait(false);
             return body;
         }
+
 
         protected bool IsQueuesTransactional => errorQueue.Transactional;
 

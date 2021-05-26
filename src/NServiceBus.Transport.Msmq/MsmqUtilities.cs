@@ -114,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties)
+        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties, bool serializeProperties = false)
         {
             var result = new Message();
 
@@ -151,7 +151,22 @@ namespace NServiceBus.Transport.Msmq
                     });
                 }
 
+                if (serializeProperties)
+                {
+                    foreach (var item in dispatchProperties)
+                    {
+                        headers.Add(new HeaderInfo
+                        {
+                            Key = PropertyHeaderPrefix + item.Key,
+                            Value = item.Value
+                        });
+                    }
+
+                    headerSerializer.Serialize(stream, dispatchProperties);
+                }
+
                 headerSerializer.Serialize(stream, headers);
+
                 result.Extension = stream.ToArray();
             }
 
@@ -249,6 +264,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        public const string PropertyHeaderPrefix = "NServiceBus.Timeouts.Properties.";
         const string DIRECTPREFIX = "DIRECT=OS:";
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
