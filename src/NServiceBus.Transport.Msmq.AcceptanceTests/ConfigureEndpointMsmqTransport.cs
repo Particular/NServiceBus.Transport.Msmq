@@ -14,6 +14,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     {
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
+        TransportDefinition.UseTimeouts(new DummyTimeoutStorage());
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 

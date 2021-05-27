@@ -38,17 +38,17 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        const string TimeoutDestination = "NServiceBus.Timeout.Destination";
-        const string TimeoutAt = "NServiceBus.Timeout.Expire";
-        const string TimeoutManagerAddress = "particular.timeoutmanager";
+        public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
+        public const string TimeoutAt = "NServiceBus.Timeout.Expire";
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
-            //bool isDelayedMessage = false;
-            string destination = TimeoutManagerAddress;
+            string destination = transportSettings.TimeoutQueueAddress.ToString();
 
-            if (transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null)
+            bool isDelayedMessage = transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null;
+
+            if (isDelayedMessage)
             {
                 transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
                 DateTimeOffset deliverAt;

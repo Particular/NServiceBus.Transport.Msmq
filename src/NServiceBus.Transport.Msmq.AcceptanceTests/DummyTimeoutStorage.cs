@@ -2,12 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-class DummyTimeoutStorage : ITimeoutStorage
+public class DummyTimeoutStorage : ITimeoutStorage
 {
-    /// <summary>
-    /// </summary>
-    /// <param name="timeout"></param>
-    /// <returns></returns>
     public Task Store(TimeoutItem timeout)
     {
         return Task.CompletedTask;

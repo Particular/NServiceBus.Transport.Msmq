@@ -16,6 +16,7 @@ namespace NServiceBus.Transport.Msmq
 
         public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
+            timeoutStorage = null;
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
@@ -100,8 +101,6 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        ITimeoutStorage TimeoutStorage;
-
         protected async Task TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag context, CancellationToken cancellationToken = default)
         {
             if (!ignoreIncomingTimeToBeReceivedHeaders && TimeToBeReceived.HasElapsed(headers))
@@ -116,15 +115,20 @@ namespace NServiceBus.Transport.Msmq
 
             if (isTimeout)
             {
+                var destination = headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
+                var at = DateTimeOffsetHelper.ToDateTimeOffset(headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
+
                 var timeout = new TimeoutItem
                 {
-                    Destination = "",
+                    Destination = destination,
                     Id = messageId,
                     State = body,
-                    Time = 
+                    Time = at.UtcDateTime
                 };
 
-                await TimeoutStorage.Store(timeout);
+                await timeoutStorage.Store(timeout)
+                    .ConfigureAwait(false);
+
                 return;
             }
 
@@ -175,6 +179,7 @@ namespace NServiceBus.Transport.Msmq
         OnError onError;
         Action<string, Exception, CancellationToken> criticalError;
         bool ignoreIncomingTimeToBeReceivedHeaders;
+        ITimeoutStorage timeoutStorage;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }
