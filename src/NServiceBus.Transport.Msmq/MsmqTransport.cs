@@ -19,6 +19,8 @@ namespace NServiceBus
     /// </summary>
     public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
+        const string TimeoutQueueSuffix = ".timeout";
+
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
         /// </summary>
@@ -35,6 +37,21 @@ namespace NServiceBus
 
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
+
+            var useTimeouts = TimeoutStorage != null;
+
+            if (useTimeouts)
+            {
+                var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
+
+                if (mainReceiver == null)
+                {
+                    throw new InvalidOperationException("No receiver with ID 'Main'.");
+                }
+
+                var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
+                TimeoutQueueAddress = new MsmqAddress(mainQueueAddress.Queue + TimeoutQueueSuffix, mainQueueAddress.Machine);
+            }
 
             if (hostSettings.CoreSettings != null)
             {
@@ -67,13 +84,25 @@ namespace NServiceBus
                 var queuesToCreate = receivers
                     .Select(r => r.ReceiveAddress)
                     .Concat(sendingAddresses)
-                    .ToArray();
+                    .ToList();
+
+                if (useTimeouts)
+                {
+                    queuesToCreate.Add(TimeoutQueueAddress.ToString());
+                    QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
+                }
+
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
             foreach (var address in sendingAddresses)
             {
                 QueuePermissions.CheckQueue(address);
+            }
+
+            if (useTimeouts)
+            {
+                QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -84,7 +113,9 @@ namespace NServiceBus
                 UseTransactionalQueues,
                 UseJournalQueue,
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
-                TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue)
+                TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
+                TimeoutQueue = TimeoutQueueAddress.ToString(),
+                TimeoutStorageType = TimeoutStorage?.GetType(),
             });
 
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this);
@@ -219,6 +250,20 @@ namespace NServiceBus
         /// This setting is not relevant, if queue creation has been disabled.
         /// </summary>
         public string CreateQueuesForUser { get; set; }
+
+        internal ITimeoutStorage TimeoutStorage { get; set; }
+
+        internal MsmqAddress TimeoutQueueAddress { get; set; }
+
+        /// <summary>
+        /// Use timeouts managed via external storage 
+        /// </summary>
+        public void UseTimeouts(ITimeoutStorage timeoutStorage)
+        {
+            Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
+            TimeoutStorage = timeoutStorage;
+        }
+
 
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.

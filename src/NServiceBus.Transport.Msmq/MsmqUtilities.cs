@@ -161,8 +161,6 @@ namespace NServiceBus.Transport.Msmq
                             Value = item.Value
                         });
                     }
-
-                    headerSerializer.Serialize(stream, dispatchProperties);
                 }
 
                 headerSerializer.Serialize(stream, headers);
