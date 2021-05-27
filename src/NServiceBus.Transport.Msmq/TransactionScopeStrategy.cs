@@ -53,14 +53,14 @@ namespace NServiceBus.Transport.Msmq
             }
             // We'll only get here if Complete/Dispose throws which should be rare.
             // Note: If that happens the attempts counter will be inconsistent since the message might be picked up again before we can register the failure in the LRU cache.
-            catch (Exception exception)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
                 if (message == null)
                 {
                     throw;
                 }
 
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex, context);
             }
         }
 
@@ -87,9 +87,9 @@ namespace NServiceBus.Transport.Msmq
                 }
                 return true;
             }
-            catch (Exception exception)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, exception, context);
+                failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex, context);
                 return false;
             }
         }

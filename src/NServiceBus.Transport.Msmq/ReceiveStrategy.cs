@@ -125,12 +125,7 @@ namespace NServiceBus.Transport.Msmq
 
                 return await onError(errorContext, cancellationToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-            {
-                Logger.Info("Message processing cancelled.", ex);
-                return ErrorHandleResult.RetryRequired;
-            }
-            catch (Exception ex)
+            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
             {
                 criticalError($"Failed to execute recoverability policy for message with native ID: `{message.Id}`", ex, cancellationToken);
 

@@ -75,8 +75,9 @@ namespace NServiceBus.Transport.Msmq
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
 
+            // Task.Run() so the call returns immediately instead of waiting for the first await or return down the call stack
             // LongRunning is useless combined with async/await
-            messagePumpTask = Task.Run(() => PumpMessages(messagePumpCancellationTokenSource.Token), CancellationToken.None);
+            messagePumpTask = Task.Run(() => PumpMessagesAndSwallowExceptions(messagePumpCancellationTokenSource.Token), CancellationToken.None);
 
             return Task.CompletedTask;
         }
@@ -94,7 +95,7 @@ namespace NServiceBus.Transport.Msmq
                     // We are deliberately not forwarding the cancellation token here because
                     // this loop is our way of waiting for all pending messaging operations
                     // to participate in cooperative cancellation or not.
-                    // We do not want to rudely abort them because the cancellation token has been cancelled.
+                    // We do not want to rudely abort them because the cancellation token has been canceled.
                     // This allows us to preserve the same behaviour in v8 as in v7 in that,
                     // if CancellationToken.None is passed to this method,
                     // the method will only return when all in flight messages have been processed.
@@ -102,7 +103,7 @@ namespace NServiceBus.Transport.Msmq
                     // all message processing operations have the opportunity to
                     // participate in cooperative cancellation.
                     // If we ever require a method of stopping the endpoint such that
-                    // all message processing is cancelled immediately,
+                    // all message processing is canceled immediately,
                     // we can provide that as a separate feature.
                     await Task.Delay(50, CancellationToken.None)
                         .ConfigureAwait(false);
@@ -119,32 +120,39 @@ namespace NServiceBus.Transport.Msmq
         }
 
         [DebuggerNonUserCode]
-        async Task PumpMessages(CancellationToken messagePumpCancellationToken)
+        async Task PumpMessagesAndSwallowExceptions(CancellationToken messagePumpCancellationToken)
         {
             while (!messagePumpCancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await InnerPumpMessages(messagePumpCancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await PumpMessages(messagePumpCancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (!ex.IsCausedBy(messagePumpCancellationToken))
+                    {
+                        Logger.Error("MSMQ Message pump failed", ex);
+                        await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
+                    }
                 }
-                catch (OperationCanceledException)
+                catch (Exception ex) when (ex.IsCausedBy(messagePumpCancellationToken))
                 {
-                    // For graceful shutdown purposes
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("MSMQ Message pump failed", ex);
-                    await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
+                    // private token, sender is being stopped, log the exception in case the stack trace is ever needed for debugging
+                    Logger.Debug("Operation canceled while stopping message pump.", ex);
+                    break;
                 }
             }
         }
 
-        async Task InnerPumpMessages(CancellationToken messagePumpCancellationToken)
+        async Task PumpMessages(CancellationToken messagePumpCancellationToken)
         {
             using (var enumerator = inputQueue.GetMessageEnumerator2())
             {
-                while (!messagePumpCancellationToken.IsCancellationRequested)
+                while (true)
                 {
+                    messagePumpCancellationToken.ThrowIfCancellationRequested();
+
                     try
                     {
                         //note: .Peek will throw an ex if no message is available. It also turns out that .MoveNext is faster since message isn't read
@@ -162,17 +170,14 @@ namespace NServiceBus.Transport.Msmq
                         continue;
                     }
 
-                    if (messagePumpCancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
+                    messagePumpCancellationToken.ThrowIfCancellationRequested();
 
                     await concurrencyLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
 
                     _ = Task.Factory.StartNew(state =>
                         {
                             var (messagePump, cancellationToken) = ((MessagePump, CancellationToken))state;
-                            return InnerReceiveMessages(messagePump, cancellationToken);
+                            return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, cancellationToken);
                         },
                         (this, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
                         CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
@@ -184,33 +189,34 @@ namespace NServiceBus.Transport.Msmq
         }
 
         // This is static to prevent the method from accessing feilds in the pump since that causes variable capturing and cause extra allocations
-        static async Task InnerReceiveMessages(MessagePump messagePump, CancellationToken messagePumpCancellationToken)
+        static async Task ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(MessagePump messagePump, CancellationToken messagePumpCancellationToken)
         {
             try
             {
-                await ProcessMessage(messagePump, messagePump.messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
+                try
+                {
+                    // we are switching token here so we need to catch cancellation
+                    await messagePump.receiveStrategy.ReceiveMessage(messagePump.messageProcessingCancellationTokenSource.Token).ConfigureAwait(false);
+                    messagePump.receiveCircuitBreaker.Success();
+                }
+                catch (Exception ex) when (ex.IsCausedBy(messagePump.messageProcessingCancellationTokenSource.Token))
+                {
+                    Logger.Warn("MSMQ receive operation cancelled", ex);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn("MSMQ receive operation failed", ex);
+                    await messagePump.receiveCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
+                }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.IsCausedBy(messagePumpCancellationToken))
             {
-                Logger.Warn("MSMQ receive operation failed", ex);
-                await messagePump.receiveCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
+                // private token, sender is being stopped, log the exception in case the stack trace is ever needed for debugging
+                Logger.Debug("Operation canceled while stopping message pump.", ex);
             }
             finally
             {
                 messagePump.concurrencyLimiter.Release();
-            }
-        }
-
-        static async Task ProcessMessage(MessagePump messagePump, CancellationToken messageProcessingCancellationToken)
-        {
-            try
-            {
-                await messagePump.receiveStrategy.ReceiveMessage(messageProcessingCancellationToken).ConfigureAwait(false);
-                messagePump.receiveCircuitBreaker.Success();
-            }
-            catch (OperationCanceledException) when (messageProcessingCancellationToken.IsCancellationRequested)
-            {
-                // Graceful shutdown
             }
         }
 

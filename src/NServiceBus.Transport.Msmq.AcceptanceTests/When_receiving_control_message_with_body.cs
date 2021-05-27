@@ -102,7 +102,7 @@
                     {
                         await next(context).ConfigureAwait(false);
                     }
-                    catch (Exception)
+                    catch (Exception ex) when (!ex.IsCausedBy(context.CancellationToken))
                     {
                         testContext.ControlMessageFailed = true;
                         return;
