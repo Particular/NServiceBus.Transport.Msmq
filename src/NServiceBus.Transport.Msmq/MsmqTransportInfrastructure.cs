@@ -18,7 +18,7 @@ namespace NServiceBus.Transport.Msmq
             Dispatcher = new MsmqMessageDispatcher(transportSettings);
         }
 
-        ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
+        public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
         {
             switch (minimumConsistencyGuarantee)
             {
@@ -56,7 +56,9 @@ namespace NServiceBus.Transport.Msmq
                     transportSettings.MessageEnumeratorTimeout,
                     criticalErrorAction,
                     transportSettings,
-                    receiver);
+                    receiver
+                    );
+
                 messagePumps.Add(pump.Id, pump);
             }
 
