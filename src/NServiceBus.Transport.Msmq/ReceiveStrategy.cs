@@ -16,7 +16,6 @@ namespace NServiceBus.Transport.Msmq
 
         public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
-            timeoutStorage = null;
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
@@ -111,27 +110,6 @@ namespace NServiceBus.Transport.Msmq
 
             var body = await ReadStream(bodyStream).ConfigureAwait(false);
 
-            var isTimeout = headers.ContainsKey(MsmqUtilities.PropertyHeaderPrefix);
-
-            if (isTimeout)
-            {
-                var destination = headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
-                var at = DateTimeOffsetHelper.ToDateTimeOffset(headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
-
-                var timeout = new TimeoutItem
-                {
-                    Destination = destination,
-                    Id = messageId,
-                    State = body,
-                    Time = at.UtcDateTime
-                };
-
-                await timeoutStorage.Store(timeout)
-                    .ConfigureAwait(false);
-
-                return;
-            }
-
             var messageContext = new MessageContext(messageId, headers, body, transaction, context);
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
@@ -179,7 +157,6 @@ namespace NServiceBus.Transport.Msmq
         OnError onError;
         Action<string, Exception, CancellationToken> criticalError;
         bool ignoreIncomingTimeToBeReceivedHeaders;
-        ITimeoutStorage timeoutStorage;
 
         static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }
