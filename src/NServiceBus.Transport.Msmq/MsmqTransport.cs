@@ -121,22 +121,6 @@ namespace NServiceBus
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this);
             msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
-
-            if (true)// TODO: Timeouts enabled?
-            {
-                var timeoutPump = new MessagePump(
-                    transactionMode => MsmqTransportInfrastructure.SelectReceiveStrategy(transactionMode, TransactionScopeOptions.TransactionOptions),
-                    MessageEnumeratorTimeout,
-                    hostSettings.CriticalErrorAction,
-                    this,
-                    new ReceiveSettings("Timeout", TimeoutQueueAddress.ToString(), false, false /*TODO*/, "error" /*TODO*/)
-                    );
-
-
-                await timeoutPump.StartReceive(cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
             return msmqTransportInfrastructure;
         }
 
@@ -204,13 +188,13 @@ namespace NServiceBus
         public bool CreateQueues { get; set; } = true;
 
         /// <summary>
-        /// This setting should be used with caution. Configures whether to store undeliverable messages in the dead letter queue. Disabling the dead letter queue should be used with caution. Setting this to <c>false</c> should only be used where loss of messages is an acceptable. 
+        /// This setting should be used with caution. Configures whether to store undeliverable messages in the dead letter queue. Disabling the dead letter queue should be used with caution. Setting this to <c>false</c> should only be used where loss of messages is an acceptable.
         /// </summary>
         public bool UseDeadLetterQueue { get; set; } = true;
 
         /// <summary>
         /// Configures MSMQ to cache connections to a remote queue and re-use them
-        /// as needed instead of creating new connections for each message. 
+        /// as needed instead of creating new connections for each message.
         /// Turning connection caching off will negatively impact the message throughput in most scenarios.
         /// </summary>
         public bool UseConnectionCache { get; set; } = true;
@@ -218,7 +202,7 @@ namespace NServiceBus
         /// <summary>
         /// This setting should be used with caution. When set to <c>false</c>, any message that has
         /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
-        /// be disabled when loss of messages is an acceptable scenario. 
+        /// be disabled when loss of messages is an acceptable scenario.
         /// </summary>
         public bool UseTransactionalQueues { get; set; } = true;
 
@@ -272,7 +256,7 @@ namespace NServiceBus
         internal MsmqAddress TimeoutQueueAddress { get; set; }
 
         /// <summary>
-        /// Use timeouts managed via external storage 
+        /// Use timeouts managed via external storage
         /// </summary>
         public void UseTimeouts(ITimeoutStorage timeoutStorage)
         {
