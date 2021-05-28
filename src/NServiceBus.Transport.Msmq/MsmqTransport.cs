@@ -19,7 +19,8 @@ namespace NServiceBus
     /// </summary>
     public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
-        const string TimeoutQueueSuffix = ".timeout";
+        const string TimeoutQueueSuffix = ".timeouts";
+        const string TimeoutQueueForRawMode = "particular.msmq.timeouts";
 
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
@@ -29,7 +30,7 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
+        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(hostSettings), hostSettings);
             Guard.AgainstNull(nameof(receivers), receivers);
@@ -39,14 +40,12 @@ namespace NServiceBus
             ValidateIfDtcIsAvailable();
 
             var useTimeouts = TimeoutStorage != null;
-
-            if (useTimeouts)
+            if (useTimeouts && TimeoutQueueAddress.IsEmpty()) // TODO: adjust
             {
                 var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
-
                 if (mainReceiver == null)
                 {
-                    throw new InvalidOperationException("No receiver with ID 'Main'.");
+                    throw new Exception("No main receiver was found, please specify a timeout queue address when enabling timeouts.");
                 }
 
                 var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
@@ -100,9 +99,18 @@ namespace NServiceBus
                 QueuePermissions.CheckQueue(address);
             }
 
+            MessagePump timeoutsPump = null;
             if (useTimeouts)
             {
                 QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
+
+                var timeoutsReceiver = new ReceiveSettings("Timeouts", "particular.msmq.timeouts", false, false, "error");
+                timeoutsPump = new MessagePump(
+                    mode => MsmqTransportInfrastructure.SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout,
+                    OnTimeoutError,
+                    this,
+                    timeoutsReceiver);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -118,10 +126,15 @@ namespace NServiceBus
                 TimeoutStorageType = TimeoutStorage?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this);
+            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump);
             msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
-            return msmqTransportInfrastructure;
+            return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
+        }
+
+        private void OnTimeoutError(string something, Exception ex, CancellationToken cancellationToken)
+        {
+            // TODO: handle timeout error
         }
 
         void ValidateIfDtcIsAvailable()
@@ -154,6 +167,7 @@ namespace NServiceBus
             {
                 queueName = address.BaseAddress;
             }
+
             var queue = new StringBuilder(queueName);
             if (address.Discriminator != null)
             {
@@ -258,12 +272,15 @@ namespace NServiceBus
         /// <summary>
         /// Use timeouts managed via external storage
         /// </summary>
-        public void UseTimeouts(ITimeoutStorage timeoutStorage)
+        public void UseTimeouts(ITimeoutStorage timeoutStorage, string timeoutsQueueAddress = null)
         {
             Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
             TimeoutStorage = timeoutStorage;
+            if (!string.IsNullOrEmpty(timeoutsQueueAddress))
+            {
+                TimeoutQueueAddress = MsmqAddress.Parse(timeoutsQueueAddress);
+            }
         }
-
 
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
