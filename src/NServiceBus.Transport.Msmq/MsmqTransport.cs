@@ -20,7 +20,6 @@ namespace NServiceBus
     public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
         const string TimeoutQueueSuffix = ".timeouts";
-        const string TimeoutQueueForRawMode = "particular.msmq.timeouts";
 
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
@@ -39,8 +38,9 @@ namespace NServiceBus
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
+            // TODO: what to do with send only endpoints
             var useTimeouts = TimeoutStorage != null;
-            if (useTimeouts && TimeoutQueueAddress.IsEmpty()) // TODO: adjust
+            if (useTimeouts && TimeoutQueueAddress.IsEmpty())
             {
                 var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
                 if (mainReceiver == null)
@@ -104,7 +104,7 @@ namespace NServiceBus
             {
                 QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
 
-                var timeoutsReceiver = new ReceiveSettings("Timeouts", "particular.msmq.timeouts", false, false, "error");
+                var timeoutsReceiver = new ReceiveSettings("Timeouts", TimeoutQueueAddress.ToString(), false, false, "error");
                 timeoutsPump = new MessagePump(
                     mode => MsmqTransportInfrastructure.SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout,
