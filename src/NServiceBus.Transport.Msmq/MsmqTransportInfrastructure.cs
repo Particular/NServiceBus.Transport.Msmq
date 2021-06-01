@@ -1,3 +1,6 @@
+using System.Linq;
+using System.Runtime.Remoting.Messaging;
+
 namespace NServiceBus.Transport.Msmq
 {
     using System;
@@ -10,8 +13,8 @@ namespace NServiceBus.Transport.Msmq
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
         readonly MsmqTransport transportSettings;
-        private readonly MessagePump timeoutsPump;
-        private readonly ITimeoutStorage timeoutStorage;
+        readonly MessagePump timeoutsPump;
+        readonly ITimeoutStorage timeoutStorage;
 
         public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null, ITimeoutStorage timeoutStorage = null)
         {
@@ -39,7 +42,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        public void SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
+        public Task SetupReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
         {
             var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
 
@@ -68,36 +71,41 @@ namespace NServiceBus.Transport.Msmq
 
             Receivers = messagePumps;
 
-            StartTimeoutPump();
+            return StartTimeoutPump();
         }
 
-        private void StartTimeoutPump()
+        async Task StartTimeoutPump()
         {
-            timeoutsPump?.Initialize(PushRuntimeSettings.Default, OnTimeoutMessageReceived , OnTimeoutError, CancellationToken.None);
+            if (timeoutsPump != null)
+            {
+                await timeoutsPump.Initialize(PushRuntimeSettings.Default, OnTimeoutMessageReceived, OnTimeoutError, CancellationToken.None);
+                await timeoutsPump.StartReceive(CancellationToken.None);
+            }
         }
 
-        private Task<ErrorHandleResult> OnTimeoutError(ErrorContext errorcontext, CancellationToken cancellationtoken)
+        Task<ErrorHandleResult> OnTimeoutError(ErrorContext errorcontext, CancellationToken cancellationtoken)
         {
             // TODO: implement the on error
             throw new NotImplementedException();
         }
 
-        private async Task OnTimeoutMessageReceived(MessageContext context, CancellationToken cancellationtoken)
+        async Task OnTimeoutMessageReceived(MessageContext context, CancellationToken cancellationtoken)
         {
-            var isTimeout = context.Headers.ContainsKey(MsmqUtilities.PropertyHeaderPrefix);
+            var isTimeout = context.Headers.Any(x=> x.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix));
 
             if (!isTimeout)
             {
                 throw new Exception("This message does not represent a timeout");
             }
 
+            var id = context.Headers[Headers.MessageId];
             var destination = context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
             var at = DateTimeOffsetHelper.ToDateTimeOffset(
                 context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
 
             var timeout = new TimeoutItem
             {
-                Destination = destination, Id = context.Headers[""], State = context.Body, Time = at.UtcDateTime
+                Destination = destination, Id = id, State = context.Body, Time = at.UtcDateTime
             };
 
             await timeoutStorage.Store(timeout).ConfigureAwait(false);

@@ -29,7 +29,7 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
+        public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(hostSettings), hostSettings);
             Guard.AgainstNull(nameof(receivers), receivers);
@@ -108,9 +108,10 @@ namespace NServiceBus
                 timeoutsPump = new MessagePump(
                     mode => MsmqTransportInfrastructure.SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout,
-                    OnTimeoutError,
+                    hostSettings.CriticalErrorAction,
                     this,
-                    timeoutsReceiver);
+                    timeoutsReceiver
+                    );
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -127,14 +128,9 @@ namespace NServiceBus
             });
 
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump);
-            msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
+            await msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
-            return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
-        }
-
-        private void OnTimeoutError(string something, Exception ex, CancellationToken cancellationToken)
-        {
-            // TODO: handle timeout error
+            return msmqTransportInfrastructure;
         }
 
         void ValidateIfDtcIsAvailable()
