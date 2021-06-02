@@ -14,9 +14,12 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
 #pragma warning restore PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     {
+
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
-        TransportDefinition.UseTimeouts(new SqlTimeoutStorage("Server=.;Database=nservicebus;Trusted_Connection=True;"));
+
+        var timeoutStorage = new SqlTimeoutStorage("Server=.;Database=nservicebus;Trusted_Connection=True;");
+        TransportDefinition.UseTimeouts(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 

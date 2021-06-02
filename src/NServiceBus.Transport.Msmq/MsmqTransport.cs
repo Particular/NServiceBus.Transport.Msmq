@@ -87,6 +87,7 @@ namespace NServiceBus
 
                 if (useTimeouts)
                 {
+                    await TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
                     queuesToCreate.Add(TimeoutQueueAddress.ToString());
                     QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
                 }
