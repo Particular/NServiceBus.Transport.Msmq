@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -7,6 +8,13 @@ using System.Threading.Tasks;
 /// </summary>
 public interface ITimeoutStorage
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="endpointName"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task Initialize(string endpointName, CancellationToken cancellationToken);
     /// <summary>
     /// 
     /// </summary>

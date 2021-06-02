@@ -1,22 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Threading;
 using System.Threading.Tasks;
+using NServiceBus.Transport.Msmq.Timeouts;
 
 /// <summary>
 /// 
 /// </summary>
 public class SqlTimeoutStorage : ITimeoutStorage
 {
-    string CS = "Server=.;Database=test2;Trusted_Connection=True;";
+    string schema;
+    string tableName;
+    CreateSqlConnection createSqlConnection;
 
     /// <summary>
     /// 
     /// </summary>
     /// <param name="connectionString"></param>
-    public SqlTimeoutStorage(string connectionString)
+    /// <param name="schema"></param>
+    /// <param name="tableName"></param>
+    public SqlTimeoutStorage(string connectionString, string schema = null, string tableName = null)
     {
-        CS = connectionString;
+        createSqlConnection = () => Task.FromResult(new SqlConnection(connectionString));
+        this.tableName = tableName;
+        this.schema = schema;
     }
 
     /// <summary>
@@ -25,9 +33,10 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <param name="timeout"></param>
     public async Task Store(TimeoutItem timeout)
     {
-        using (var cn = new SqlConnection(CS))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
         {
-            using (var cmd = new SqlCommand(SqlInsert, cn))
+            var sql = string.Format(SqlInsert, tableName);
+            using (var cmd = new SqlCommand(sql, cn))
             {
                 cmd.Parameters["@id"].Value = timeout.Id;
                 cmd.Parameters["@destination"].Value = timeout.Destination;
@@ -54,6 +63,28 @@ public class SqlTimeoutStorage : ITimeoutStorage
         //     var affected = await cmd.ExecuteNonQueryAsync();
         //     return affected == 1;
         // }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="queueName"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public Task Initialize(string queueName, CancellationToken cancellationToken)
+    {
+        if (tableName == null)
+        {
+            if (schema != null)
+            {
+                tableName = $"[{schema}]";
+            }
+            
+            tableName += $"[{queueName}Timeouts]";
+        }
+        
+        var creator = new TimeoutTableCreator(createSqlConnection, tableName);
+        return creator.CreateIfNecessary(cancellationToken);
     }
 
     /// <summary>
@@ -98,19 +129,16 @@ public class SqlTimeoutStorage : ITimeoutStorage
     const string SqlDelete = "DELETE timeout WHERE Id = @Id";
     const string SqlFetch = "Select top 100 * FROM timeout WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
     
+    const string SqlCreate = @"
 
-    // Id uniqueidentifier not null primary key,        Destination nvarchar(200),        SagaId uniqueidentifier,        State varbinary(max),        Time datetime,        Headers nvarchar(max) not null,        PersistenceVersion varchar(23) not null
-    
-    const string SqlCreate = @"CREATE TABLE dbo.Timeout
+CREATE TABLE dbo.Timeout
 	(
 	    Id uniqueidentifier not null primary key,
 	    Destination nvarchar(200), 
 	    State varbinary(max), 
 	    Time datetime,  
-	    Headers nvarchar(max) not null,    
+	    Headers nvarchar(max) not null,
 	    PersistenceVersion varchar(23) not null
 	);
-
-
-	"
+	";
 }
