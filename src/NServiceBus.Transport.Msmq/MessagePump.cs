@@ -196,7 +196,7 @@ namespace NServiceBus.Transport.Msmq
             // since we want those only to be cancelled when the public token passed to Stop() is cancelled.
             // The message pump token is being used elsewhere, because we want those operations to be cancelled as soon as Stop() is called.
             // The catch clauses on the inner try are correctly filtered on the message processing cancellation token and
-            // the catch claause on the outer try is correctly filtered on the message pump cancellation token.
+            // the catch clause on the outer try is correctly filtered on the message pump cancellation token.
             try
 #pragma warning restore PS0021 // Highlight when a try block passes multiple cancellation tokens
             {
