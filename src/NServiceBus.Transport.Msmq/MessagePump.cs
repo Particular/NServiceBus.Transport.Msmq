@@ -193,8 +193,8 @@ namespace NServiceBus.Transport.Msmq
         {
 #pragma warning disable PS0021 // Highlight when a try block passes multiple cancellation tokens - justification:
             // The message processing cancellation token is being used for the receive strategies,
-            // since we want those only to be cancelled when the public token passed to Stop() is cancelled.
-            // The message pump token is being used elsewhere, because we want those operations to be cancelled as soon as Stop() is called.
+            // since we want those only to be canceled when the public token passed to Stop() is canceled.
+            // The message pump token is being used elsewhere, because we want those operations to be canceled as soon as Stop() is called.
             // The catch clauses on the inner try are correctly filtered on the message processing cancellation token and
             // the catch clause on the outer try is correctly filtered on the message pump cancellation token.
             try
@@ -208,7 +208,7 @@ namespace NServiceBus.Transport.Msmq
                 }
                 catch (Exception ex) when (ex.IsCausedBy(messagePump.messageProcessingCancellationTokenSource.Token))
                 {
-                    Logger.Warn("MSMQ receive operation cancelled", ex);
+                    Logger.Warn("MSMQ receive operation canceled", ex);
                 }
                 catch (Exception ex)
                 {
