@@ -19,7 +19,7 @@ public interface ITimeoutStorage
     /// 
     /// </summary>
     /// <returns></returns>
-    Task<DateTimeOffset> Next();
+    Task<DateTimeOffset?> Next();
     /// <summary>
     /// 
     /// </summary>
