@@ -128,7 +128,7 @@ namespace NServiceBus
                 TimeoutStorageType = TimeoutStorage?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump);
+            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump, TimeoutStorage);
             await msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
             return msmqTransportInfrastructure;

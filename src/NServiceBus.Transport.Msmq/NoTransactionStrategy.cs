@@ -26,6 +26,8 @@ namespace NServiceBus.Transport.Msmq
             var transportTransaction = new TransportTransaction();
             var context = new ContextBag();
 
+            context.Set(message);
+
             using (var bodyStream = message.BodyStream)
             {
                 try

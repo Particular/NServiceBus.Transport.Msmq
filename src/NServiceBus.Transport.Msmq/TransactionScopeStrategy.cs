@@ -31,6 +31,8 @@ namespace NServiceBus.Transport.Msmq
                         return;
                     }
 
+                    context.Set(message);
+
                     if (!TryExtractHeaders(message, out var headers))
                     {
                         MovePoisonMessageToErrorQueue(message, MessageQueueTransactionType.Automatic);
