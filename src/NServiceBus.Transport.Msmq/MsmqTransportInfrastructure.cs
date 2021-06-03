@@ -1,10 +1,8 @@
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
-
 namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
@@ -91,24 +89,38 @@ namespace NServiceBus.Transport.Msmq
 
         async Task OnTimeoutMessageReceived(MessageContext context, CancellationToken cancellationtoken)
         {
-            var isTimeout = context.Headers.Any(x=> x.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix));
-
-            if (!isTimeout)
+            try
             {
-                throw new Exception("This message does not represent a timeout");
+                var isTimeout = context.Headers.Any(x=> x.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix));
+
+                if (!isTimeout)
+                {
+                    throw new Exception("This message does not represent a timeout");
+                }
+
+                var id = context.Headers[Headers.MessageId];
+                var destination = context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
+                var at = DateTimeOffsetHelper.ToDateTimeOffset(
+                    context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
+
+                var message = context.Extensions.Get<System.Messaging.Message>();
+                
+                var timeout = new TimeoutItem
+                {
+                    Destination = destination,
+                    Id = id,
+                    State = context.Body,
+                    Time = at.UtcDateTime,
+                    Headers = message.Extension
+                };
+
+                await timeoutStorage.Store(timeout).ConfigureAwait(false);
             }
-
-            var id = context.Headers[Headers.MessageId];
-            var destination = context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
-            var at = DateTimeOffsetHelper.ToDateTimeOffset(
-                context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
-
-            var timeout = new TimeoutItem
+            catch (Exception e)
             {
-                Destination = destination, Id = id, State = context.Body, Time = at.UtcDateTime
-            };
-
-            await timeoutStorage.Store(timeout).ConfigureAwait(false);
+                // TODO: Seems no recoverability is executed
+                throw;
+            }
         }
 
         public override Task Shutdown(CancellationToken cancellationToken = default)

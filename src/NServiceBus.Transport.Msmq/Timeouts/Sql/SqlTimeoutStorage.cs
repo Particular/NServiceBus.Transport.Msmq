@@ -35,18 +35,20 @@ public class SqlTimeoutStorage : ITimeoutStorage
     {
         using (var cn = await createSqlConnection().ConfigureAwait(false))
         {
-            var sql = string.Format(SqlInsert, tableName);
+            await cn.OpenAsync().ConfigureAwait(false);
+            var sql = string.Format(SqlInsertFormat, tableName);
             using (var cmd = new SqlCommand(sql, cn))
             {
-                cmd.Parameters["@id"].Value = timeout.Id;
-                cmd.Parameters["@destination"].Value = timeout.Destination;
-                cmd.Parameters["@time"].Value = timeout.Time;
-                cmd.Parameters["@headers"].Value = timeout.Headers;
-                cmd.Parameters["@state"].Value = timeout.State;
+                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@destination", timeout.Destination);
+                cmd.Parameters.AddWithValue("@time", timeout.Time);
+                cmd.Parameters.AddWithValue("@headers", timeout.Headers);
+                cmd.Parameters.AddWithValue("@state", timeout.State);
                 _ = await cmd.ExecuteNonQueryAsync();
             }
         }
     }
+    const string SqlInsertFormat = "INSERT INTO {0} (Id,Destination,Time,Headers,State,PersistenceVersion) Values (@id,@destination,@time,@headers,@state,'1');";
 
     /// <summary>
     /// 
@@ -125,7 +127,6 @@ public class SqlTimeoutStorage : ITimeoutStorage
         return Task.FromResult(result);
     }
 
-    const string SqlInsert = "INSERT INTO timeout (Id,Destination,Time,Headers,State) Values (@Id,@Destination,@Time,@Headers,@State);";
     const string SqlDelete = "DELETE timeout WHERE Id = @Id";
     const string SqlFetch = "Select top 100 * FROM timeout WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
     
