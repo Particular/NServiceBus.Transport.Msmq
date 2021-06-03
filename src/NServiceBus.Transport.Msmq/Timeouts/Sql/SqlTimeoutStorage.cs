@@ -93,10 +93,13 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// 
     /// </summary>
     /// <returns></returns>
-    public Task<DateTimeOffset> Next()
+    public Task<DateTimeOffset?> Next()
     //public async Task<DateTimeOffset> Next()
     {
-        return Task.FromResult(DateTimeOffset.UtcNow.AddHours(1));
+        //var next = await connection.ExecuteScalarAsync<DateTime?>("Select top 1 Time FROM timeout ORDER BY Time").ConfigureAwait(false);
+
+        
+        return Task.FromResult((DateTimeOffset?)DateTimeOffset.UtcNow.AddHours(1));
         //var cmd = new SqlCommand("Select top 1 Time FROM timeout ORDER BY Time", cn, tx);
         //return new DateTimeOffset((DateTime)await cmd.ExecuteScalarAsync(), TimeSpan.Zero);
     }
@@ -108,6 +111,10 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <returns></returns>
     public Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at)
     {
+        //                    var timeouts = (await connection.QueryAsync<Timeout>("Select top 100 * FROM timeout WITH  (updlock, rowlock) WHERE Time<@Time ORDER BY Time, Id", new {Time = now}).ConfigureAwait(false)).ToList();
+
+        
+        
         var result = new List<TimeoutItem>(100);
         // var cmd = new SqlCommand(SqlFetch);
         // cmd.Parameters["@time"].Value = at.UtcDateTime;

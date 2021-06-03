@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace NServiceBus.Transport.Msmq
 {
     using System;
@@ -13,6 +15,7 @@ namespace NServiceBus.Transport.Msmq
         readonly MsmqTransport transportSettings;
         readonly MessagePump timeoutsPump;
         readonly ITimeoutStorage timeoutStorage;
+        readonly TimeoutPoller timeoutPoller;
 
         public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null, ITimeoutStorage timeoutStorage = null)
         {
@@ -20,7 +23,9 @@ namespace NServiceBus.Transport.Msmq
             this.timeoutsPump = timeoutsPump;
             this.timeoutStorage = timeoutStorage;
 
-            Dispatcher = new MsmqMessageDispatcher(transportSettings);
+            var dispatcher = new MsmqMessageDispatcher(transportSettings);
+            Dispatcher = dispatcher;
+            timeoutPoller = new TimeoutPoller(timeoutStorage, dispatcher);
         }
 
         public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
@@ -78,6 +83,8 @@ namespace NServiceBus.Transport.Msmq
             {
                 await timeoutsPump.Initialize(PushRuntimeSettings.Default, OnTimeoutMessageReceived, OnTimeoutError, CancellationToken.None);
                 await timeoutsPump.StartReceive(CancellationToken.None);
+
+                timeoutPoller.Start();
             }
         }
 
@@ -100,24 +107,34 @@ namespace NServiceBus.Transport.Msmq
 
                 var id = context.Headers[Headers.MessageId];
                 var destination = context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
-                var at = DateTimeOffsetHelper.ToDateTimeOffset(
-                    context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
-
-                var message = context.Extensions.Get<System.Messaging.Message>();
+                var at = DateTimeOffsetHelper.ToDateTimeOffset(context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
                 
-                var timeout = new TimeoutItem
-                {
-                    Destination = destination,
-                    Id = id,
-                    State = context.Body,
-                    Time = at.UtcDateTime,
-                    Headers = message.Extension
-                };
+                var message = context.Extensions.Get<System.Messaging.Message>();
 
-                await timeoutStorage.Store(timeout).ConfigureAwait(false);
+                var diff = DateTime.UtcNow - at;
+
+                if (diff.Ticks > 0) // Due
+                {
+                    // TODO: Pass transaction, but where to get the transaction from?
+                    await Dispatcher.Dispatch(id, message.Extension, context.Body, destination);
+                }
+                else
+                {
+                    var timeout = new TimeoutItem
+                    {
+                        Destination = destination,
+                        Id = id,
+                        State = context.Body,
+                        Time = at.UtcDateTime,
+                        Headers = message.Extension
+                    };
+
+                    await timeoutStorage.Store(timeout).ConfigureAwait(false);
+                }
             }
             catch (Exception e)
             {
+                Console.WriteLine(e);
                 // TODO: Seems no recoverability is executed
                 throw;
             }
@@ -126,6 +143,7 @@ namespace NServiceBus.Transport.Msmq
         public override Task Shutdown(CancellationToken cancellationToken = default)
         {
             timeoutsPump?.StopReceive(cancellationToken);
+            timeoutPoller?.Stop();
             return Task.CompletedTask;
         }
     }
