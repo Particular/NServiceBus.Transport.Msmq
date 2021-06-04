@@ -69,11 +69,11 @@ if not exists (
 )
 begin
     create table {0} (
-        Id uniqueidentifier not null primary key,
+ 	    Id nvarchar(250) not null primary key,
         Destination nvarchar(200),
         State varbinary(max),
         Time datetime,
-        Headers nvarchar(max) not null,
+        Headers varbinary(max) not null,
         PersistenceVersion varchar(23) not null -- Backwards compatibility with SQLP schema
         )
 end

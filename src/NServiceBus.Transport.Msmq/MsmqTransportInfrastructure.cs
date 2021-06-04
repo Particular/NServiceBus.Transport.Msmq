@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using NServiceBus.Logging;
 
 namespace NServiceBus.Transport.Msmq
 {
@@ -130,6 +130,8 @@ namespace NServiceBus.Transport.Msmq
                     };
 
                     await timeoutStorage.Store(timeout).ConfigureAwait(false);
+                    
+                    timeoutPoller.Callback(timeout.Time);
                 }
             }
             catch (Exception e)
