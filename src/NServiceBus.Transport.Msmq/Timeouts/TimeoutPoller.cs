@@ -19,7 +19,7 @@ class TimeoutPoller
         _next = new Timer(s => Callback(null), null, -1, -1);
     }
 
-    async void Callback(DateTimeOffset? at)
+    public async void Callback(DateTimeOffset? at)
     {
         var result = s.Wait(0);// No async needed because of 0 milliseconds.
 
@@ -64,7 +64,7 @@ class TimeoutPoller
                                     timeout.Destination
                                 )
                                 .ConfigureAwait(false);
-                            
+
                             tx.Complete();
                         }
                     });
@@ -105,6 +105,11 @@ class TimeoutPoller
                     }
                 }
             }
+        }
+        catch (Exception e)
+        {
+            // TODO: Something with critical errors
+            Console.WriteLine(e);
         }
         finally
         {
