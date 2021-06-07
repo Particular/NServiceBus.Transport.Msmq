@@ -4,16 +4,16 @@ namespace NServiceBus.Transport.Msmq.Timeouts
     using System.Data.SqlClient;
     using System.Threading.Tasks;
     using System.Threading;
-    
+
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public delegate Task<SqlConnection> CreateSqlConnection();
 
     class TimeoutTableCreator
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="createSqlConnection"></param>
         /// <param name="tableName"></param>
@@ -74,7 +74,7 @@ begin
         State varbinary(max),
         Time datetime,
         Headers varbinary(max) not null,
-        PersistenceVersion varchar(23) not null -- Backwards compatibility with SQLP schema
+        NrOfRetries INT NOT NULL default(0)
         )
 end
 
