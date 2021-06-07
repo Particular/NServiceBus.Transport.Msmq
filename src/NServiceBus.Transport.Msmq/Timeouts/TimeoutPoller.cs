@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus.Logging;
+using NServiceBus.Transport;
 using NServiceBus.Transport.Msmq;
 
 class TimeoutPoller
@@ -39,12 +40,17 @@ class TimeoutPoller
             {
                 var now = DateTime.UtcNow;
                 {
+                    // TODO: What to do when storage down? Critical error!
                     var timeouts = await TimeoutStorage.FetchDueTimeouts(now);
 
                     var tasks = timeouts.Select(async timeout =>
                     {
+                        // TODO: try..catch, forwarding to error 
                         using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
                         {
+                            var transportTransaction = new TransportTransaction();
+                            transportTransaction.Set(Transaction.Current);
+
                             var diff = timeout.Time - DateTime.UtcNow;
 
                             var success = await TimeoutStorage.Remove(timeout).ConfigureAwait(false);
@@ -61,7 +67,8 @@ class TimeoutPoller
                                     timeout.Id,
                                     timeout.Headers,
                                     timeout.State,
-                                    timeout.Destination
+                                    timeout.Destination,
+                                    transportTransaction
                                 )
                                 .ConfigureAwait(false);
 

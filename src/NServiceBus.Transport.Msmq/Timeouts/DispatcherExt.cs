@@ -6,7 +6,7 @@ using NServiceBus.Transport.Msmq;
 
 static class DispatcherExt
 {
-    public static Task Dispatch(this IMessageDispatcher instance, string id, byte[] extension, byte[] body, string destination)
+    public static Task Dispatch(this IMessageDispatcher instance, string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction)
     {
         var headers = MsmqUtilities.DeserializeMessageHeaders(extension);
 
@@ -25,6 +25,6 @@ static class DispatcherExt
 
         return instance.Dispatch(
             outgoingMessages: new TransportOperations(operation),
-            transaction: new TransportTransaction()
+            transaction: transportTransaction
         );
     }}

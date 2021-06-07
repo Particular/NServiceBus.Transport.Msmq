@@ -115,8 +115,7 @@ namespace NServiceBus.Transport.Msmq
 
                 if (diff.Ticks > 0) // Due
                 {
-                    // TODO: Pass transaction, but where to get the transaction from?
-                    await Dispatcher.Dispatch(id, message.Extension, context.Body, destination);
+                    await Dispatcher.Dispatch(id, message.Extension, context.Body, destination, context.TransportTransaction);
                 }
                 else
                 {
