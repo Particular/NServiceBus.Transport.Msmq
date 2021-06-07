@@ -44,7 +44,7 @@ namespace NServiceBus.Transport.Msmq
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
             var message = transportOperation.Message;
-            string destination = transportSettings.TimeoutQueueAddress.ToString();
+            string destination = transportSettings.DelayedDeliverySettings.TimeoutsQueueAddress.ToString();
 
             bool isDelayedMessage = transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null;
 
