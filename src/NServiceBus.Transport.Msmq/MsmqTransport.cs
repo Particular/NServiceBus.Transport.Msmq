@@ -40,6 +40,12 @@ namespace NServiceBus
 
             // TODO: what to do with send only endpoints
             var useTimeouts = TimeoutStorage != null;
+
+            if (useTimeouts && receivers.Length == 0 && TimeoutsErrorQueueAddress.IsEmpty())
+            {
+                throw new Exception("Timeout error queue must be set for send-only endpoint.");
+            }
+            
             if (useTimeouts && TimeoutQueueAddress.IsEmpty())
             {
                 var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
@@ -51,6 +57,8 @@ namespace NServiceBus
                 var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
                 TimeoutQueueAddress = new MsmqAddress(mainQueueAddress.Queue + TimeoutQueueSuffix, mainQueueAddress.Machine);
             }
+            
+            
 
             if (hostSettings.CoreSettings != null)
             {
@@ -89,7 +97,9 @@ namespace NServiceBus
                 {
                     await TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
                     queuesToCreate.Add(TimeoutQueueAddress.ToString());
+                    queuesToCreate.Add(TimeoutsErrorQueueAddress.ToString());
                     QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
+                    QueuePermissions.CheckQueue(TimeoutsErrorQueueAddress.ToString());
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
@@ -267,15 +277,24 @@ namespace NServiceBus
         internal MsmqAddress TimeoutQueueAddress { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        internal MsmqAddress TimeoutsErrorQueueAddress { get; set; }
+
+        /// <summary>
         /// Use timeouts managed via external storage
         /// </summary>
-        public void UseTimeouts(ITimeoutStorage timeoutStorage, string timeoutsQueueAddress = null)
+        public void UseTimeouts(ITimeoutStorage timeoutStorage, string timeoutsQueueAddress = null, string sendOnlyErrorQueueAddress = null)
         {
             Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
             TimeoutStorage = timeoutStorage;
             if (!string.IsNullOrEmpty(timeoutsQueueAddress))
             {
                 TimeoutQueueAddress = MsmqAddress.Parse(timeoutsQueueAddress);
+            }
+            if (!string.IsNullOrEmpty(sendOnlyErrorQueueAddress))
+            {
+                TimeoutsErrorQueueAddress = MsmqAddress.Parse(sendOnlyErrorQueueAddress);
             }
         }
 
