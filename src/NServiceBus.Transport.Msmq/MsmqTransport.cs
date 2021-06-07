@@ -39,28 +39,7 @@ namespace NServiceBus
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
-            var useTimeouts = TimeoutStorage != null;
-            if (useTimeouts && receivers.Length == 0 && TimeoutsErrorQueueAddress.IsEmpty())
-            {
-                throw new Exception("Timeout error queue must be set for send-only endpoint.");
-            }
-            if (useTimeouts && receivers.Length > 0 && !TimeoutsErrorQueueAddress.IsEmpty())
-            {
-                 logger.Warn("Timeout error queue was set but ignored. The error queue configured for the endpoint will be used instead.");
-            }
-
-            if (useTimeouts && TimeoutQueueAddress.IsEmpty())
-            {
-                var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
-                if (mainReceiver == null)
-                {
-                    throw new Exception("No main receiver was found, please specify a timeout queue address when enabling timeouts.");
-                }
-
-                var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
-                TimeoutQueueAddress = new MsmqAddress(mainQueueAddress.Queue + TimeoutQueueSuffix, mainQueueAddress.Machine);
-                TimeoutsErrorQueueAddress = MsmqAddress.Parse(mainReceiver.ErrorQueue);
-            }
+            bool requiresDelayedDelivery = SetupDelayedDelivery(receivers);
 
             if (hostSettings.CoreSettings != null)
             {
@@ -93,15 +72,13 @@ namespace NServiceBus
                 var queuesToCreate = receivers
                     .Select(r => r.ReceiveAddress)
                     .Concat(sendingAddresses)
-                    .ToList();
+                    .ToHashSet();
 
-                if (useTimeouts)
+                if (requiresDelayedDelivery)
                 {
-                    await TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
-                    queuesToCreate.Add(TimeoutQueueAddress.ToString());
-                    queuesToCreate.Add(TimeoutsErrorQueueAddress.ToString());
-                    QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
-                    QueuePermissions.CheckQueue(TimeoutsErrorQueueAddress.ToString());
+                    await DelayedDeliverySettings.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
+                    queuesToCreate.Add(DelayedDeliverySettings.TimeoutsQueueAddress.ToString());
+                    queuesToCreate.Add(DelayedDeliverySettings.GetErrorQueueAddress().ToString());
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
@@ -113,11 +90,12 @@ namespace NServiceBus
             }
 
             MessagePump timeoutsPump = null;
-            if (useTimeouts)
+            if (requiresDelayedDelivery)
             {
-                QueuePermissions.CheckQueue(TimeoutQueueAddress.ToString());
+                QueuePermissions.CheckQueue(DelayedDeliverySettings.TimeoutsQueueAddress.ToString());
+                QueuePermissions.CheckQueue(DelayedDeliverySettings.GetErrorQueueAddress().ToString());
 
-                var timeoutsReceiver = new ReceiveSettings("Timeouts", TimeoutQueueAddress.ToString(), false, false, "error");
+                var timeoutsReceiver = new ReceiveSettings("Timeouts", DelayedDeliverySettings.TimeoutsQueueAddress.ToString(), false, false, "error");
                 timeoutsPump = new MessagePump(
                     mode => MsmqTransportInfrastructure.SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout,
@@ -136,14 +114,43 @@ namespace NServiceBus
                 UseJournalQueue,
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
-                TimeoutQueue = TimeoutQueueAddress.ToString(),
-                TimeoutStorageType = TimeoutStorage?.GetType(),
+                TimeoutQueue = DelayedDeliverySettings?.TimeoutsQueueAddress.ToString(),
+                TimeoutStorageType = DelayedDeliverySettings?.TimeoutStorage?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump, TimeoutStorage, TimeoutsErrorQueueAddress, NrOfRetries);
+            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump);
             await msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
             return msmqTransportInfrastructure;
+        }
+
+        private bool SetupDelayedDelivery(ReceiveSettings[] receivers)
+        {
+            var useTimeouts = DelayedDeliverySettings != null;
+            if (useTimeouts && receivers.Length == 0 && DelayedDeliverySettings.SendOnlyErrorQueueAddress.IsEmpty())
+            {
+                throw new Exception("Timeout error queue must be set for send-only endpoint.");
+            }
+
+            if (useTimeouts && receivers.Length > 0 && !DelayedDeliverySettings.TimeoutsQueueAddress.IsEmpty())
+            {
+                logger.Warn("Timeout error queue was set but ignored. The error queue configured for the endpoint will be used instead.");
+            }
+
+            if (useTimeouts && DelayedDeliverySettings.TimeoutsQueueAddress.IsEmpty())
+            {
+                var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
+                if (mainReceiver == null)
+                {
+                    throw new Exception("No main receiver was found, please specify a timeout queue address when enabling timeouts.");
+                }
+
+                var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
+                DelayedDeliverySettings.TimeoutsQueueAddress = new MsmqAddress(mainQueueAddress.Queue + TimeoutQueueSuffix, mainQueueAddress.Machine);
+                DelayedDeliverySettings.ErrorQueue = MsmqAddress.Parse(mainReceiver.ErrorQueue);
+            }
+
+            return useTimeouts;
         }
 
         void ValidateIfDtcIsAvailable()
@@ -274,31 +281,13 @@ namespace NServiceBus
         /// </summary>
         public string CreateQueuesForUser { get; set; }
 
-        internal ITimeoutStorage TimeoutStorage { get; set; }
-
-        internal MsmqAddress TimeoutQueueAddress { get; set; }
-
-        internal MsmqAddress TimeoutsErrorQueueAddress { get; set; }
-
-        internal int NrOfRetries { get; set; }
-
         /// <summary>
         /// Use timeouts managed via external storage
         /// </summary>
-        public void UseTimeouts(ITimeoutStorage timeoutStorage, DelayedDeliverySettings delayedDeliverySettings)
+        public DelayedDeliverySettings UseTimeouts(ITimeoutStorage timeoutStorage)
         {
-            Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
-            TimeoutStorage = timeoutStorage;
-            if (!string.IsNullOrEmpty(delayedDeliverySettings.TimeoutsQueueAddress))
-            {
-                TimeoutQueueAddress = MsmqAddress.Parse(delayedDeliverySettings.TimeoutsQueueAddress);
-            }
-            if (!string.IsNullOrEmpty(delayedDeliverySettings.SendOnlyErrorQueueAddress))
-            {
-                TimeoutsErrorQueueAddress = MsmqAddress.Parse(delayedDeliverySettings.SendOnlyErrorQueueAddress);
-            }
-
-            NrOfRetries = delayedDeliverySettings.NrOfRetries;
+            DelayedDeliverySettings = DelayedDeliverySettings ?? new DelayedDeliverySettings(timeoutStorage);
+            return DelayedDeliverySettings;
         }
 
         /// <summary>
@@ -351,5 +340,6 @@ namespace NServiceBus
         internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
 
         static ILog logger = LogManager.GetLogger<MsmqTransport>();
+        internal DelayedDeliverySettings DelayedDeliverySettings { get; set; }
     }
 }

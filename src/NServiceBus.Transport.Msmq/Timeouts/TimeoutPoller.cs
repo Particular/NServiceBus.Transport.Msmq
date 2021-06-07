@@ -1,3 +1,4 @@
+using NServiceBus;
 using System;
 using System.Linq;
 using System.Threading;
@@ -15,12 +16,12 @@ class TimeoutPoller
     MsmqAddress errorQueue;
     int nrOfRetries;
 
-    public TimeoutPoller(ITimeoutStorage timeoutStorage, MsmqMessageDispatcher dispatcher, MsmqAddress errorQueue, int nrOfRetries)
+    public TimeoutPoller(DelayedDeliverySettings delayedDeliverySettings, MsmqMessageDispatcher dispatcher)
     {
-        TimeoutStorage = timeoutStorage;
+        TimeoutStorage = delayedDeliverySettings.TimeoutStorage;
+        errorQueue = delayedDeliverySettings.GetErrorQueueAddress();
+        nrOfRetries = delayedDeliverySettings.NrOfRetries;
         Dispatcher = dispatcher;
-        this.errorQueue = errorQueue;
-        this.nrOfRetries = nrOfRetries;
         _next = new Timer(s => Callback(null), null, -1, -1);
     }
 

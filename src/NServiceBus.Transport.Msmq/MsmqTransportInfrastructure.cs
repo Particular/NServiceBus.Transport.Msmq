@@ -17,15 +17,15 @@ namespace NServiceBus.Transport.Msmq
         readonly ITimeoutStorage timeoutStorage;
         readonly TimeoutPoller timeoutPoller;
 
-        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null, ITimeoutStorage timeoutStorage = null, MsmqAddress timeoutsErrorQueue = default, int nrOfRetries = 0)
+        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null)
         {
             this.transportSettings = transportSettings;
             this.timeoutsPump = timeoutsPump;
-            this.timeoutStorage = timeoutStorage;
+            timeoutStorage = transportSettings.DelayedDeliverySettings.TimeoutStorage;
 
             var dispatcher = new MsmqMessageDispatcher(transportSettings);
             Dispatcher = dispatcher;
-            timeoutPoller = new TimeoutPoller(timeoutStorage, dispatcher, timeoutsErrorQueue, nrOfRetries);
+            timeoutPoller = new TimeoutPoller(transportSettings.DelayedDeliverySettings, dispatcher);
         }
 
         public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
