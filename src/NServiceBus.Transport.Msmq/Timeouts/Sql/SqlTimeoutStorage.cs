@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using NServiceBus.Transport.Msmq.Timeouts;
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class SqlTimeoutStorage : ITimeoutStorage
 {
@@ -16,7 +16,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     CreateSqlConnection createSqlConnection;
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="connectionString"></param>
     /// <param name="schema"></param>
@@ -29,7 +29,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="timeout"></param>
     public async Task Store(TimeoutItem timeout)
@@ -71,7 +71,25 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <summary>
-    /// 
+    ///
+    /// </summary>
+    /// <param name="timeout"></param>
+    /// <returns></returns>
+    public async Task<bool> BumpFailureCount(TimeoutItem timeout)
+    {
+        var sql = string.Format(SqlUpdate, tableName);
+        using (var cn = await createSqlConnection())
+        using (var cmd = new SqlCommand(sql, cn))
+        {
+            cmd.Parameters.AddWithValue("@id", timeout.Id);
+            await cn.OpenAsync();
+            var affected = await cmd.ExecuteNonQueryAsync();
+            return affected == 1;
+        }
+    }
+
+    /// <summary>
+    ///
     /// </summary>
     /// <param name="queueName"></param>
     /// <param name="cancellationToken"></param>
@@ -93,7 +111,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <returns></returns>
     public async Task<DateTimeOffset?> Next()
@@ -109,7 +127,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="at"></param>
     /// <returns></returns>
@@ -145,4 +163,5 @@ public class SqlTimeoutStorage : ITimeoutStorage
     const string SqlFetch = "Select top 100 Id,Destination,Time,Headers,State FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
 
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
+    const string SqlUpdate = "UPDATE {0} SET NrOfRetries = NrOfRetries + 1 WHERE Id = @id";
 }

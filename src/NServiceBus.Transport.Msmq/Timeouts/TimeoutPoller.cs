@@ -12,11 +12,15 @@ class TimeoutPoller
     ILog Log = LogManager.GetLogger<TimeoutPoller>();
     ITimeoutStorage TimeoutStorage;
     MsmqMessageDispatcher Dispatcher;
+    MsmqAddress errorQueue;
+    int nrOfRetries;
 
-    public TimeoutPoller(ITimeoutStorage timeoutStorage, MsmqMessageDispatcher dispatcher)
+    public TimeoutPoller(ITimeoutStorage timeoutStorage, MsmqMessageDispatcher dispatcher, MsmqAddress errorQueue, int nrOfRetries)
     {
         TimeoutStorage = timeoutStorage;
         Dispatcher = dispatcher;
+        this.errorQueue = errorQueue;
+        this.nrOfRetries = nrOfRetries;
         _next = new Timer(s => Callback(null), null, -1, -1);
     }
 
@@ -31,7 +35,7 @@ class TimeoutPoller
 
         try
         {
-            if (at.HasValue && NextTimeout.HasValue && at.Value >= NextTimeout.Value)
+            if (at.HasValue && nextTimeout.HasValue && at.Value >= nextTimeout.Value)
             {
                 return;
             }
@@ -45,34 +49,44 @@ class TimeoutPoller
 
                     var tasks = timeouts.Select(async timeout =>
                     {
-                        // TODO: try..catch, forwarding to error 
-                        using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
+                        try
                         {
-                            var transportTransaction = new TransportTransaction();
-                            transportTransaction.Set(Transaction.Current);
-
-                            var diff = timeout.Time - DateTime.UtcNow;
-
-                            var success = await TimeoutStorage.Remove(timeout).ConfigureAwait(false);
-
-                            if (!success)
+                            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
                             {
-                                // Already dispatched
-                                return;
+                                var transportTransaction = new TransportTransaction();
+                                transportTransaction.Set(Transaction.Current);
+
+                                // If retries deplete, we want to send the timeout to the error queue and remove it from storage
+                                var timeoutDestination = timeout.NrOfRetries > nrOfRetries
+                                    ? errorQueue.ToString()
+                                    : timeout.Destination;
+
+                                var diff = timeout.Time - DateTime.UtcNow;
+                                var success = await TimeoutStorage.Remove(timeout).ConfigureAwait(false);
+
+                                if (!success)
+                                {
+                                    // Already dispatched
+                                    return;
+                                }
+
+                                Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
+
+                                await Dispatcher.Dispatch(
+                                                    timeout.Id,
+                                                    timeout.Headers,
+                                                    timeout.State,
+                                                    timeoutDestination,
+                                                    transportTransaction
+                                                )
+                                                .ConfigureAwait(false);
+
+                                tx.Complete();
                             }
-
-                            Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
-
-                            await Dispatcher.Dispatch(
-                                    timeout.Id,
-                                    timeout.Headers,
-                                    timeout.State,
-                                    timeout.Destination,
-                                    transportTransaction
-                                )
-                                .ConfigureAwait(false);
-
-                            tx.Complete();
+                        }
+                        catch (Exception)
+                        {
+                            await TimeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
                         }
                     });
 
@@ -85,18 +99,18 @@ class TimeoutPoller
 
                         if (next.HasValue)
                         {
-                            NextTimeout = next;
+                            nextTimeout = next;
                         }
                         else
                         {
-                            NextTimeout = null;
+                            nextTimeout = null;
                         }
 
                         var sleep = MaxSleepDuration;
 
-                        if (NextTimeout.HasValue)
+                        if (nextTimeout.HasValue)
                         {
-                            var diff = NextTimeout.Value - DateTime.UtcNow;
+                            var diff = nextTimeout.Value - DateTime.UtcNow;
                             if (diff < sleep)
                             {
                                 sleep = diff;
@@ -125,17 +139,17 @@ class TimeoutPoller
     }
 
     readonly SemaphoreSlim s = new SemaphoreSlim(1);
-    DateTimeOffset? NextTimeout;
+    DateTimeOffset? nextTimeout;
     static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
     Timer _next;
 
     public void Start()
     {
-        _ = _next.Change(0, -1);        
+        _ = _next.Change(0, -1);
     }
 
     public void Stop()
     {
-        _ = _next.Change(-1, -1);        
+        _ = _next.Change(-1, -1);
     }
 }

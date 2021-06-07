@@ -17,7 +17,7 @@ namespace NServiceBus.Transport.Msmq
         readonly ITimeoutStorage timeoutStorage;
         readonly TimeoutPoller timeoutPoller;
 
-        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null, ITimeoutStorage timeoutStorage = null)
+        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null, ITimeoutStorage timeoutStorage = null, MsmqAddress timeoutsErrorQueue = default, int nrOfRetries = 0)
         {
             this.transportSettings = transportSettings;
             this.timeoutsPump = timeoutsPump;
@@ -25,7 +25,7 @@ namespace NServiceBus.Transport.Msmq
 
             var dispatcher = new MsmqMessageDispatcher(transportSettings);
             Dispatcher = dispatcher;
-            timeoutPoller = new TimeoutPoller(timeoutStorage, dispatcher);
+            timeoutPoller = new TimeoutPoller(timeoutStorage, dispatcher, timeoutsErrorQueue, nrOfRetries);
         }
 
         public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
@@ -108,7 +108,7 @@ namespace NServiceBus.Transport.Msmq
                 var id = context.Headers[Headers.MessageId];
                 var destination = context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination];
                 var at = DateTimeOffsetHelper.ToDateTimeOffset(context.Headers[MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt]);
-                
+
                 var message = context.Extensions.Get<System.Messaging.Message>();
 
                 var diff = DateTime.UtcNow - at;
@@ -129,7 +129,7 @@ namespace NServiceBus.Transport.Msmq
                     };
 
                     await timeoutStorage.Store(timeout).ConfigureAwait(false);
-                    
+
                     timeoutPoller.Callback(timeout.Time);
                 }
             }

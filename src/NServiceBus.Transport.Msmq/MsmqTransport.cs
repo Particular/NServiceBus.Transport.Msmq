@@ -9,6 +9,7 @@ namespace NServiceBus
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
+    using Logging;
     using Routing;
     using Support;
     using Transport;
@@ -17,7 +18,7 @@ namespace NServiceBus
     /// <summary>
     /// Transport definition for MSMQ.
     /// </summary>
-    public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
+    public partial class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
         const string TimeoutQueueSuffix = ".timeouts";
 
@@ -38,14 +39,16 @@ namespace NServiceBus
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
-            // TODO: what to do with send only endpoints
             var useTimeouts = TimeoutStorage != null;
-
             if (useTimeouts && receivers.Length == 0 && TimeoutsErrorQueueAddress.IsEmpty())
             {
                 throw new Exception("Timeout error queue must be set for send-only endpoint.");
             }
-            
+            if (useTimeouts && receivers.Length > 0 && !TimeoutsErrorQueueAddress.IsEmpty())
+            {
+                 logger.Warn("Timeout error queue was set but ignored. The error queue configured for the endpoint will be used instead.");
+            }
+
             if (useTimeouts && TimeoutQueueAddress.IsEmpty())
             {
                 var mainReceiver = receivers.SingleOrDefault(x => x.Id == "Main");
@@ -56,9 +59,8 @@ namespace NServiceBus
 
                 var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
                 TimeoutQueueAddress = new MsmqAddress(mainQueueAddress.Queue + TimeoutQueueSuffix, mainQueueAddress.Machine);
+                TimeoutsErrorQueueAddress = MsmqAddress.Parse(mainReceiver.ErrorQueue);
             }
-            
-            
 
             if (hostSettings.CoreSettings != null)
             {
@@ -138,7 +140,7 @@ namespace NServiceBus
                 TimeoutStorageType = TimeoutStorage?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump, TimeoutStorage);
+            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, timeoutsPump, TimeoutStorage, TimeoutsErrorQueueAddress, NrOfRetries);
             await msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
 
             return msmqTransportInfrastructure;
@@ -276,26 +278,27 @@ namespace NServiceBus
 
         internal MsmqAddress TimeoutQueueAddress { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
         internal MsmqAddress TimeoutsErrorQueueAddress { get; set; }
+
+        internal int NrOfRetries { get; set; }
 
         /// <summary>
         /// Use timeouts managed via external storage
         /// </summary>
-        public void UseTimeouts(ITimeoutStorage timeoutStorage, string timeoutsQueueAddress = null, string sendOnlyErrorQueueAddress = null)
+        public void UseTimeouts(ITimeoutStorage timeoutStorage, DelayedDeliverySettings delayedDeliverySettings)
         {
             Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
             TimeoutStorage = timeoutStorage;
-            if (!string.IsNullOrEmpty(timeoutsQueueAddress))
+            if (!string.IsNullOrEmpty(delayedDeliverySettings.TimeoutsQueueAddress))
             {
-                TimeoutQueueAddress = MsmqAddress.Parse(timeoutsQueueAddress);
+                TimeoutQueueAddress = MsmqAddress.Parse(delayedDeliverySettings.TimeoutsQueueAddress);
             }
-            if (!string.IsNullOrEmpty(sendOnlyErrorQueueAddress))
+            if (!string.IsNullOrEmpty(delayedDeliverySettings.SendOnlyErrorQueueAddress))
             {
-                TimeoutsErrorQueueAddress = MsmqAddress.Parse(sendOnlyErrorQueueAddress);
+                TimeoutsErrorQueueAddress = MsmqAddress.Parse(delayedDeliverySettings.SendOnlyErrorQueueAddress);
             }
+
+            NrOfRetries = delayedDeliverySettings.NrOfRetries;
         }
 
         /// <summary>
@@ -346,5 +349,7 @@ namespace NServiceBus
         protected internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
 
         internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
+
+        static ILog logger = LogManager.GetLogger<MsmqTransport>();
     }
 }
