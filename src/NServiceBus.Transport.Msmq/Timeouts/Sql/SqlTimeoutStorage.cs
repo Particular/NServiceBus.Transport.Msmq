@@ -45,7 +45,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
                 cmd.Parameters.AddWithValue("@time", timeout.Time);
                 cmd.Parameters.AddWithValue("@headers", timeout.Headers);
                 cmd.Parameters.AddWithValue("@state", timeout.State);
-                _ = await cmd.ExecuteNonQueryAsync();
+                _ = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
         }
     }
@@ -60,12 +60,12 @@ public class SqlTimeoutStorage : ITimeoutStorage
     public async Task<bool> Remove(TimeoutItem timeout)
     {
         var sql = string.Format(SqlDelete, tableName);
-        using (var cn = await createSqlConnection())
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
         {
             cmd.Parameters.AddWithValue("@id", timeout.Id);
-            await cn.OpenAsync();
-            var affected = await cmd.ExecuteNonQueryAsync();
+            await cn.OpenAsync().ConfigureAwait(false);
+            var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
             return affected == 1;
         }
     }
@@ -78,12 +78,12 @@ public class SqlTimeoutStorage : ITimeoutStorage
     public async Task<bool> BumpFailureCount(TimeoutItem timeout)
     {
         var sql = string.Format(SqlUpdate, tableName);
-        using (var cn = await createSqlConnection())
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
         {
             cmd.Parameters.AddWithValue("@id", timeout.Id);
-            await cn.OpenAsync();
-            var affected = await cmd.ExecuteNonQueryAsync();
+            await cn.OpenAsync().ConfigureAwait(false);
+            var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
             return affected == 1;
         }
     }
@@ -117,12 +117,12 @@ public class SqlTimeoutStorage : ITimeoutStorage
     public async Task<DateTimeOffset?> Next()
     {
         var sql = string.Format("Select top 1 Time FROM {0} ORDER BY Time", tableName);
-        using (var cn = await createSqlConnection())
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
         {
             await cn.OpenAsync().ConfigureAwait(false);
-            var result = (DateTime?) await cmd.ExecuteScalarAsync();
-            return result.HasValue ? (DateTimeOffset?) new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
+            var result = (DateTime?)await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+            return result.HasValue ? (DateTimeOffset?)new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
         }
     }
 
@@ -137,22 +137,22 @@ public class SqlTimeoutStorage : ITimeoutStorage
 
         var result = new List<TimeoutItem>(100);
 
-        using (var cn = await createSqlConnection())
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
         {
             cmd.Parameters.AddWithValue("@time", at.UtcDateTime);
 
             await cn.OpenAsync().ConfigureAwait(false);
-            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult);
-            while (await reader.ReadAsync())
+            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult).ConfigureAwait(false);
+            while (await reader.ReadAsync().ConfigureAwait(false))
             {
                 result.Add(new TimeoutItem
                 {
-                    Id = (string) reader[0],
-                    Destination = (string) reader[1],
-                    Time = (DateTime) reader[2],
-                    Headers = (byte[]) reader[3],
-                    State = (byte[]) reader[4]
+                    Id = (string)reader[0],
+                    Destination = (string)reader[1],
+                    Time = (DateTime)reader[2],
+                    Headers = (byte[])reader[3],
+                    State = (byte[])reader[4]
                 });
             }
         }
@@ -163,5 +163,5 @@ public class SqlTimeoutStorage : ITimeoutStorage
     const string SqlFetch = "Select top 100 Id,Destination,Time,Headers,State FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
 
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
-    const string SqlUpdate = "UPDATE {0} SET NrOfRetries = NrOfRetries + 1 WHERE Id = @id";
+    const string SqlUpdate = "UPDATE {0} SET RetryCount = RetryCount + 1 WHERE Id = @id";
 }

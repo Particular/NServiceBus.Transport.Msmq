@@ -14,10 +14,12 @@ namespace NServiceBus.Transport.Msmq
     class MsmqMessageDispatcher : IMessageDispatcher
     {
         readonly MsmqTransport transportSettings;
+        readonly string timeoutsQueue;
 
-        public MsmqMessageDispatcher(MsmqTransport transportSettings)
+        public MsmqMessageDispatcher(MsmqTransport transportSettings, string timeoutsQueue)
         {
             this.transportSettings = transportSettings;
+            this.timeoutsQueue = timeoutsQueue;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction,
@@ -43,8 +45,8 @@ namespace NServiceBus.Transport.Msmq
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
+            string destination;
             var message = transportOperation.Message;
-            string destination = transportSettings.DelayedDeliverySettings.TimeoutsQueueAddress.ToString();
 
             bool isDelayedMessage = transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null;
 
@@ -64,6 +66,8 @@ namespace NServiceBus.Transport.Msmq
 
                 transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
                 transportOperation.Properties[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+
+                destination = timeoutsQueue;
             }
             else
             {

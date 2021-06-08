@@ -13,7 +13,6 @@ static class DispatcherExt
         headers = headers
             .Where(kv => !kv.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
-        
         var request = new OutgoingMessage(
             messageId: id,
             headers: headers,
@@ -27,4 +26,5 @@ static class DispatcherExt
             outgoingMessages: new TransportOperations(operation),
             transaction: transportTransaction
         );
-    }}
+    }
+}
