@@ -1,4 +1,3 @@
-using NServiceBus;
 using System;
 using System.Linq;
 using System.Threading;
@@ -10,19 +9,19 @@ using NServiceBus.Transport.Msmq;
 
 class TimeoutPoller
 {
-    ILog Log = LogManager.GetLogger<TimeoutPoller>();
-    ITimeoutStorage TimeoutStorage;
-    MsmqMessageDispatcher Dispatcher;
-    MsmqAddress errorQueue;
-    int nrOfRetries;
+    static readonly ILog Log = LogManager.GetLogger<TimeoutPoller>();
+    ITimeoutStorage timeoutStorage;
+    MsmqMessageDispatcher dispatcher;
+    string errorQueue;
+    int numberOfRetries;
 
-    public TimeoutPoller(DelayedDeliverySettings delayedDeliverySettings, MsmqMessageDispatcher dispatcher)
+    public TimeoutPoller(MsmqMessageDispatcher dispatcher, ITimeoutStorage timeoutStorage, int numberOfRetries, string timeoutsErrorQueue)
     {
-        TimeoutStorage = delayedDeliverySettings.TimeoutStorage;
-        errorQueue = delayedDeliverySettings.GetErrorQueueAddress();
-        nrOfRetries = delayedDeliverySettings.NrOfRetries;
-        Dispatcher = dispatcher;
-        _next = new Timer(s => Callback(null), null, -1, -1);
+        this.timeoutStorage = timeoutStorage;
+        errorQueue = timeoutsErrorQueue;
+        this.numberOfRetries = numberOfRetries;
+        this.dispatcher = dispatcher;
+        next = new Timer(s => Callback(null), null, -1, -1);
     }
 
     public async void Callback(DateTimeOffset? at)
@@ -46,7 +45,7 @@ class TimeoutPoller
                 var now = DateTime.UtcNow;
                 {
                     // TODO: What to do when storage down? Critical error!
-                    var timeouts = await TimeoutStorage.FetchDueTimeouts(now);
+                    var timeouts = await timeoutStorage.FetchDueTimeouts(now).ConfigureAwait(false);
 
                     var tasks = timeouts.Select(async timeout =>
                     {
@@ -58,12 +57,12 @@ class TimeoutPoller
                                 transportTransaction.Set(Transaction.Current);
 
                                 // If retries deplete, we want to send the timeout to the error queue and remove it from storage
-                                var timeoutDestination = timeout.NrOfRetries > nrOfRetries
-                                    ? errorQueue.ToString()
+                                var timeoutDestination = timeout.NrOfRetries > numberOfRetries
+                                    ? errorQueue
                                     : timeout.Destination;
 
                                 var diff = timeout.Time - DateTime.UtcNow;
-                                var success = await TimeoutStorage.Remove(timeout).ConfigureAwait(false);
+                                var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
 
                                 if (!success)
                                 {
@@ -73,7 +72,7 @@ class TimeoutPoller
 
                                 Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
 
-                                await Dispatcher.Dispatch(
+                                await dispatcher.Dispatch(
                                                     timeout.Id,
                                                     timeout.Headers,
                                                     timeout.State,
@@ -87,7 +86,7 @@ class TimeoutPoller
                         }
                         catch (Exception)
                         {
-                            await TimeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+                            await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
                         }
                     });
 
@@ -96,7 +95,7 @@ class TimeoutPoller
 
                     if (timeouts.Count == 0)
                     {
-                        var next = await TimeoutStorage.Next();
+                        var next = await timeoutStorage.Next().ConfigureAwait(false);
 
                         if (next.HasValue)
                         {
@@ -121,7 +120,7 @@ class TimeoutPoller
                         if (sleep.Ticks > 0)
                         {
                             Log.DebugFormat("Sleep: {0}", sleep);
-                            _next.Change(sleep, System.Threading.Timeout.InfiniteTimeSpan);
+                            this.next.Change(sleep, Timeout.InfiniteTimeSpan);
                             break;
                         }
                     }
@@ -142,15 +141,15 @@ class TimeoutPoller
     readonly SemaphoreSlim s = new SemaphoreSlim(1);
     DateTimeOffset? nextTimeout;
     static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
-    Timer _next;
+    Timer next;
 
     public void Start()
     {
-        _ = _next.Change(0, -1);
+        _ = next.Change(0, -1);
     }
 
     public void Stop()
     {
-        _ = _next.Change(-1, -1);
+        _ = next.Change(-1, -1);
     }
 }

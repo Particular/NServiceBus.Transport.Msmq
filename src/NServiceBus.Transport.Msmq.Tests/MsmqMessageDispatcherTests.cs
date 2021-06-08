@@ -73,7 +73,7 @@
                 MsmqHelpers.DeleteQueue(path);
                 MsmqHelpers.CreateQueue(path);
 
-                var messageSender = new MsmqMessageDispatcher(settings);
+                var messageSender = new MsmqMessageDispatcher(settings, "timeouts");
 
                 var bytes = new byte[]
                 {

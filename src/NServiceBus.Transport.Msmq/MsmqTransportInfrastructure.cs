@@ -1,4 +1,3 @@
-using NServiceBus.Logging;
 
 namespace NServiceBus.Transport.Msmq
 {
@@ -17,15 +16,15 @@ namespace NServiceBus.Transport.Msmq
         readonly ITimeoutStorage timeoutStorage;
         readonly TimeoutPoller timeoutPoller;
 
-        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MessagePump timeoutsPump = null)
+        public MsmqTransportInfrastructure(MsmqTransport transportSettings, MsmqMessageDispatcher dispatcher, MessagePump timeoutsPump, TimeoutPoller timeoutPoller)
         {
             this.transportSettings = transportSettings;
             this.timeoutsPump = timeoutsPump;
+            this.timeoutPoller = timeoutPoller;
             timeoutStorage = transportSettings.DelayedDeliverySettings.TimeoutStorage;
 
-            var dispatcher = new MsmqMessageDispatcher(transportSettings);
             Dispatcher = dispatcher;
-            timeoutPoller = new TimeoutPoller(transportSettings.DelayedDeliverySettings, dispatcher);
+
         }
 
         public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
@@ -81,8 +80,8 @@ namespace NServiceBus.Transport.Msmq
         {
             if (timeoutsPump != null)
             {
-                await timeoutsPump.Initialize(PushRuntimeSettings.Default, OnTimeoutMessageReceived, OnTimeoutError, CancellationToken.None);
-                await timeoutsPump.StartReceive(CancellationToken.None);
+                await timeoutsPump.Initialize(PushRuntimeSettings.Default, OnTimeoutMessageReceived, OnTimeoutError, CancellationToken.None).ConfigureAwait(false);
+                await timeoutsPump.StartReceive(CancellationToken.None).ConfigureAwait(false);
 
                 timeoutPoller.Start();
             }
@@ -98,7 +97,7 @@ namespace NServiceBus.Transport.Msmq
         {
             try
             {
-                var isTimeout = context.Headers.Any(x=> x.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix));
+                var isTimeout = context.Headers.Any(x => x.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix));
 
                 if (!isTimeout)
                 {
@@ -115,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
 
                 if (diff.Ticks > 0) // Due
                 {
-                    await Dispatcher.Dispatch(id, message.Extension, context.Body, destination, context.TransportTransaction);
+                    await Dispatcher.Dispatch(id, message.Extension, context.Body, destination, context.TransportTransaction).ConfigureAwait(false);
                 }
                 else
                 {

@@ -1,6 +1,5 @@
 namespace NServiceBus.Transport.Msmq.Timeouts
 {
-    using System.Data;
     using System.Data.SqlClient;
     using System.Threading.Tasks;
     using System.Threading;
@@ -74,7 +73,7 @@ begin
         State varbinary(max),
         Time datetime,
         Headers varbinary(max) not null,
-        NrOfRetries INT NOT NULL default(0)
+        RetryCount INT NOT NULL default(0)
         )
 end
 

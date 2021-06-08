@@ -25,7 +25,6 @@ namespace NServiceBus.Transport.Msmq
                 using (var msmqTransaction = new MessageQueueTransaction())
                 {
                     msmqTransaction.Begin();
-                    
                     if (!TryReceive(msmqTransaction, out message))
                     {
                         return;
