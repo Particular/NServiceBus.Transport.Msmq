@@ -45,7 +45,7 @@ namespace NServiceBus
 
             string timeoutsQueue = null;
             string timeoutsErrorQueue = null;
-            var requiresDelayedDelivery = DelayedDeliverySettings != null;
+            var requiresDelayedDelivery = DelayedDelivery != null;
 
             if (requiresDelayedDelivery)
             {
@@ -70,7 +70,7 @@ namespace NServiceBus
                     }
                     else
                     {
-                        throw new Exception("Timeouts are not supported for send-only configurations not using NServiceBus endpoint.");
+                        throw new Exception("Timeouts are not supported for send-only configurations outside of an NServiceBus endpoint.");
                     }
                 }
                 queuesToCreate.Add(timeoutsQueue);
@@ -108,7 +108,7 @@ namespace NServiceBus
 
                 if (requiresDelayedDelivery)
                 {
-                    await DelayedDeliverySettings.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
+                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
@@ -137,7 +137,7 @@ namespace NServiceBus
                     timeoutsReceiver
                     );
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDeliverySettings.TimeoutStorage, DelayedDeliverySettings.NumberOfRetries, timeoutsErrorQueue);
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, timeoutsErrorQueue);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -150,7 +150,7 @@ namespace NServiceBus
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
                 TimeoutQueue = timeoutsQueue,
-                TimeoutStorageType = DelayedDeliverySettings?.TimeoutStorage?.GetType(),
+                TimeoutStorageType = DelayedDelivery?.TimeoutStorage?.GetType(),
             });
 
             var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, dispatcher, timeoutsPump, timeoutPoller);
@@ -290,11 +290,7 @@ namespace NServiceBus
         /// <summary>
         /// Use timeouts managed via external storage
         /// </summary>
-        public DelayedDeliverySettings UseTimeouts(ITimeoutStorage timeoutStorage)
-        {
-            DelayedDeliverySettings = DelayedDeliverySettings ?? new DelayedDeliverySettings(timeoutStorage);
-            return DelayedDeliverySettings;
-        }
+        public DelayedDeliverySettings DelayedDelivery { get; set; }
 
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
@@ -345,6 +341,5 @@ namespace NServiceBus
 
         internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
 
-        internal DelayedDeliverySettings DelayedDeliverySettings { get; set; }
     }
 }

@@ -12,12 +12,11 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
-
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
         var timeoutStorage = new SqlTimeoutStorage("Server=.;Database=nservicebus;Trusted_Connection=True;");
-        TransportDefinition.UseTimeouts(timeoutStorage);
+        TransportDefinition.DelayedDelivery = new DelayedDeliverySettings(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 
