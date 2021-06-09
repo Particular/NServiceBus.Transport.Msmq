@@ -28,5 +28,5 @@ public class TimeoutItem
     /// <summary>
     ///
     /// </summary>
-    public int NrOfRetries { get; set; }
+    public int NumberOfRetries { get; set; }
 }

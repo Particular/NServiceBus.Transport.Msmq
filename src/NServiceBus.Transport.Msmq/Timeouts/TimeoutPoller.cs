@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus.Logging;
+using NServiceBus.Routing;
 using NServiceBus.Transport;
 using NServiceBus.Transport.Msmq;
 
@@ -13,12 +15,14 @@ class TimeoutPoller
     ITimeoutStorage timeoutStorage;
     MsmqMessageDispatcher dispatcher;
     string errorQueue;
+    readonly Dictionary<string, string> faultMetadata;
     int numberOfRetries;
 
-    public TimeoutPoller(MsmqMessageDispatcher dispatcher, ITimeoutStorage timeoutStorage, int numberOfRetries, string timeoutsErrorQueue)
+    public TimeoutPoller(MsmqMessageDispatcher dispatcher, ITimeoutStorage timeoutStorage, int numberOfRetries, string timeoutsErrorQueue, Dictionary<string, string> faultMetadata)
     {
         this.timeoutStorage = timeoutStorage;
         errorQueue = timeoutsErrorQueue;
+        this.faultMetadata = faultMetadata;
         this.numberOfRetries = numberOfRetries;
         this.dispatcher = dispatcher;
         next = new Timer(s => Callback(null), null, -1, -1);
@@ -47,48 +51,7 @@ class TimeoutPoller
                     // TODO: What to do when storage down? Critical error!
                     var timeouts = await timeoutStorage.FetchDueTimeouts(now).ConfigureAwait(false);
 
-                    var tasks = timeouts.Select(async timeout =>
-                    {
-                        try
-                        {
-                            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
-                            {
-                                var transportTransaction = new TransportTransaction();
-                                transportTransaction.Set(Transaction.Current);
-
-                                // If retries deplete, we want to send the timeout to the error queue and remove it from storage
-                                var timeoutDestination = timeout.NrOfRetries > numberOfRetries
-                                    ? errorQueue
-                                    : timeout.Destination;
-
-                                var diff = timeout.Time - DateTime.UtcNow;
-                                var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
-
-                                if (!success)
-                                {
-                                    // Already dispatched
-                                    return;
-                                }
-
-                                Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
-
-                                await dispatcher.Dispatch(
-                                                    timeout.Id,
-                                                    timeout.Headers,
-                                                    timeout.State,
-                                                    timeoutDestination,
-                                                    transportTransaction
-                                                )
-                                                .ConfigureAwait(false);
-
-                                tx.Complete();
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
-                        }
-                    });
+                    var tasks = timeouts.Select(timeout => HandleDueDelayedMessage(timeout));
 
                     await Task.WhenAll(tasks)
                         .ConfigureAwait(false);
@@ -135,6 +98,94 @@ class TimeoutPoller
         finally
         {
             s.Release();
+        }
+    }
+
+    async Task HandleDueDelayedMessage(TimeoutItem timeout)
+    {
+
+        try
+        {
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(Transaction.Current);
+
+                // If retries deplete, we want to send the timeout to the error queue and remove it from storage
+                var timeoutDestination = timeout.NumberOfRetries > numberOfRetries
+                    ? errorQueue
+                    : timeout.Destination;
+
+                var diff = timeout.Time - DateTime.UtcNow;
+                var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+
+                if (!success)
+                {
+                    // Already dispatched
+                    return;
+                }
+
+                Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
+
+                await dispatcher.DispatchDelayedMessage(
+                        timeout.Id,
+                        timeout.Headers,
+                        timeout.State,
+                        timeoutDestination,
+                        transportTransaction
+                    )
+                    .ConfigureAwait(false);
+
+                tx.Complete();
+            }
+        }
+        catch (Exception ex)
+        {
+            await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+
+            if (timeout.NumberOfRetries > numberOfRetries)
+            {
+                await TrySendDelayedMessageToErrorQueue(timeout, ex).ConfigureAwait(false);
+            }
+        }
+    }
+
+    async Task TrySendDelayedMessageToErrorQueue(TimeoutItem timeout, Exception exception)
+    {
+        try
+        {
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(Transaction.Current);
+
+                var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+
+                if (!success)
+                {
+                    // Already dispatched
+                    return;
+                }
+
+                var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(timeout.Headers);
+
+                ExceptionHeaderHelper.SetExceptionHeaders(headersAndProperties, exception);
+
+                foreach (var pair in faultMetadata)
+                {
+                    headersAndProperties[pair.Key] = pair.Value;
+                }
+
+                var outgoingMessage = new OutgoingMessage(timeout.Id, headersAndProperties, timeout.State);
+                var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(errorQueue));
+                await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, CancellationToken.None).ConfigureAwait(false);
+
+                tx.Complete();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to move delayed message {timeout.Id} to the error queue {errorQueue} after {timeout.NumberOfRetries} failed attempts at dispatching it to the destination", ex);
         }
     }
 

@@ -113,7 +113,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties, bool serializeProperties = false)
+        public static Message Convert(OutgoingMessage message)
         {
             var result = new Message();
 
@@ -125,11 +125,6 @@ namespace NServiceBus.Transport.Msmq
             AssignMsmqNativeCorrelationId(message, result);
 
             result.Recoverable = true;
-
-            if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
-            {
-                result.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
-            }
 
             var addCorrIdHeader = !message.Headers.ContainsKey("CorrId");
 
@@ -148,18 +143,6 @@ namespace NServiceBus.Transport.Msmq
                         Key = "CorrId",
                         Value = result.CorrelationId
                     });
-                }
-
-                if (serializeProperties)
-                {
-                    foreach (var item in dispatchProperties)
-                    {
-                        headers.Add(new HeaderInfo
-                        {
-                            Key = PropertyHeaderPrefix + item.Key,
-                            Value = item.Value
-                        });
-                    }
                 }
 
                 headerSerializer.Serialize(stream, headers);

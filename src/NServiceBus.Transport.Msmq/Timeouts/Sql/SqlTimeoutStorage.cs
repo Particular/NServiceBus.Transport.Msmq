@@ -51,7 +51,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     const string SqlInsertFormat =
-        "INSERT INTO {0} (Id,Destination,Time,Headers,State,PersistenceVersion) Values (@id,@destination,@time,@headers,@state,'1');";
+        "INSERT INTO {0} (Id,Destination,Time,Headers,State) Values (@id,@destination,@time,@headers,@state);";
 
     /// <summary>
     /// </summary>

@@ -19,8 +19,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]),
-                    new DispatchProperties());
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
@@ -35,8 +34,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]),
-                    new DispatchProperties());
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
             byte[] bufferWithNulls = new byte[message.Extension.Length + (10 * sizeof(char))];
 
             Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10 * sizeof(char)));
@@ -52,8 +50,7 @@
         public void Should_fetch_the_replyToAddress_from_responsequeue_for_backwards_compatibility()
         {
             Message message = MsmqUtilities.Convert(
-                new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]),
-                new DispatchProperties());
+                new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]));
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -66,8 +63,7 @@
         {
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id",
-                    new Dictionary<string, string> { { Headers.ReplyToAddress, "SomeAddress" } }, new byte[0]),
-                new DispatchProperties());
+                    new Dictionary<string, string> { { Headers.ReplyToAddress, "SomeAddress" } }, new byte[0]));
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -81,8 +77,7 @@
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id",
                     new Dictionary<string, string> { { Headers.MessageIntent, MessageIntentEnum.Send.ToString() } },
-                    new byte[0]),
-                new DispatchProperties());
+                    new byte[0]));
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -95,36 +90,13 @@
         {
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", new Dictionary<string, string>
-                    (), new byte[0]),
-                new DispatchProperties());
+                    (), new byte[0]));
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
         }
-
-        [Test]
-        public void Should_use_the_TTBR_in_the_send_options_if_set()
-        {
-            var properties = new DispatchProperties
-            {
-                DiscardIfNotReceivedBefore = new DiscardIfNotReceivedBefore(TimeSpan.FromDays(1))
-            };
-
-
-            Message message =
-                MsmqUtilities.Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]),
-                    properties);
-
-            Assert.AreEqual(TimeSpan.FromDays(1), message.TimeToBeReceived);
-        }
-
-        [Test]
-        public void Should_use_durable_setting() =>
-            Assert.True(MsmqUtilities
-                .Convert(new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]),
-                    new DispatchProperties()).Recoverable);
 
         [Test]
         public void Should_deserialize_if_trailing_bogus_data()
@@ -134,38 +106,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]),
-                    new DispatchProperties());
-
-            var r = new Random();
-
-            byte[] bufferWithNulls = new byte[message.Extension.Length + (10 * sizeof(char))];
-            r.NextBytes(bufferWithNulls);
-
-            Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10 * sizeof(char)));
-
-            message.Extension = bufferWithNulls;
-
-            Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
-
-            Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
-        }
-
-        [Test]
-        public void Should_serialize_properties()
-        {
-            string expected = "Hello World";
-
-            var properties = new DispatchProperties
-            {
-                DelayDeliveryWith = new DelayDeliveryWith(TimeSpan.FromSeconds(42))
-            };
-
-            Message message = MsmqUtilities.Convert(new OutgoingMessage(
-                    "message id",
-                    new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]),
-                    properties,
-                    true);
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
 
             var r = new Random();
 
