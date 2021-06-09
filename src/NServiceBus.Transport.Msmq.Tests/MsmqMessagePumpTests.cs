@@ -12,7 +12,7 @@ namespace NServiceBus.Transport.Msmq.Tests
         public void ShouldThrowIfConfiguredToReceiveFromRemoteQueue()
         {
             var receiveSettings = new ReceiveSettings("test receiver", "queue@remote", false, false, "error");
-            var messagePump = new MessagePump(mode => null, TimeSpan.Zero, (_, __, ___) => { }, new MsmqTransport(), receiveSettings);
+            var messagePump = new MessagePump(mode => null, TimeSpan.Zero, TransportTransactionMode.SendsAtomicWithReceive, false, (_, __, ___) => { }, receiveSettings);
 
             var exception = Assert.ThrowsAsync<Exception>(async () =>
             {

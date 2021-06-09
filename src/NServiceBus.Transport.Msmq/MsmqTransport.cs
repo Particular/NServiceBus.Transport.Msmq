@@ -8,6 +8,7 @@ namespace NServiceBus
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Faults;
     using Features;
     using Routing;
     using Support;
@@ -121,23 +122,28 @@ namespace NServiceBus
 
             var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue);
 
-            MessagePump timeoutsPump = null;
+            DelayedDeliveryPump delayedDeliveryPump = null;
             TimeoutPoller timeoutPoller = null;
             if (requiresDelayedDelivery)
             {
                 QueuePermissions.CheckQueue(timeoutsQueue);
                 QueuePermissions.CheckQueue(timeoutsErrorQueue);
 
-                var timeoutsReceiver = new ReceiveSettings("Timeouts", timeoutsQueue, false, false, "error");
-                timeoutsPump = new MessagePump(
-                    mode => MsmqTransportInfrastructure.SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
-                    MessageEnumeratorTimeout,
-                    hostSettings.CriticalErrorAction,
-                    this,
-                    timeoutsReceiver
-                    );
+                var staticFaultMetadata = new Dictionary<string, string>
+                {
+                    {FaultsHeaderKeys.FailedQ, timeoutsQueue},
+                    {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
+                    {Headers.ProcessingEndpoint, hostSettings.Name},
+                    {Headers.HostDisplayName, hostSettings.HostDisplayName}
+                };
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, timeoutsErrorQueue);
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, timeoutsErrorQueue, staticFaultMetadata);
+
+                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
+                    new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
+
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, staticFaultMetadata);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -153,10 +159,58 @@ namespace NServiceBus
                 TimeoutStorageType = DelayedDelivery?.TimeoutStorage?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this, dispatcher, timeoutsPump, timeoutPoller);
-            await msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction).ConfigureAwait(false);
+            var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, timeoutPoller);
+            await infrastructure.Start().ConfigureAwait(false);
 
-            return msmqTransportInfrastructure;
+            return infrastructure;
+        }
+
+        Dictionary<string, IMessageReceiver> CreateReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
+        {
+            var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
+
+            foreach (var receiver in receivers)
+            {
+                if (receiver.UsePublishSubscribe)
+                {
+                    throw new NotImplementedException("MSMQ does not support native pub/sub.");
+                }
+
+                // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
+                CheckEndpointNameComplianceForMsmq.Check(receiver.ReceiveAddress);
+                QueuePermissions.CheckQueue(receiver.ReceiveAddress);
+
+                var pump = new MessagePump(
+                    transactionMode =>
+                        SelectReceiveStrategy(transactionMode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout,
+                    TransportTransactionMode,
+                    IgnoreIncomingTimeToBeReceivedHeaders,
+                    criticalErrorAction,
+                    receiver
+                );
+
+                messagePumps.Add(pump.Id, pump);
+            }
+
+            return messagePumps;
+        }
+
+        static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
+        {
+            switch (minimumConsistencyGuarantee)
+            {
+                case TransportTransactionMode.TransactionScope:
+                    return new TransactionScopeStrategy(transactionOptions, new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.SendsAtomicWithReceive:
+                    return new SendsAtomicWithReceiveNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.ReceiveOnly:
+                    return new ReceiveOnlyNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.None:
+                    return new NoTransactionStrategy();
+                default:
+                    throw new NotSupportedException($"TransportTransactionMode {minimumConsistencyGuarantee} is not supported by the MSMQ transport");
+            }
         }
 
         void ValidateIfDtcIsAvailable()

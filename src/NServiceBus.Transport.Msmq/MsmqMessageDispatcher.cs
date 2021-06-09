@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Messaging;
@@ -40,41 +41,118 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
+        public Task DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction)
+        {
+            var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
+            var headers = new Dictionary<string, string>();
+            var properties = new DispatchProperties();
+
+            foreach (var kvp in headersAndProperties)
+            {
+                if (kvp.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix))
+                {
+                    properties[kvp.Key] = kvp.Value;
+                }
+                else
+                {
+                    headers[kvp.Key] = kvp.Value;
+                }
+            }
+
+            var request = new OutgoingMessage(id, headers, body);
+
+            SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination, properties, DispatchConsistency.Isolated));
+            return Task.CompletedTask;
+        }
+
         public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
         public const string TimeoutAt = "NServiceBus.Timeout.Expire";
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
-            string destination;
-            var message = transportOperation.Message;
-
             bool isDelayedMessage = transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null;
 
             if (isDelayedMessage)
             {
-                transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
-                DateTimeOffset deliverAt;
-
-                if (transportOperation.Properties.DelayDeliveryWith != null)
-                {
-                    deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
-                }
-                else // transportOperation.Properties.DoNotDeliverBefore != null
-                {
-                    deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
-                }
-
-                transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
-                transportOperation.Properties[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
-
-                destination = timeoutsQueue;
+                SendToDelayedDeliveryQueue(transaction, transportOperation);
             }
             else
             {
-                destination = transportOperation.Destination;
+                SendToDestination(transaction, transportOperation);
+            }
+        }
+
+        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        {
+            var message = transportOperation.Message;
+
+            transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
+            DateTimeOffset deliverAt;
+
+            if (transportOperation.Properties.DelayDeliveryWith != null)
+            {
+                deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
+            }
+            else // transportOperation.Properties.DoNotDeliverBefore != null
+            {
+                deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
             }
 
-            var destinationAddress = MsmqAddress.Parse(destination);
+            transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
+            transportOperation.Properties[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+
+            var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
+
+            foreach (var kvp in transportOperation.Properties)
+            {
+                //Use add to force exception if user adds a custom header that has the same name as the prefix + property name
+                transportOperation.Message.Headers.Add($"{MsmqUtilities.PropertyHeaderPrefix}{kvp.Key}", kvp.Value);
+            }
+
+            try
+            {
+                using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
+                {
+                    using (var toSend = MsmqUtilities.Convert(message))
+                    {
+                        toSend.UseDeadLetterQueue = true; //Always used DLQ for delayed messages
+                        toSend.UseJournalQueue = transportSettings.UseJournalQueue;
+
+                        if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                        {
+                            q.Send(toSend, string.Empty, GetIsolatedTransactionType());
+                            return;
+                        }
+
+                        if (TryGetNativeTransaction(transaction, out var activeTransaction))
+                        {
+                            q.Send(toSend, string.Empty, activeTransaction);
+                            return;
+                        }
+
+                        q.Send(toSend, string.Empty, GetTransactionTypeForSend());
+                    }
+                }
+            }
+            catch (MessageQueueException ex)
+            {
+                if (ex.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
+                {
+                    throw new QueueNotFoundException(timeoutsQueue, $"Failed to send the message to the local delayed delivery queue [{timeoutsQueue}]: queue does not exist.", ex);
+                }
+
+                ThrowFailedToSendException(timeoutsQueue, ex);
+            }
+            catch (Exception ex)
+            {
+                ThrowFailedToSendException(timeoutsQueue, ex);
+            }
+        }
+
+        void SendToDestination(TransportTransaction transaction, UnicastTransportOperation transportOperation)
+        {
+            var message = transportOperation.Message;
+            var destinationAddress = MsmqAddress.Parse(transportOperation.Destination);
 
             var dispatchProperties = transportOperation.Properties;
 
@@ -99,8 +177,13 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
                 {
-                    using (var toSend = MsmqUtilities.Convert(message, dispatchProperties, isDelayedMessage))
+                    using (var toSend = MsmqUtilities.Convert(message))
                     {
+                        if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
+                        {
+                            toSend.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
+                        }
+
                         var useDeadLetterQueue = dispatchProperties.ShouldUseDeadLetterQueue();
                         if (useDeadLetterQueue.HasValue)
                         {
@@ -146,18 +229,18 @@ namespace NServiceBus.Transport.Msmq
             {
                 if (ex.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
                 {
-                    var msg = destination == null
+                    var msg = transportOperation.Destination == null
                         ? "Failed to send message. Target address is null."
-                        : $"Failed to send message to address: [{destination}]";
+                        : $"Failed to send message to address: [{transportOperation.Destination}]";
 
-                    throw new QueueNotFoundException(destination, msg, ex);
+                    throw new QueueNotFoundException(transportOperation.Destination, msg, ex);
                 }
 
-                ThrowFailedToSendException(destination, ex);
+                ThrowFailedToSendException(transportOperation.Destination, ex);
             }
             catch (Exception ex)
             {
-                ThrowFailedToSendException(destination, ex);
+                ThrowFailedToSendException(transportOperation.Destination, ex);
             }
         }
 
