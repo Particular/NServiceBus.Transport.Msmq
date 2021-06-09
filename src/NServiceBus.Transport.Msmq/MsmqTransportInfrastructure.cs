@@ -21,10 +21,9 @@ namespace NServiceBus.Transport.Msmq
             this.transportSettings = transportSettings;
             this.timeoutsPump = timeoutsPump;
             this.timeoutPoller = timeoutPoller;
-            timeoutStorage = transportSettings.DelayedDeliverySettings.TimeoutStorage;
+            timeoutStorage = transportSettings.DelayedDelivery?.TimeoutStorage;
 
             Dispatcher = dispatcher;
-
         }
 
         public static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)

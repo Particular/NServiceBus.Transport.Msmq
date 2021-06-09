@@ -1,16 +1,16 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
+    using System;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
-    using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
-    public class When_no_explicit_error_queue_configured_for_sendonly_endpoint : NServiceBusAcceptanceTest
+    public class When_no_explicit_error_queue_configured_for_sendonly_endpoint_with_timeouts : NServiceBusAcceptanceTest
     {
         [Test]
-        public void Should_start_endpoint()
+        public void Should_throw_exception()
         {
-            Assert.DoesNotThrowAsync(async () =>
+            Assert.ThrowsAsync<Exception>(async () =>
             {
                 await Scenario.Define<Context>()
                     .WithEndpoint<EndpointWithNoErrorQConfig>()
@@ -25,7 +25,6 @@
                 EndpointSetup<ServerWithNoErrorQueueConfigured>(endpointConfiguration =>
                 {
                     endpointConfiguration.SendOnly();
-                    ((MsmqTransport)endpointConfiguration.ConfigureTransport()).DelayedDelivery = null;
                 });
             }
         }
