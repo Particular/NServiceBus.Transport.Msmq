@@ -51,7 +51,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     const string SqlInsertFormat =
-        "INSERT INTO {0} (Id,Destination,Time,Headers,State) Values (@id,@destination,@time,@headers,@state);";
+        "INSERT INTO {0} (Id,Destination,Time,Headers,State) VALUES (@id,@destination,@time,@headers,@state);";
 
     /// <summary>
     /// </summary>
@@ -116,7 +116,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <returns></returns>
     public async Task<DateTimeOffset?> Next()
     {
-        var sql = string.Format("Select top 1 Time FROM {0} ORDER BY Time", tableName);
+        var sql = $"SELECT TOP 1 Time FROM {tableName} ORDER BY Time";
         using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
         {
@@ -160,8 +160,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
         return result;
     }
 
-    const string SqlFetch = "Select top 100 Id,Destination,Time,Headers,State FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
-
+    const string SqlFetch = "SELECT TOP 100 Id,Destination,Time,Headers,State FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
     const string SqlUpdate = "UPDATE {0} SET RetryCount = RetryCount + 1 WHERE Id = @id";
 }
