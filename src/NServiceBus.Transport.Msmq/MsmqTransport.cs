@@ -120,7 +120,7 @@ namespace NServiceBus
                 QueuePermissions.CheckQueue(address);
             }
 
-            var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue);
+            var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue, OnSendCallbackForTesting);
 
             DelayedDeliveryPump delayedDeliveryPump = null;
             TimeoutPoller timeoutPoller = null;
@@ -345,6 +345,11 @@ namespace NServiceBus
         /// Use timeouts managed via external storage
         /// </summary>
         public DelayedDeliverySettings DelayedDelivery { get; set; }
+
+        /// <summary>
+        /// The callback that can be used to inject failures to the dispatcher for testing.
+        /// </summary>
+        internal Action<TransportTransaction, UnicastTransportOperation> OnSendCallbackForTesting { get; set; }
 
         /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.

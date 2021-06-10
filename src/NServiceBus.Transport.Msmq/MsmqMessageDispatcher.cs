@@ -16,11 +16,13 @@ namespace NServiceBus.Transport.Msmq
     {
         readonly MsmqTransport transportSettings;
         readonly string timeoutsQueue;
+        readonly Action<TransportTransaction, UnicastTransportOperation> onSendCallback;
 
-        public MsmqMessageDispatcher(MsmqTransport transportSettings, string timeoutsQueue)
+        public MsmqMessageDispatcher(MsmqTransport transportSettings, string timeoutsQueue, Action<TransportTransaction, UnicastTransportOperation> onSendCallback = null)
         {
             this.transportSettings = transportSettings;
             this.timeoutsQueue = timeoutsQueue;
+            this.onSendCallback = onSendCallback;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction,
@@ -84,6 +86,7 @@ namespace NServiceBus.Transport.Msmq
 
         void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
+            onSendCallback?.Invoke(transaction, transportOperation);
             var message = transportOperation.Message;
 
             transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
@@ -151,6 +154,7 @@ namespace NServiceBus.Transport.Msmq
 
         void SendToDestination(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
+            onSendCallback?.Invoke(transaction, transportOperation);
             var message = transportOperation.Message;
             var destinationAddress = MsmqAddress.Parse(transportOperation.Destination);
 

@@ -3,9 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Messaging;
-    using DelayedDelivery;
     using NUnit.Framework;
-    using Performance.TimeToBeReceived;
     using Support;
 
     [TestFixture]
