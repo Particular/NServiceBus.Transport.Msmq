@@ -137,7 +137,7 @@ namespace NServiceBus
                     {Headers.HostDisplayName, hostSettings.HostDisplayName}
                 };
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, timeoutsErrorQueue, staticFaultMetadata);
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata);
 
                 var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,

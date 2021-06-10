@@ -47,50 +47,41 @@ namespace NServiceBus.Transport.Msmq
 
         async Task TimeoutReceived(MessageContext context, CancellationToken cancellationtoken)
         {
-            try
+            if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination, out var destination))
             {
-                if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination, out var destination))
-                {
-                    throw new Exception("This message does not represent a timeout");
-                }
-
-                if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt, out var atString))
-                {
-                    throw new Exception("This message does not represent a timeout");
-                }
-
-                var id = context.NativeMessageId; //Use native message ID as a key in the delayed delivery table
-                var at = DateTimeOffsetHelper.ToDateTimeOffset(atString);
-
-                var message = context.Extensions.Get<System.Messaging.Message>();
-
-                var diff = DateTime.UtcNow - at;
-
-                if (diff.Ticks > 0) // Due
-                {
-                    await dispatcher.DispatchDelayedMessage(id, message.Extension, context.Body, destination, context.TransportTransaction).ConfigureAwait(false);
-                }
-                else
-                {
-                    var timeout = new TimeoutItem
-                    {
-                        Destination = destination,
-                        Id = id,
-                        State = context.Body,
-                        Time = at.UtcDateTime,
-                        Headers = message.Extension
-                    };
-
-                    await storage.Store(timeout).ConfigureAwait(false);
-
-                    poller.Callback(timeout.Time);
-                }
+                throw new Exception("This message does not represent a timeout");
             }
-            catch (Exception e)
+
+            if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt, out var atString))
             {
-                Console.WriteLine(e);
-                // TODO: Seems no recoverability is executed
-                throw;
+                throw new Exception("This message does not represent a timeout");
+            }
+
+            var id = context.NativeMessageId; //Use native message ID as a key in the delayed delivery table
+            var at = DateTimeOffsetHelper.ToDateTimeOffset(atString);
+
+            var message = context.Extensions.Get<System.Messaging.Message>();
+
+            var diff = DateTime.UtcNow - at;
+
+            if (diff.Ticks > 0) // Due
+            {
+                await dispatcher.DispatchDelayedMessage(id, message.Extension, context.Body, destination, context.TransportTransaction).ConfigureAwait(false);
+            }
+            else
+            {
+                var timeout = new TimeoutItem
+                {
+                    Destination = destination,
+                    Id = id,
+                    State = context.Body,
+                    Time = at.UtcDateTime,
+                    Headers = message.Extension
+                };
+
+                await storage.Store(timeout).ConfigureAwait(false);
+
+                poller.Callback(timeout.Time);
             }
         }
 
