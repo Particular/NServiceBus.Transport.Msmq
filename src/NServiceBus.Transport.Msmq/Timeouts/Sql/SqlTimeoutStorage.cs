@@ -152,7 +152,8 @@ public class SqlTimeoutStorage : ITimeoutStorage
                     Destination = (string)reader[1],
                     Time = (DateTime)reader[2],
                     Headers = (byte[])reader[3],
-                    State = (byte[])reader[4]
+                    State = (byte[])reader[4],
+                    NumberOfRetries = (int)reader[5]
                 });
             }
         }
@@ -160,7 +161,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
         return result;
     }
 
-    const string SqlFetch = "SELECT TOP 100 Id,Destination,Time,Headers,State FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY Time, Id";
+    const string SqlFetch = "SELECT TOP 100 Id,Destination,Time,Headers,State,RetryCount FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY RetryCount, Time";
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
     const string SqlUpdate = "UPDATE {0} SET RetryCount = RetryCount + 1 WHERE Id = @id";
 }
