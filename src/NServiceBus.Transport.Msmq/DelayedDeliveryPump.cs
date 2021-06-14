@@ -15,14 +15,16 @@ namespace NServiceBus.Transport.Msmq
         readonly MessagePump pump;
         readonly Dictionary<string, string> faultMetadata;
         readonly string errorQueue;
+        RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
 
-        public DelayedDeliveryPump(
-            MsmqMessageDispatcher dispatcher,
+        public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
             TimeoutPoller poller,
             ITimeoutStorage storage,
             MessagePump messagePump,
             string errorQueue,
             int numberOfRetries,
+            Action<string, Exception, CancellationToken> criticalErrorAction,
+            TimeSpan timeToWaitForStoreCircuitBreaker,
             Dictionary<string, string> faultMetadata)
         {
             this.dispatcher = dispatcher;
@@ -32,6 +34,9 @@ namespace NServiceBus.Transport.Msmq
             this.faultMetadata = faultMetadata;
             pump = messagePump;
             this.errorQueue = errorQueue;
+
+            storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker,
+                ex => criticalErrorAction("Failed to store delayed message", ex, CancellationToken.None));
         }
 
         public async Task Start()
@@ -79,7 +84,16 @@ namespace NServiceBus.Transport.Msmq
                     Headers = message.Extension
                 };
 
-                await storage.Store(timeout).ConfigureAwait(false);
+                try
+                {
+                    await storage.Store(timeout).ConfigureAwait(false);
+                    storeCircuitBreaker.Success();
+                }
+                catch (Exception e)
+                {
+                    await storeCircuitBreaker.Failure(e).ConfigureAwait(false);
+                    throw new Exception("Error while storing delayed message", e);
+                }
 
                 poller.Callback(timeout.Time);
             }
