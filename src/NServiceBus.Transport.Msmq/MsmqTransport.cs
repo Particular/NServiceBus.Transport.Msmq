@@ -143,7 +143,7 @@ namespace NServiceBus
                     MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
                     new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, staticFaultMetadata);
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
