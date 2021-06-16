@@ -9,14 +9,14 @@
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
-    public class When_delayed_delivery_storage_is_unavailable : NServiceBusAcceptanceTest
+    public class When_handling_delayed_delivery_errors_fail : NServiceBusAcceptanceTest
     {
         [Test]
-        public async Task Should_trigger_store_circuit_breaker()
+        public async Task Should_trigger_circuit_breaker()
         {
             Requires.DelayedDelivery();
 
-            var delay = TimeSpan.FromSeconds(90); //To ensure this timeout would never be actually dispatched during this test
+            var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
 
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b => b.When((session, c) =>
@@ -33,7 +33,9 @@
                 .Run();
 
             Assert.False(context.Processed);
+            Assert.False(context.MovedToErrorQueue);
             Assert.True(context.CriticalActionCalled);
+            StringAssert.AreEqualIgnoringCase("Failed to execute error handling for delayed message forwarding", context.FailureMessage);
         }
 
         public class Context : ScenarioContext
@@ -41,6 +43,7 @@
             public bool MovedToErrorQueue { get; set; }
             public bool Processed { get; set; }
             public bool CriticalActionCalled { get; set; }
+            public string FailureMessage { get; set; }
         }
 
         public class Endpoint : EndpointConfigurationBuilder
@@ -53,11 +56,12 @@
                     endpointConfiguration.SendFailedMessagesTo(Conventions.EndpointNamingConvention(typeof(ErrorSpy)));
                     endpointConfiguration.DefineCriticalErrorAction((errorContext, token) =>
                     {
+                        context.FailureMessage = errorContext.Error;
                         context.CriticalActionCalled = true;
                         return Task.CompletedTask;
                     });
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyTimeoutStorage(transport.DelayedDelivery.TimeoutStorage), 2, TimeSpan.FromSeconds(5));
+                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyTimeoutStorage(transport.DelayedDelivery.TimeoutStorage), 1, TimeSpan.FromSeconds(5));
                 });
             }
 
@@ -102,10 +106,6 @@
             }
         }
 
-        public class MyMessage : IMessage
-        {
-        }
-
         class FaultyTimeoutStorage : ITimeoutStorage
         {
             ITimeoutStorage impl;
@@ -119,16 +119,23 @@
 
             public Task<DateTimeOffset?> Next() => impl.Next();
 
-            public Task Store(TimeoutItem entity)
+            public Task Store(TimeoutItem entity) => impl.Store(entity);
+
+            public Task<bool> Remove(TimeoutItem entity)
             {
                 throw new Exception("Simulated");
             }
 
-            public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
-
-            public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
+            public Task<bool> BumpFailureCount(TimeoutItem timeout)
+            {
+                throw new Exception("Simulated");
+            }
 
             public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
+        }
+
+        public class MyMessage : IMessage
+        {
         }
     }
 }

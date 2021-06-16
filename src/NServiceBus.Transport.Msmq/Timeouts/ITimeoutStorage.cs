@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,7 +43,7 @@ public interface ITimeoutStorage
     /// </summary>
     /// <param name="at"></param>
     /// <returns></returns>
-    Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at);
+    Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at);
     ///// <summary>
     /////
     ///// </summary>

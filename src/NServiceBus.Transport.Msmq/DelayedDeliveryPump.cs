@@ -95,7 +95,7 @@ namespace NServiceBus.Transport.Msmq
                     throw new Exception("Error while storing delayed message", e);
                 }
 
-                poller.Callback(timeout.Time);
+                poller.Signal(timeout.Time);
             }
         }
 
