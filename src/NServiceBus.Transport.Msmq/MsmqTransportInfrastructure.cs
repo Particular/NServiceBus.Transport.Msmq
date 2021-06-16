@@ -33,7 +33,7 @@ namespace NServiceBus.Transport.Msmq
             if (delayedDeliveryPump != null)
             {
                 await delayedDeliveryPump.Stop(cancellationToken).ConfigureAwait(false);
-                timeoutPoller.Stop();
+                await timeoutPoller.Stop().ConfigureAwait(false);
             }
         }
     }

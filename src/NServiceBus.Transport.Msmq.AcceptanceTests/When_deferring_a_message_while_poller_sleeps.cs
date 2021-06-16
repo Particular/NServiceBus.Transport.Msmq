@@ -1,8 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
@@ -29,7 +27,7 @@
                     options.RouteToThisEndpoint();
 
                     return session.Send(new MyMessage(), options);
-                }).When(c => c.LongDelayFetched, session =>
+                }).When(c => c.LongDelayFetched && c.LongTimeoutStored, session =>
                 {
                     var options = new SendOptions();
 
@@ -49,6 +47,7 @@
         {
             public bool Processed { get; set; }
             public bool LongDelayFetched { get; set; }
+            public bool LongTimeoutStored { get; set; }
         }
 
         public class Endpoint : EndpointConfigurationBuilder
@@ -96,24 +95,24 @@
 
             public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
 
-            public Task<DateTimeOffset?> Next() => impl.Next();
+            public async Task<DateTimeOffset?> Next()
+            {
+                var next = await impl.Next().ConfigureAwait(false);
+                context.LongDelayFetched = true;
+                return next;
+            }
 
-            public Task Store(TimeoutItem entity) => impl.Store(entity);
+            public async Task Store(TimeoutItem entity)
+            {
+                await impl.Store(entity).ConfigureAwait(false);
+                context.LongTimeoutStored = true;
+            }
 
             public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
 
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
 
-            public async Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at)
-            {
-                List<TimeoutItem> result = await impl.FetchDueTimeouts(at);
-                if (result.Any())
-                {
-                    //When we fetch the initial delayed message, we signal
-                    context.LongDelayFetched = true;
-                }
-                return result;
-            }
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }
     }
 }

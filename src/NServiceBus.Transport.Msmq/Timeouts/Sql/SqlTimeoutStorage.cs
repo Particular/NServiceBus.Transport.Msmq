@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
@@ -131,11 +130,11 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// </summary>
     /// <param name="at"></param>
     /// <returns></returns>
-    public async Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at)
+    public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
     {
         var sql = string.Format(SqlFetch, tableName);
 
-        var result = new List<TimeoutItem>(100);
+        TimeoutItem result = null;
 
         using (var cn = await createSqlConnection().ConfigureAwait(false))
         using (var cmd = new SqlCommand(sql, cn))
@@ -143,10 +142,10 @@ public class SqlTimeoutStorage : ITimeoutStorage
             cmd.Parameters.AddWithValue("@time", at.UtcDateTime);
 
             await cn.OpenAsync().ConfigureAwait(false);
-            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult).ConfigureAwait(false);
-            while (await reader.ReadAsync().ConfigureAwait(false))
+            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow).ConfigureAwait(false);
+            if (await reader.ReadAsync().ConfigureAwait(false))
             {
-                result.Add(new TimeoutItem
+                result = new TimeoutItem
                 {
                     Id = (string)reader[0],
                     Destination = (string)reader[1],
@@ -154,14 +153,14 @@ public class SqlTimeoutStorage : ITimeoutStorage
                     Headers = (byte[])reader[3],
                     State = (byte[])reader[4],
                     NumberOfRetries = (int)reader[5]
-                });
+                };
             }
         }
 
         return result;
     }
 
-    const string SqlFetch = "SELECT TOP 100 Id,Destination,Time,Headers,State,RetryCount FROM {0} WITH  (updlock, rowlock) WHERE Time<@time ORDER BY RetryCount, Time";
+    const string SqlFetch = "SELECT TOP 1 Id, Destination, Time, Headers, State, RetryCount FROM {0} WITH (readpast, updlock, rowlock) WHERE Time < @time ORDER BY RetryCount, Time";
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
     const string SqlUpdate = "UPDATE {0} SET RetryCount = RetryCount + 1 WHERE Id = @id";
 }

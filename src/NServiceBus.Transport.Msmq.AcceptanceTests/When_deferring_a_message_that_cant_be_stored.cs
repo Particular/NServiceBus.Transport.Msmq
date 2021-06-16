@@ -1,7 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
     using System;
-    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
@@ -122,7 +121,7 @@
 
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
 
-            public Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at) => impl.FetchDueTimeouts(at);
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }
     }
 }

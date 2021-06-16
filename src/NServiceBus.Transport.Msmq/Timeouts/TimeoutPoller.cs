@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus.Logging;
@@ -19,150 +19,229 @@ class TimeoutPoller
         this.faultMetadata = faultMetadata;
         this.numberOfRetries = numberOfRetries;
         this.dispatcher = dispatcher;
-        next = new Timer(s => Callback(null), null, -1, -1);
         fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", TimeSpan.FromSeconds(30),
             ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex, CancellationToken.None));
 
         dispatchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageDispatch", TimeSpan.FromSeconds(30),
-            ex => criticalErrorAction("Failed fetch due delayed messages from the storage", ex, CancellationToken.None));
+            ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex, CancellationToken.None));
+
+        failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", 1, ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex, CancellationToken.None));
+
+        signalQueue = Channel.CreateBounded<bool>(1);
+        taskQueue = Channel.CreateBounded<Task>(2);
     }
 
-    public async void Callback(DateTimeOffset? at)
+    public void Start()
     {
-        bool result = s.Wait(0); // No async needed because of 0 milliseconds.
+        tokenSource = new CancellationTokenSource();
+        loopTask = Task.Run(() => Loop(tokenSource.Token));
+        completionTask = Task.Run(() => AwaitHandleTasks());
+    }
 
-        if (!result)
+    public async Task Stop()
+    {
+        tokenSource.Cancel();
+        await loopTask.ConfigureAwait(false);
+        await completionTask.ConfigureAwait(false);
+    }
+
+    public void Signal(DateTime timeoutTime)
+    {
+        //If the next timeout if within a minute from now, trigger the poller
+        if (DateTime.UtcNow.Add(MaxSleepDuration) > timeoutTime)
         {
-            return;
+            //If there is something already in the queue we are fine.
+            signalQueue.Writer.TryWrite(true);
         }
+    }
 
-        try
+    async Task AwaitHandleTasks()
+    {
+        while (await taskQueue.Reader.WaitToReadAsync().ConfigureAwait(false)) //if this returns false the channel is completed
         {
-            if (at.HasValue && nextTimeout.HasValue && at.Value >= nextTimeout.Value)
+            while (taskQueue.Reader.TryRead(out var task))
             {
-                return;
-            }
-
-            while (true)
-            {
-                DateTime now = DateTime.UtcNow;
-                List<TimeoutItem> timeouts;
                 try
                 {
-                    timeouts = await timeoutStorage.FetchDueTimeouts(now).ConfigureAwait(false);
-                    fetchCircuitBreaker.Success();
+                    await task.ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    await fetchCircuitBreaker.Failure(e).ConfigureAwait(false);
-                    await Task.Delay(1000).ConfigureAwait(false);
-                    continue;
-                }
-
-                var tasks = timeouts.Select(timeout => HandleDueDelayedMessage(timeout));
-
-                await Task.WhenAll(tasks)
-                    .ConfigureAwait(false);
-
-                if (timeouts.Count == 0)
-                {
-                    DateTimeOffset? next = await timeoutStorage.Next().ConfigureAwait(false);
-
-                    if (next.HasValue)
-                    {
-                        nextTimeout = next;
-                    }
-                    else
-                    {
-                        nextTimeout = null;
-                    }
-
-                    TimeSpan sleep = MaxSleepDuration;
-
-                    if (nextTimeout.HasValue)
-                    {
-                        TimeSpan diff = nextTimeout.Value - DateTime.UtcNow;
-                        if (diff < sleep)
-                        {
-                            sleep = diff;
-                        }
-                    }
-
-                    if (sleep.Ticks > 0)
-                    {
-                        Log.DebugFormat("Sleep: {0}", sleep);
-                        this.next.Change(sleep, Timeout.InfiniteTimeSpan);
-                        break;
-                    }
+                    failureHandlingCircuitBreaker.Failure(e);
                 }
             }
         }
-        catch (Exception e)
+    }
+
+    async Task Loop(CancellationToken cancellationToken)
+    {
+        try
         {
-            // TODO: Something with critical errors
-            Console.WriteLine(e);
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var completionSource = new TaskCompletionSource<DateTimeOffset?>();
+                    var handleTask = Poll(completionSource);
+                    await taskQueue.Writer.WriteAsync(handleTask, cancellationToken).ConfigureAwait(false);
+                    var nextPoll = await completionSource.Task.ConfigureAwait(false);
+
+                    if (nextPoll.HasValue)
+                    {
+                        using (var waitCancelled = new CancellationTokenSource())
+                        {
+                            var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token);
+
+                            var waitTask = WaitIfNeeded(nextPoll.Value, combinedSource.Token);
+                            var signalTask = WaitForSignal(combinedSource.Token);
+
+                            await Task.WhenAny(waitTask, signalTask).ConfigureAwait(false);
+                            waitCancelled.Cancel();
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception e)
+                {
+                    //Poll and HandleDueDelayedMessage have their own exception handling logic so any exception here is likely going to be related to the transaction itself
+                    await fetchCircuitBreaker.Failure(e).ConfigureAwait(false);
+                }
+            }
         }
         finally
         {
-            s.Release();
+            //No matter what we need to complete the writer so that we can stop gracefully
+            taskQueue.Writer.Complete();
+        }
+    }
+
+    async Task WaitForSignal(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await signalQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            //Ignore
+        }
+    }
+
+    Task WaitIfNeeded(DateTimeOffset nextPoll, CancellationToken cancellationToken)
+    {
+        var waitTime = nextPoll - DateTimeOffset.UtcNow;
+        if (waitTime > TimeSpan.Zero)
+        {
+            //return Task.Delay(1000, cancellationToken);
+            return Task.Delay(waitTime, cancellationToken);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    async Task Poll(TaskCompletionSource<DateTimeOffset?> result)
+    {
+        TimeoutItem timeout = null;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        try
+        {
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                timeout = await timeoutStorage.FetchNextDueTimeout(now).ConfigureAwait(false);
+                fetchCircuitBreaker.Success();
+
+                if (timeout != null)
+                {
+                    result.SetResult(null);
+                    await HandleDueDelayedMessage(timeout).ConfigureAwait(false);
+                }
+                else
+                {
+                    var nextDueTimeout = await timeoutStorage.Next().ConfigureAwait(false);
+                    if (nextDueTimeout.HasValue)
+                    {
+                        result.SetResult(nextDueTimeout);
+                    }
+                    else
+                    {
+                        //If no timeouts, wait a while
+                        result.SetResult(now.Add(MaxSleepDuration));
+                    }
+                }
+
+                tx.Complete();
+            }
+        }
+        catch (QueueNotFoundException exception)
+        {
+            if (timeout != null)
+            {
+                await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            if (timeout != null)
+            {
+                await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
+                await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+
+                if (timeout.NumberOfRetries > numberOfRetries)
+                {
+                    await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await fetchCircuitBreaker.Failure(exception).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            //In case we failed before SetResult
+            result.TrySetResult(null);
         }
     }
 
     async Task HandleDueDelayedMessage(TimeoutItem timeout)
     {
-        try
+        var transportTransaction = new TransportTransaction();
+        transportTransaction.Set(Transaction.Current);
+
+        TimeSpan diff = timeout.Time - DateTime.UtcNow;
+        var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+
+        if (!success)
         {
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
-            {
-                var transportTransaction = new TransportTransaction();
-                transportTransaction.Set(Transaction.Current);
-
-                TimeSpan diff = timeout.Time - DateTime.UtcNow;
-                bool success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
-
-                if (!success)
-                {
-                    // Already dispatched
-                    return;
-                }
-
-                Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
-
-                await dispatcher.DispatchDelayedMessage(
-                        timeout.Id,
-                        timeout.Headers,
-                        timeout.State,
-                        timeout.Destination,
-                        transportTransaction
-                    )
-                    .ConfigureAwait(false);
-
-                tx.Complete();
-            }
-
-            dispatchCircuitBreaker.Success();
+            // Already dispatched
+            return;
         }
-        catch (QueueNotFoundException exception)
-        {
-            await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
-            await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
 
-            if (timeout.NumberOfRetries > numberOfRetries)
-            {
-                await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
-            }
-        }
+        Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
+
+        await dispatcher.DispatchDelayedMessage(
+                timeout.Id,
+                timeout.Headers,
+                timeout.State,
+                timeout.Destination,
+                transportTransaction
+            )
+            .ConfigureAwait(false);
+
+        dispatchCircuitBreaker.Success();
     }
 
     async Task TrySendDelayedMessageToErrorQueue(TimeoutItem timeout, Exception exception)
     {
         try
         {
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
+            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions
+            {
+                IsolationLevel = IsolationLevel.ReadCommitted
+            }, TransactionScopeAsyncFlowOption.Enabled))
             {
                 var transportTransaction = new TransportTransaction();
                 transportTransaction.Set(Transaction.Current);
@@ -197,22 +276,21 @@ class TimeoutPoller
         }
     }
 
-
-    public void Start() => _ = next.Change(0, -1);
-
-    public void Stop() => _ = next.Change(-1, -1);
-
     readonly Dictionary<string, string> faultMetadata;
-    readonly SemaphoreSlim s = new SemaphoreSlim(1);
     ITimeoutStorage timeoutStorage;
     MsmqMessageDispatcher dispatcher;
     string errorQueue;
     int numberOfRetries;
-    DateTimeOffset? nextTimeout;
-    Timer next;
     RepeatedFailuresOverTimeCircuitBreaker fetchCircuitBreaker;
     RepeatedFailuresOverTimeCircuitBreaker dispatchCircuitBreaker;
+    FailureRateCircuitBreaker failureHandlingCircuitBreaker;
+
+    Task loopTask;
+    Task completionTask;
 
     static readonly ILog Log = LogManager.GetLogger<TimeoutPoller>();
     static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
+    Channel<bool> signalQueue;
+    Channel<Task> taskQueue;
+    CancellationTokenSource tokenSource;
 }
