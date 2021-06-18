@@ -109,7 +109,7 @@ namespace NServiceBus
 
                 if (requiresDelayedDelivery)
                 {
-                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
+                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);

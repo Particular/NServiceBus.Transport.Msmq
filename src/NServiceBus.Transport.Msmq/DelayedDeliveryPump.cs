@@ -86,13 +86,20 @@ namespace NServiceBus.Transport.Msmq
 
                 try
                 {
-                    await storage.Store(timeout).ConfigureAwait(false);
+                    await storage.BeginTransaction(context.TransportTransaction).ConfigureAwait(false);
+                    await storage.Store(timeout, context.TransportTransaction).ConfigureAwait(false);
+                    await storage.CommitTransaction(context.TransportTransaction).ConfigureAwait(false);
+
                     storeCircuitBreaker.Success();
                 }
                 catch (Exception e)
                 {
                     await storeCircuitBreaker.Failure(e).ConfigureAwait(false);
                     throw new Exception("Error while storing delayed message", e);
+                }
+                finally
+                {
+                    await storage.ReleaseTransaction(context.TransportTransaction).ConfigureAwait(false);
                 }
 
                 poller.Signal(timeout.Time);
