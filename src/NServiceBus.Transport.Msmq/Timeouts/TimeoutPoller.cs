@@ -148,15 +148,18 @@ class TimeoutPoller
         DateTimeOffset now = DateTimeOffset.UtcNow;
         try
         {
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }, TransactionScopeAsyncFlowOption.Enabled))
+            var tx = timeoutStorage.PrepareTransaction();
+            try
             {
-                timeout = await timeoutStorage.FetchNextDueTimeout(now).ConfigureAwait(false);
+                await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
+
+                timeout = await timeoutStorage.FetchNextDueTimeout(now, tx).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
                 if (timeout != null)
                 {
                     result.SetResult(null);
-                    await HandleDueDelayedMessage(timeout).ConfigureAwait(false);
+                    await HandleDueDelayedMessage(timeout, tx).ConfigureAwait(false);
                 }
                 else
                 {
@@ -172,7 +175,11 @@ class TimeoutPoller
                     }
                 }
 
-                tx.Complete();
+                await timeoutStorage.CommitTransaction(tx).ConfigureAwait(false);
+            }
+            finally
+            {
+                await timeoutStorage.ReleaseTransaction(tx).ConfigureAwait(false);
             }
         }
         catch (QueueNotFoundException exception)
@@ -206,13 +213,13 @@ class TimeoutPoller
         }
     }
 
-    async Task HandleDueDelayedMessage(TimeoutItem timeout)
+    async Task HandleDueDelayedMessage(TimeoutItem timeout, TransportTransaction transaction)
     {
         var transportTransaction = new TransportTransaction();
         transportTransaction.Set(Transaction.Current);
 
         TimeSpan diff = timeout.Time - DateTime.UtcNow;
-        var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+        var success = await timeoutStorage.Remove(timeout, transaction).ConfigureAwait(false);
 
         if (!success)
         {
@@ -238,15 +245,12 @@ class TimeoutPoller
     {
         try
         {
-            using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions
+            var tx = timeoutStorage.PrepareTransaction();
+            try
             {
-                IsolationLevel = IsolationLevel.ReadCommitted
-            }, TransactionScopeAsyncFlowOption.Enabled))
-            {
-                var transportTransaction = new TransportTransaction();
-                transportTransaction.Set(Transaction.Current);
+                await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
 
-                bool success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+                bool success = await timeoutStorage.Remove(timeout, tx).ConfigureAwait(false);
 
                 if (!success)
                 {
@@ -265,9 +269,13 @@ class TimeoutPoller
 
                 var outgoingMessage = new OutgoingMessage(timeout.Id, headersAndProperties, timeout.State);
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(errorQueue));
-                await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, CancellationToken.None).ConfigureAwait(false);
+                await dispatcher.Dispatch(new TransportOperations(transportOperation), tx, CancellationToken.None).ConfigureAwait(false);
 
-                tx.Complete();
+                await timeoutStorage.CommitTransaction(tx).ConfigureAwait(false);
+            }
+            finally
+            {
+                await timeoutStorage.ReleaseTransaction(tx).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
