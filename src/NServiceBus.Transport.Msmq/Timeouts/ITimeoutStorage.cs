@@ -57,7 +57,7 @@ public interface ITimeoutStorage
     ///
     /// </summary>
     /// <returns></returns>
-    TransportTransaction PrepareTransaction();
+    TransportTransaction CreateTransaction();
 
     /// <summary>
     /// 
@@ -77,5 +77,5 @@ public interface ITimeoutStorage
     /// </summary>
     /// <param name="transaction"></param>
     /// <returns></returns>
-    Task ReleaseTransaction(TransportTransaction transaction);
+    Task DisposeTransaction(TransportTransaction transaction);
 }

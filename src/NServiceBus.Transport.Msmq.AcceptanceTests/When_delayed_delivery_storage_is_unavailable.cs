@@ -129,13 +129,13 @@
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
 
             public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction) => impl.FetchNextDueTimeout(at, transaction);
-            public TransportTransaction PrepareTransaction() => impl.PrepareTransaction();
+            public TransportTransaction CreateTransaction() => impl.CreateTransaction();
 
             public Task BeginTransaction(TransportTransaction transaction) => impl.BeginTransaction(transaction);
 
             public Task CommitTransaction(TransportTransaction transaction) => impl.CommitTransaction(transaction);
 
-            public Task ReleaseTransaction(TransportTransaction transaction) => impl.ReleaseTransaction(transaction);
+            public Task DisposeTransaction(TransportTransaction transaction) => impl.DisposeTransaction(transaction);
         }
     }
 }

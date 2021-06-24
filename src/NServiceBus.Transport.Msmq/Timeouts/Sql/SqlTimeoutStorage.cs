@@ -164,7 +164,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <inheritdoc />
-    public TransportTransaction PrepareTransaction()
+    public TransportTransaction CreateTransaction()
     {
         if (transactionMode == TransportTransactionMode.TransactionScope)
         {
@@ -229,7 +229,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <inheritdoc />
-    public Task ReleaseTransaction(TransportTransaction transaction)
+    public Task DisposeTransaction(TransportTransaction transaction)
     {
         if (transaction.TryGet(out SqlTransaction sqlTransaction))
         {
