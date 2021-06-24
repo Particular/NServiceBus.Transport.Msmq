@@ -45,10 +45,10 @@ class TimeoutPoller
         await completionTask.ConfigureAwait(false);
     }
 
-    public void Signal(DateTime timeoutTime)
+    public void Signal(DateTimeOffset timeoutTime)
     {
-        //If the next timeout if within a minute from now, trigger the poller
-        if (DateTime.UtcNow.Add(MaxSleepDuration) > timeoutTime)
+        //If the next timeout is within a minute from now, trigger the poller
+        if (DateTimeOffset.UtcNow.Add(MaxSleepDuration) > timeoutTime)
         {
             //If there is something already in the queue we are fine.
             signalQueue.Writer.TryWrite(true);
@@ -218,7 +218,7 @@ class TimeoutPoller
         var transportTransaction = new TransportTransaction();
         transportTransaction.Set(Transaction.Current);
 
-        TimeSpan diff = timeout.Time - DateTime.UtcNow;
+        TimeSpan diff = timeout.Time - DateTimeOffset.UtcNow;
         var success = await timeoutStorage.Remove(timeout, transaction).ConfigureAwait(false);
 
         if (!success)
