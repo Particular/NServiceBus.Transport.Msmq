@@ -53,6 +53,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 if (kvp.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix))
                 {
+                    //TODO: Remove delayed delivery properties
                     properties[kvp.Key] = kvp.Value;
                 }
                 else

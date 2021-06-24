@@ -99,7 +99,7 @@ namespace NServiceBus.Transport.Msmq
                 }
                 finally
                 {
-                    await storage.ReleaseTransaction(context.TransportTransaction).ConfigureAwait(false);
+                    await storage.DisposeTransaction(context.TransportTransaction).ConfigureAwait(false);
                 }
 
                 poller.Signal(timeout.Time);

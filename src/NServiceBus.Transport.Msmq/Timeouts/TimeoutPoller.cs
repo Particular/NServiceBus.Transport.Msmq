@@ -148,7 +148,7 @@ class TimeoutPoller
         DateTimeOffset now = DateTimeOffset.UtcNow;
         try
         {
-            var tx = timeoutStorage.PrepareTransaction();
+            var tx = timeoutStorage.CreateTransaction();
             try
             {
                 await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
@@ -179,7 +179,7 @@ class TimeoutPoller
             }
             finally
             {
-                await timeoutStorage.ReleaseTransaction(tx).ConfigureAwait(false);
+                await timeoutStorage.DisposeTransaction(tx).ConfigureAwait(false);
             }
         }
         catch (QueueNotFoundException exception)
@@ -245,7 +245,7 @@ class TimeoutPoller
     {
         try
         {
-            var tx = timeoutStorage.PrepareTransaction();
+            var tx = timeoutStorage.CreateTransaction();
             try
             {
                 await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
@@ -275,7 +275,7 @@ class TimeoutPoller
             }
             finally
             {
-                await timeoutStorage.ReleaseTransaction(tx).ConfigureAwait(false);
+                await timeoutStorage.DisposeTransaction(tx).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
