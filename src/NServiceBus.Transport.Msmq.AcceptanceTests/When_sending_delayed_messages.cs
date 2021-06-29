@@ -58,17 +58,17 @@
                         await Task.WhenAll(sendTasks).ConfigureAwait(false);
                         var duration = s.Elapsed;
 
-                        Log.InfoFormat(($" Sending {Context.NrOfDelayedMessages} delayed messages took {duration}.");
-                        Log.InfoFormat(("Storing...");
+                        Log.InfoFormat($" Sending {Context.NrOfDelayedMessages} delayed messages took {duration}.");
+                        Log.InfoFormat("Storing...");
                         c.StoringTimeouts.Wait();
-                        Log.InfoFormat(($" Storing took roughly {s.Elapsed} (include sending)");
-                        Log.InfoFormat(("Dispatching...");
+                        Log.InfoFormat($" Storing took roughly {s.Elapsed} (include sending)");
+                        Log.InfoFormat("Dispatching...");
                         c.DispatchingTimeouts.Wait();
                         var dispatchDuration = DateTimeOffset.UtcNow - deliverAt;
-                        Log.InfoFormat(($" Dispatching took {dispatchDuration}");
-                        Log.InfoFormat(("Processing...");
+                        Log.InfoFormat($" Dispatching took {dispatchDuration}");
+                        Log.InfoFormat("Processing...");
                         c.Processed.Wait();
-                        Log.InfoFormat(("Done!");
+                        Log.InfoFormat("Done!");
                         var affected = await PurgeTimeoutsTable().ConfigureAwait(false);
                         Assert.AreEqual(0, affected, "No rows should remain in database.");
                     }).DoNotFailOnErrorMessages();
