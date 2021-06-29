@@ -79,7 +79,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <inheritdoc />
     public async Task<bool> BumpFailureCount(TimeoutItem timeout)
     {
-        using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
+        using (new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
         {
             using (var cn = await createSqlConnection().ConfigureAwait(false))
             using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
