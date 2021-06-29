@@ -106,6 +106,7 @@ class TimeoutPoller
                 }
                 catch (Exception e)
                 {
+                    Log.Error("Failed to poll and dispatch due timeouts from storage.", e);
                     //Poll and HandleDueDelayedMessage have their own exception handling logic so any exception here is likely going to be related to the transaction itself
                     await fetchCircuitBreaker.Failure(e).ConfigureAwait(false);
                 }
