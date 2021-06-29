@@ -9,12 +9,13 @@ using NServiceBus.AcceptanceTesting.Support;
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
     internal readonly TestableMsmqTransport TransportDefinition = new TestableMsmqTransport();
+    public static readonly string StorageConnectionString = "Server=.;Database=nservicebus;Trusted_Connection=True;";
 
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
-        var timeoutStorage = new SqlTimeoutStorage("Server=.;Database=nservicebus;Trusted_Connection=True;");
+        var timeoutStorage = new SqlTimeoutStorage(StorageConnectionString, tableName: "[SendingDelayedMessages.EndpointTimeouts]"); // TODO: Table name MUST NOT be set here
         TransportDefinition.DelayedDelivery = new DelayedDeliverySettings(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
