@@ -15,7 +15,10 @@
 
     public class When_sending_delayed_messages : NServiceBusAcceptanceTest
     {
-        [Test, Explicit]
+        static readonly TimeSpan Delay = TimeSpan.FromSeconds(5);
+        const int NrOfDelayedMessages = 10;
+
+        [Test, Explicit, Timeout(20000)]
         [TestCase(TransportTransactionMode.None)]
         [TestCase(TransportTransactionMode.ReceiveOnly)]
         [TestCase(TransportTransactionMode.SendsAtomicWithReceive)]
@@ -24,7 +27,7 @@
         {
             Requires.DelayedDelivery();
 
-            var deliverAt = DateTimeOffset.UtcNow + Context.Delay; //To ensure this timeout would never be actually dispatched during this test
+            var deliverAt = DateTimeOffset.UtcNow + Delay; //To ensure this timeout would never be actually dispatched during this test
 
             Log.InfoFormat("Dispatch at {0}", deliverAt);
 
@@ -40,12 +43,11 @@
                         await PurgeTimeoutsTable().ConfigureAwait(false);
 
                         var s = Stopwatch.StartNew();
-                        var sendTasks = new List<Task>(Context.NrOfDelayedMessages);
-
+                        var sendTasks = new List<Task>(NrOfDelayedMessages);
 
                         var limiter = new SemaphoreSlim(16);
 
-                        for (int i = 0; i < Context.NrOfDelayedMessages; i++)
+                        for (int i = 0; i < NrOfDelayedMessages; i++)
                         {
                             var options = new SendOptions();
 
@@ -58,7 +60,7 @@
                         await Task.WhenAll(sendTasks).ConfigureAwait(false);
                         var duration = s.Elapsed;
 
-                        Log.InfoFormat($" Sending {Context.NrOfDelayedMessages} delayed messages took {duration}.");
+                        Log.InfoFormat($" Sending {NrOfDelayedMessages} delayed messages took {duration}.");
                         Log.InfoFormat("Storing...");
                         c.StoringTimeouts.Wait();
                         Log.InfoFormat($" Storing took roughly {s.Elapsed} (include sending)");
@@ -93,8 +95,6 @@
 
         public class Context : ScenarioContext
         {
-            public static readonly TimeSpan Delay = TimeSpan.FromSeconds(5);
-            public const int NrOfDelayedMessages = 1;
             public readonly CountdownEvent StoringTimeouts = new CountdownEvent(NrOfDelayedMessages);
             public readonly CountdownEvent DispatchingTimeouts = new CountdownEvent(NrOfDelayedMessages);
             public readonly CountdownEvent Processed = new CountdownEvent(NrOfDelayedMessages);
