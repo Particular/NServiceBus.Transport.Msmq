@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using Logging;
     using Routing;
 
     class DelayedDeliveryPump
@@ -16,6 +17,7 @@ namespace NServiceBus.Transport.Msmq
         readonly Dictionary<string, string> faultMetadata;
         readonly string errorQueue;
         RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
+        readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
 
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
             TimeoutPoller poller,
@@ -108,6 +110,8 @@ namespace NServiceBus.Transport.Msmq
 
         async Task<ErrorHandleResult> OnError(ErrorContext errorContext, CancellationToken cancellationToken)
         {
+            Log.Error($"OnError {errorContext.Message.MessageId}", errorContext.Exception);
+
             if (errorContext.ImmediateProcessingFailures < numberOfRetries)
             {
                 return ErrorHandleResult.RetryRequired;
