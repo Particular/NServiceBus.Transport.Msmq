@@ -157,6 +157,7 @@ class TimeoutPoller
                 timeout = await timeoutStorage.FetchNextDueTimeout(now, tx).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
+                Log.Warn($"Fetch... {timeout != null}");
                 if (timeout != null)
                 {
                     result.SetResult(null);

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using NServiceBus;
+using NServiceBus.Logging;
 using NServiceBus.Transport;
 using NServiceBus.Transport.Msmq.Timeouts;
 using IsolationLevel = System.Transactions.IsolationLevel;
@@ -166,8 +167,10 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <inheritdoc />
     public TransportTransaction CreateTransaction()
     {
+        Log.Info("TransportTransactionMode = {transactionMode}");
         if (transactionMode == TransportTransactionMode.TransactionScope)
         {
+            Log.Info("Creating TransactionScope");
             //HINT: Can't make async because the scope would be lost
             var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
@@ -187,19 +190,17 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <inheritdoc />
     public async Task BeginTransaction(TransportTransaction transaction)
     {
+        var connection = await createSqlConnection().ConfigureAwait(false);
+        await connection.OpenAsync().ConfigureAwait(false);
+        transaction.Set(connection);
+
         if (transaction.TryGet(out Transaction distributedTransaction))
         {
-            var connection = await createSqlConnection().ConfigureAwait(false);
-            await connection.OpenAsync().ConfigureAwait(false);
             connection.EnlistTransaction(distributedTransaction);
-            transaction.Set(connection);
         }
         else
         {
-            var connection = await createSqlConnection().ConfigureAwait(false);
-            await connection.OpenAsync().ConfigureAwait(false);
             var sqlTransaction = connection.BeginTransaction();
-            transaction.Set(connection);
             transaction.Set(sqlTransaction);
         }
     }
@@ -209,7 +210,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     {
         var connection = transaction.Get<SqlConnection>();
 
-        if (transaction.TryGet(out TransactionScope scope))
+        if (transaction.TryGet(out TransactionScope scope)) // SHould ONLY happen in the poller
         {
             connection.Dispose();
             transaction.Remove<SqlConnection>();
@@ -219,24 +220,24 @@ public class SqlTimeoutStorage : ITimeoutStorage
         else if (transaction.TryGet(out SqlTransaction sqlTransaction))
         {
             sqlTransaction.Commit();
-            transaction.Remove<SqlTransaction>();
-
-            connection.Dispose();
-            transaction.Remove<SqlConnection>();
         }
 
         return Task.CompletedTask;
     }
+
+    static readonly ILog Log = LogManager.GetLogger<SqlTimeoutStorage>();
 
     /// <inheritdoc />
     public Task DisposeTransaction(TransportTransaction transaction)
     {
         if (transaction.TryGet(out SqlTransaction sqlTransaction))
         {
+            Log.Info("Dispose SqlTransaction");
             sqlTransaction.Dispose();
         }
         if (transaction.TryGet(out SqlConnection connection))
         {
+            Log.Info("Dispose SqlConnection");
             connection.Dispose();
         }
         if (transaction.TryGet(out TransactionRelease release))
