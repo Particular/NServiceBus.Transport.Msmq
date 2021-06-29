@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Data.SqlClient;
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
@@ -9,6 +10,7 @@
     using Logging;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
+    using Transport;
     using NUnit.Framework;
 
     public class When_sending_delayed_messages : NServiceBusAcceptanceTest
@@ -22,16 +24,26 @@
         {
             Requires.DelayedDelivery();
 
-            var deliverAt = DateTimeOffset.Now.AddSeconds(10); //To ensure this timeout would never be actually dispatched during this test
+            var deliverAt = DateTimeOffset.UtcNow + Context.Delay; //To ensure this timeout would never be actually dispatched during this test
+
+            Log.InfoFormat("Dispatch at {0}", deliverAt);
 
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b =>
                 {
-                    b.CustomConfig(cfg => cfg.ConfigureTransport<MsmqTransport>().TransportTransactionMode = transactionMode);
+                    b.CustomConfig(cfg =>
+                    {
+                        cfg.ConfigureTransport<MsmqTransport>().TransportTransactionMode = transactionMode;
+                    });
                     b.When(async (session, c) =>
                     {
+                        await PurgeTimeoutsTable().ConfigureAwait(false);
+
                         var s = Stopwatch.StartNew();
                         var sendTasks = new List<Task>(Context.NrOfDelayedMessages);
+
+
+                        var limiter = new SemaphoreSlim(16);
 
                         for (int i = 0; i < Context.NrOfDelayedMessages; i++)
                         {
@@ -39,41 +51,50 @@
 
                             options.DoNotDeliverBefore(deliverAt);
                             options.RouteToThisEndpoint();
-
-                            sendTasks.Add(session.Send(new MyMessage(), options));
+                            await limiter.WaitAsync().ConfigureAwait(false);
+                            sendTasks.Add(Task.Run(() => session.Send(new MyMessage(), options)).ContinueWith(t => limiter.Release()));
                         }
 
                         await Task.WhenAll(sendTasks).ConfigureAwait(false);
                         var duration = s.Elapsed;
 
-                        WL($" Sending {Context.NrOfDelayedMessages} delayed messages took {duration}.");
-                        WL(" Storing...");
+                        Log.InfoFormat(($" Sending {Context.NrOfDelayedMessages} delayed messages took {duration}.");
+                        Log.InfoFormat(("Storing...");
                         c.StoringTimeouts.Wait();
-                        WL($" Storing took roughly {s.Elapsed} (include sending)");
-                        WL(" Dispatching...");
+                        Log.InfoFormat(($" Storing took roughly {s.Elapsed} (include sending)");
+                        Log.InfoFormat(("Dispatching...");
                         c.DispatchingTimeouts.Wait();
                         var dispatchDuration = DateTimeOffset.UtcNow - deliverAt;
-                        WL($" Dispatching took {dispatchDuration}");
-                        WL(DateTime.UtcNow + " Done!");
+                        Log.InfoFormat(($" Dispatching took {dispatchDuration}");
+                        Log.InfoFormat(("Processing...");
+                        c.Processed.Wait();
+                        Log.InfoFormat(("Done!");
+                        var affected = await PurgeTimeoutsTable().ConfigureAwait(false);
+                        Assert.AreEqual(0, affected, "No rows should remain in database.");
                     }).DoNotFailOnErrorMessages();
                 })
-                //.Done(c => c.CriticalActionCalled)
                 .Run();
 
             //Assert.False(context.Processed);
             //Assert.True(context.CriticalActionCalled);
         }
 
-        static readonly ILog Log = LogManager.GetLogger<When_sending_delayed_messages>();
-
-        static void WL(string value)
+        static async Task<int> PurgeTimeoutsTable()
         {
-            Log.Info(value);
+            using (var cn = new SqlConnection(ConfigureEndpointMsmqTransport.StorageConnectionString))
+            {
+                await cn.OpenAsync();
+                using (var cmd = new SqlCommand("DELETE FROM [nservicebus].[dbo].[SendingDelayedMessages.EndpointTimeouts]", cn))
+                {
+                    return await cmd.ExecuteNonQueryAsync();
+                }
+            }
         }
 
         public class Context : ScenarioContext
         {
-            public const int NrOfDelayedMessages = 1000;
+            public static readonly TimeSpan Delay = TimeSpan.FromSeconds(5);
+            public const int NrOfDelayedMessages = 1;
             public readonly CountdownEvent StoringTimeouts = new CountdownEvent(NrOfDelayedMessages);
             public readonly CountdownEvent DispatchingTimeouts = new CountdownEvent(NrOfDelayedMessages);
             public readonly CountdownEvent Processed = new CountdownEvent(NrOfDelayedMessages);
@@ -129,41 +150,41 @@
                 this.context = context;
                 timeoutStorageImplementation = impl;
             }
-
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => timeoutStorageImplementation.Initialize(endpointName, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transportTransactionMode, CancellationToken cancellationToken) => timeoutStorageImplementation.Initialize(endpointName, transportTransactionMode, cancellationToken);
 
             public Task<DateTimeOffset?> Next() => timeoutStorageImplementation.Next();
 
-            public Task Store(TimeoutItem entity)
+            public Task Store(TimeoutItem entity, TransportTransaction transportTransaction)
             {
-                System.Transactions.Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
-                return timeoutStorageImplementation.Store(entity);
-            }
-
-            public Task<bool> Remove(TimeoutItem entity)
-            {
-                System.Transactions.Transaction.Current.TransactionCompleted += (s, e) => context.DispatchingTimeouts.Signal();
-                return timeoutStorageImplementation.Remove(entity);
+                context.StoringTimeouts.Signal();
+                return timeoutStorageImplementation.Store(entity, transportTransaction);
             }
 
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => timeoutStorageImplementation.BumpFailureCount(timeout);
 
-            public Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at) => timeoutStorageImplementation.FetchDueTimeouts(at);
+            public Task<bool> Remove(TimeoutItem entity, TransportTransaction transaction) => timeoutStorageImplementation.Remove(entity, transaction);
+            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction)
+            {
+                var entity = await timeoutStorageImplementation.FetchNextDueTimeout(at, transaction);
+
+                if (entity != null)
+                {
+                    context.DispatchingTimeouts.Signal();
+                }
+
+                return entity;
+            }
+
+            public TransportTransaction CreateTransaction() => timeoutStorageImplementation.CreateTransaction();
+            public Task BeginTransaction(TransportTransaction transaction) => timeoutStorageImplementation.BeginTransaction(transaction);
+            public async Task CommitTransaction(TransportTransaction transaction)
+            {
+                await timeoutStorageImplementation.CommitTransaction(transaction);
+            }
+
+            public Task DisposeTransaction(TransportTransaction transaction) => timeoutStorageImplementation.DisposeTransaction(transaction);
         }
 
-        class FakeTimeoutStorage : ITimeoutStorage
-        {
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => Task.CompletedTask;
-
-            public Task<DateTimeOffset?> Next() => Task.FromResult((DateTimeOffset?)DateTimeOffset.UtcNow.AddYears(1));
-
-            public Task Store(TimeoutItem entity) => Task.CompletedTask;
-
-            public Task<bool> Remove(TimeoutItem entity) => Task.FromResult(true);
-
-            public Task<bool> BumpFailureCount(TimeoutItem timeout) => Task.FromResult(true);
-
-            public Task<List<TimeoutItem>> FetchDueTimeouts(DateTimeOffset at) => Task.FromResult(new List<TimeoutItem>(0));
-        }
+        static readonly ILog Log = LogManager.GetLogger<When_sending_delayed_messages>();
     }
 }
