@@ -15,7 +15,7 @@ using IsolationLevel = System.Transactions.IsolationLevel;
 public class SqlTimeoutStorage : ITimeoutStorage
 {
     const string SqlInsert = "INSERT INTO {0} (Id, Destination, Time, Headers, State) VALUES (@id, @destination, @time, @headers, @state);";
-    const string SqlFetch = "SELECT TOP 1 Id, Destination, Time, Headers, State, RetryCount FROM {0} WITH (READPAST, UPDLOCK, ROWLOCK) WHERE Time < @time ORDER BY RetryCount, Time";
+    const string SqlFetch = "SELECT TOP 1 Id, Destination, Time, Headers, State, RetryCount FROM {0} WITH (READPAST, UPDLOCK, ROWLOCK) WHERE Time < @time ORDER BY Time";
     const string SqlDelete = "DELETE {0} WHERE Id = @id";
     const string SqlUpdate = "UPDATE {0} SET RetryCount = RetryCount + 1 WHERE Id = @id";
     const string SqlGetNext = "SELECT TOP 1 Time FROM {0} ORDER BY Time";
