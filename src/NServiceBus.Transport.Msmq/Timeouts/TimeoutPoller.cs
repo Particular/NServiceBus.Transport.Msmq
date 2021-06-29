@@ -218,7 +218,7 @@ class TimeoutPoller
         var transportTransaction = new TransportTransaction();
         transportTransaction.Set(Transaction.Current);
 
-        TimeSpan diff = timeout.Time - DateTimeOffset.UtcNow;
+        TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
         var success = await timeoutStorage.Remove(timeout, transaction).ConfigureAwait(false);
 
         if (!success)
