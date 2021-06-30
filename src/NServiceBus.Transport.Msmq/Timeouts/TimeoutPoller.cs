@@ -193,6 +193,7 @@ class TimeoutPoller
         }
         catch (Exception exception)
         {
+            Log.Error("Failure during timeout polling.", exception);
             if (timeout != null)
             {
                 await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
