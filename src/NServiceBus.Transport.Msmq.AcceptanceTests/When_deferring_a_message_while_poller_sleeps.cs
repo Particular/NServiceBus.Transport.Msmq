@@ -93,7 +93,7 @@
                 this.context = context;
             }
 
-            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
+            public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
 
             public async Task<DateTimeOffset?> Next()
             {
@@ -102,24 +102,17 @@
                 return next;
             }
 
-            public async Task Store(TimeoutItem entity, TransportTransaction transaction)
+            public async Task Store(TimeoutItem entity)
             {
-                await impl.Store(entity, transaction).ConfigureAwait(false);
+                await impl.Store(entity).ConfigureAwait(false);
                 context.LongTimeoutStored = true;
             }
 
-            public Task<bool> Remove(TimeoutItem entity, TransportTransaction transaction) => impl.Remove(entity, transaction);
+            public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
 
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
 
-            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction) => impl.FetchNextDueTimeout(at, transaction);
-            public TransportTransaction CreateTransaction() => impl.CreateTransaction();
-
-            public Task BeginTransaction(TransportTransaction transaction) => impl.BeginTransaction(transaction);
-
-            public Task CommitTransaction(TransportTransaction transaction) => impl.CommitTransaction(transaction);
-
-            public Task DisposeTransaction(TransportTransaction transaction) => impl.DisposeTransaction(transaction);
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }
     }
 }

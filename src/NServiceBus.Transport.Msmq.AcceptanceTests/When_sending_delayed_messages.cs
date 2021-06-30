@@ -6,30 +6,34 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Transactions;
     using AcceptanceTesting;
     using Logging;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
-    using Transport;
     using NUnit.Framework;
 
     public class When_sending_delayed_messages : NServiceBusAcceptanceTest
     {
-        static readonly TimeSpan Delay = TimeSpan.FromSeconds(5);
-        const int NrOfDelayedMessages = 10;
+        static readonly TimeSpan Delay = TimeSpan.FromSeconds(25);
+        const int NrOfDelayedMessages = 10000;
 
-        [Test, Explicit, Timeout(20000)]
+        [Test]
+        [Explicit]
+        [Timeout(600000)]
         [TestCase(TransportTransactionMode.None)]
         [TestCase(TransportTransactionMode.ReceiveOnly)]
         [TestCase(TransportTransactionMode.SendsAtomicWithReceive)]
         [TestCase(TransportTransactionMode.TransactionScope)]
         public async Task Should_work_for_transaction_mode(TransportTransactionMode transactionMode)
         {
+            //AppDomain.CurrentDomain.FirstChanceException += (s, e) => Log.Fatal("FirstChanceException" + new StackTrace(e.Exception, 1), e.Exception);
+
             Requires.DelayedDelivery();
 
             var deliverAt = DateTimeOffset.UtcNow + Delay; //To ensure this timeout would never be actually dispatched during this test
 
-            Log.InfoFormat("Dispatch at {0}", deliverAt);
+            Log.Info($"Dispatch at {deliverAt:O}");
 
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<Endpoint>(b =>
@@ -60,14 +64,16 @@
                         await Task.WhenAll(sendTasks).ConfigureAwait(false);
                         var duration = s.Elapsed;
 
-                        Log.InfoFormat($" Sending {NrOfDelayedMessages} delayed messages took {duration}.");
+                        Log.InfoFormat($"Sending {NrOfDelayedMessages} delayed messages took {duration}.");
                         Log.InfoFormat("Storing...");
                         c.StoringTimeouts.Wait();
-                        Log.InfoFormat($" Storing took roughly {s.Elapsed} (include sending)");
+                        Log.InfoFormat($"Storing took roughly {s.Elapsed} (include sending)");
+
+                        Assert.Less(DateTimeOffset.UtcNow, deliverAt, "Storing not happened within timeout due timestamp");
                         Log.InfoFormat("Dispatching...");
                         c.DispatchingTimeouts.Wait();
                         var dispatchDuration = DateTimeOffset.UtcNow - deliverAt;
-                        Log.InfoFormat($" Dispatching took {dispatchDuration}");
+                        Log.InfoFormat($"Dispatching took {dispatchDuration}");
                         Log.InfoFormat("Processing...");
                         c.Processed.Wait();
                         Log.InfoFormat("Done!");
@@ -142,30 +148,29 @@
 
         class WrapTimeoutStorage : ITimeoutStorage
         {
-            ITimeoutStorage timeoutStorageImplementation;
-            Context context;
+            readonly ITimeoutStorage timeoutStorageImplementation;
+            readonly Context context;
 
             public WrapTimeoutStorage(ITimeoutStorage impl, Context context)
             {
                 this.context = context;
                 timeoutStorageImplementation = impl;
             }
-            public Task Initialize(string endpointName, TransportTransactionMode transportTransactionMode, CancellationToken cancellationToken) => timeoutStorageImplementation.Initialize(endpointName, transportTransactionMode, cancellationToken);
+            public Task Initialize(string endpointName, CancellationToken cancellationToken) => timeoutStorageImplementation.Initialize(endpointName, cancellationToken);
 
             public Task<DateTimeOffset?> Next() => timeoutStorageImplementation.Next();
 
-            public Task Store(TimeoutItem entity, TransportTransaction transportTransaction)
+            public Task Store(TimeoutItem entity)
             {
-                context.StoringTimeouts.Signal();
-                return timeoutStorageImplementation.Store(entity, transportTransaction);
+                Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
+                return timeoutStorageImplementation.Store(entity);
             }
-
             public Task<bool> BumpFailureCount(TimeoutItem timeout) => timeoutStorageImplementation.BumpFailureCount(timeout);
 
-            public Task<bool> Remove(TimeoutItem entity, TransportTransaction transaction) => timeoutStorageImplementation.Remove(entity, transaction);
-            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction)
+            public Task<bool> Remove(TimeoutItem entity) => timeoutStorageImplementation.Remove(entity);
+            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
             {
-                var entity = await timeoutStorageImplementation.FetchNextDueTimeout(at, transaction);
+                var entity = await timeoutStorageImplementation.FetchNextDueTimeout(at);
 
                 if (entity != null)
                 {
@@ -174,15 +179,6 @@
 
                 return entity;
             }
-
-            public TransportTransaction CreateTransaction() => timeoutStorageImplementation.CreateTransaction();
-            public Task BeginTransaction(TransportTransaction transaction) => timeoutStorageImplementation.BeginTransaction(transaction);
-            public async Task CommitTransaction(TransportTransaction transaction)
-            {
-                await timeoutStorageImplementation.CommitTransaction(transaction);
-            }
-
-            public Task DisposeTransaction(TransportTransaction transaction) => timeoutStorageImplementation.DisposeTransaction(transaction);
         }
 
         static readonly ILog Log = LogManager.GetLogger<When_sending_delayed_messages>();

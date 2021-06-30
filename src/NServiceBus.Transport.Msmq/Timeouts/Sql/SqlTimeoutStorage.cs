@@ -3,12 +3,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
-using NServiceBus;
-using NServiceBus.Logging;
-using NServiceBus.Transport;
 using NServiceBus.Transport.Msmq.Timeouts;
-using IsolationLevel = System.Transactions.IsolationLevel;
 
 /// <summary>
 ///
@@ -24,7 +19,6 @@ public class SqlTimeoutStorage : ITimeoutStorage
     string schema;
     string tableName;
     CreateSqlConnection createSqlConnection;
-    TransportTransactionMode transactionMode;
 
     string insertCommand;
     string removeCommand;
@@ -52,26 +46,30 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <inheritdoc />
-    public async Task Store(TimeoutItem timeout, TransportTransaction transaction)
+    public async Task Store(TimeoutItem timeout)
     {
-        using (var cmd = CreateCommand(insertCommand, transaction))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
+        using (var cmd = new SqlCommand(insertCommand, cn))
         {
             cmd.Parameters.AddWithValue("@id", timeout.Id);
             cmd.Parameters.AddWithValue("@destination", timeout.Destination);
             cmd.Parameters.AddWithValue("@time", timeout.Time);
             cmd.Parameters.AddWithValue("@headers", timeout.Headers);
             cmd.Parameters.AddWithValue("@state", timeout.State);
+            await cn.OpenAsync().ConfigureAwait(false);
             _ = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
     }
 
 
     /// <inheritdoc />
-    public async Task<bool> Remove(TimeoutItem timeout, TransportTransaction transaction)
+    public async Task<bool> Remove(TimeoutItem timeout)
     {
-        using (var cmd = CreateCommand(removeCommand, transaction))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
+        using (var cmd = new SqlCommand(removeCommand, cn))
         {
             cmd.Parameters.AddWithValue("@id", timeout.Id);
+            await cn.OpenAsync().ConfigureAwait(false);
             var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
             return affected == 1;
         }
@@ -80,21 +78,18 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <inheritdoc />
     public async Task<bool> BumpFailureCount(TimeoutItem timeout)
     {
-        using (new TransactionScope(TransactionScopeOption.RequiresNew, TransactionScopeAsyncFlowOption.Enabled))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
+        using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
-            using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
-            {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
-                await cn.OpenAsync().ConfigureAwait(false);
-                var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-                return affected == 1;
-            }
+            cmd.Parameters.AddWithValue("@id", timeout.Id);
+            await cn.OpenAsync().ConfigureAwait(false);
+            var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+            return affected == 1;
         }
     }
 
     /// <inheritdoc />
-    public Task Initialize(string queueName, TransportTransactionMode transportTransactionMode, CancellationToken cancellationToken)
+    public Task Initialize(string queueName, CancellationToken cancellationToken)
     {
         if (tableName == null)
         {
@@ -106,8 +101,6 @@ public class SqlTimeoutStorage : ITimeoutStorage
             tableName += $"[{queueName}Timeouts]";
         }
 
-        transactionMode = transportTransactionMode;
-
         var creator = new TimeoutTableCreator(createSqlConnection, tableName);
         return creator.CreateIfNecessary(cancellationToken);
     }
@@ -115,26 +108,25 @@ public class SqlTimeoutStorage : ITimeoutStorage
     /// <inheritdoc />
     public async Task<DateTimeOffset?> Next()
     {
-        using (new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
+        using (var cmd = new SqlCommand(nextCommand, cn))
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
-            using (var cmd = new SqlCommand(nextCommand, cn))
-            {
-                await cn.OpenAsync().ConfigureAwait(false);
-                var result = (DateTime?)await cmd.ExecuteScalarAsync().ConfigureAwait(false);
-                return result.HasValue ? (DateTimeOffset?)new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
-            }
+            await cn.OpenAsync().ConfigureAwait(false);
+            var result = (DateTime?)await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+            return result.HasValue ? (DateTimeOffset?)new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
         }
     }
 
     /// <inheritdoc />
-    public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction)
+    public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
     {
         TimeoutItem result = null;
-        using (var cmd = CreateCommand(fetchCommand, transaction))
+        using (var cn = await createSqlConnection().ConfigureAwait(false))
+        using (var cmd = new SqlCommand(fetchCommand, cn))
         {
             cmd.Parameters.AddWithValue("@time", at.UtcDateTime);
 
+            await cn.OpenAsync().ConfigureAwait(false);
             using (var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow).ConfigureAwait(false))
             {
                 if (await reader.ReadAsync().ConfigureAwait(false))
@@ -153,115 +145,5 @@ public class SqlTimeoutStorage : ITimeoutStorage
         }
 
         return result;
-    }
-
-    static SqlCommand CreateCommand(string commandText, TransportTransaction transaction)
-    {
-        var cn = transaction.Get<SqlConnection>();
-        transaction.TryGet(out SqlTransaction sqlTransaction);
-
-        var command = new SqlCommand(commandText, cn, sqlTransaction);
-        return command;
-    }
-
-    /// <inheritdoc />
-    public TransportTransaction CreateTransaction()
-    {
-        Log.Info("TransportTransactionMode = {transactionMode}");
-        if (transactionMode == TransportTransactionMode.TransactionScope)
-        {
-            Log.Info("Creating TransactionScope");
-            //HINT: Can't make async because the scope would be lost
-            var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
-                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
-
-            var transaction = new TransportTransaction();
-            transaction.Set(scope);
-            transaction.Set(Transaction.Current);
-            transaction.Set(new TransactionRelease(transaction)); //HINT: Makes sure we release the transaction because the storage owns it
-
-            return transaction;
-        }
-
-        return new TransportTransaction();
-    }
-
-    /// <inheritdoc />
-    public async Task BeginTransaction(TransportTransaction transaction)
-    {
-        var connection = await createSqlConnection().ConfigureAwait(false);
-        await connection.OpenAsync().ConfigureAwait(false);
-        transaction.Set(connection);
-
-        if (transaction.TryGet(out Transaction distributedTransaction))
-        {
-            connection.EnlistTransaction(distributedTransaction);
-        }
-        else
-        {
-            var sqlTransaction = connection.BeginTransaction();
-            transaction.Set(sqlTransaction);
-        }
-    }
-
-    /// <inheritdoc />
-    public Task CommitTransaction(TransportTransaction transaction)
-    {
-        var connection = transaction.Get<SqlConnection>();
-
-        if (transaction.TryGet(out TransactionScope scope)) // SHould ONLY happen in the poller
-        {
-            connection.Dispose();
-            transaction.Remove<SqlConnection>();
-
-            scope.Complete();
-        }
-        else if (transaction.TryGet(out SqlTransaction sqlTransaction))
-        {
-            sqlTransaction.Commit();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    static readonly ILog Log = LogManager.GetLogger<SqlTimeoutStorage>();
-
-    /// <inheritdoc />
-    public Task DisposeTransaction(TransportTransaction transaction)
-    {
-        if (transaction.TryGet(out SqlTransaction sqlTransaction))
-        {
-            Log.Info("Dispose SqlTransaction");
-            sqlTransaction.Dispose();
-        }
-        if (transaction.TryGet(out SqlConnection connection))
-        {
-            Log.Info("Dispose SqlConnection");
-            connection.Dispose();
-        }
-        if (transaction.TryGet(out TransactionRelease release))
-        {
-            release.Dispose();
-        }
-        return Task.CompletedTask;
-    }
-
-    class TransactionRelease : IDisposable
-    {
-        TransportTransaction transaction;
-
-        public TransactionRelease(TransportTransaction transaction)
-        {
-            this.transaction = transaction;
-        }
-
-        public void Dispose()
-        {
-            if (transaction.TryGet(out TransactionScope scope))
-            {
-                scope.Dispose();
-            }
-        }
     }
 }

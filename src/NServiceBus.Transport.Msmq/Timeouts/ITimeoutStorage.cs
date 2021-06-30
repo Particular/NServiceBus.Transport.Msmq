@@ -1,8 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using NServiceBus;
-using NServiceBus.Transport;
 
 /// <summary>
 ///
@@ -13,10 +11,9 @@ public interface ITimeoutStorage
     /// 
     /// </summary>
     /// <param name="endpointName"></param>
-    /// <param name="transportTransactionMode"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task Initialize(string endpointName, TransportTransactionMode transportTransactionMode, CancellationToken cancellationToken);
+    Task Initialize(string endpointName, CancellationToken cancellationToken);
     /// <summary>
     ///
     /// </summary>
@@ -27,17 +24,15 @@ public interface ITimeoutStorage
     /// 
     /// </summary>
     /// <param name="entity"></param>
-    /// <param name="transportTransaction"></param>
     /// <returns></returns>
-    Task Store(TimeoutItem entity, TransportTransaction transportTransaction);
+    Task Store(TimeoutItem entity);
 
     /// <summary>
     /// 
     /// </summary>
     /// <param name="entity"></param>
-    /// <param name="transaction"></param>
     /// <returns></returns>
-    Task<bool> Remove(TimeoutItem entity, TransportTransaction transaction);
+    Task<bool> Remove(TimeoutItem entity);
 
     /// <summary>
     ///
@@ -50,32 +45,31 @@ public interface ITimeoutStorage
     /// 
     /// </summary>
     /// <param name="at"></param>
-    /// <param name="transaction"></param>
     /// <returns></returns>
-    Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction);
-    /// <summary>
-    ///
-    /// </summary>
-    /// <returns></returns>
-    TransportTransaction CreateTransaction();
+    Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at);
+    ///// <summary>
+    /////
+    ///// </summary>
+    ///// <returns></returns>
+    //TransportTransaction CreateTransaction();
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="transaction"></param>
-    /// <returns></returns>
-    Task BeginTransaction(TransportTransaction transaction);
+    ///// <summary>
+    ///// 
+    ///// </summary>
+    ///// <param name="transaction"></param>
+    ///// <returns></returns>
+    //Task BeginTransaction(TransportTransaction transaction);
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <returns></returns>
-    Task CommitTransaction(TransportTransaction transaction);
+    ///// <summary>
+    /////
+    ///// </summary>
+    ///// <returns></returns>
+    //Task CommitTransaction(TransportTransaction transaction);
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="transaction"></param>
-    /// <returns></returns>
-    Task DisposeTransaction(TransportTransaction transaction);
+    ///// <summary>
+    ///// 
+    ///// </summary>
+    ///// <param name="transaction"></param>
+    ///// <returns></returns>
+    //Task DisposeTransaction(TransportTransaction transaction);
 }

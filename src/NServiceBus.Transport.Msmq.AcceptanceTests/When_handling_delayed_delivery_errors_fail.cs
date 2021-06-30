@@ -115,13 +115,13 @@
                 this.impl = impl;
             }
 
-            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
+            public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
 
             public Task<DateTimeOffset?> Next() => impl.Next();
 
-            public Task Store(TimeoutItem entity, TransportTransaction transaction) => impl.Store(entity, transaction);
+            public Task Store(TimeoutItem entity) => impl.Store(entity);
 
-            public Task<bool> Remove(TimeoutItem entity, TransportTransaction transaction)
+            public Task<bool> Remove(TimeoutItem entityn)
             {
                 throw new Exception("Simulated");
             }
@@ -131,14 +131,7 @@
                 throw new Exception("Simulated");
             }
 
-            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, TransportTransaction transaction) => impl.FetchNextDueTimeout(at, transaction);
-            public TransportTransaction CreateTransaction() => impl.CreateTransaction();
-
-            public Task BeginTransaction(TransportTransaction transaction) => impl.BeginTransaction(transaction);
-
-            public Task CommitTransaction(TransportTransaction transaction) => impl.CommitTransaction(transaction);
-
-            public Task DisposeTransaction(TransportTransaction transaction) => impl.DisposeTransaction(transaction);
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }
 
         public class MyMessage : IMessage

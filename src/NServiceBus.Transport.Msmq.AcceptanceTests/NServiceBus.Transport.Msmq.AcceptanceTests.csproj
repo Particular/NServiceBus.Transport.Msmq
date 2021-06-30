@@ -26,4 +26,8 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DelayedDelvery\" />
+  </ItemGroup>
+
 </Project>

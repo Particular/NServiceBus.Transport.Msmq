@@ -4,6 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Transactions;
     using Logging;
     using Routing;
 
@@ -18,6 +19,7 @@ namespace NServiceBus.Transport.Msmq
         readonly string errorQueue;
         RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
         readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
+        readonly TransactionScopeOption txOption;
 
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
             TimeoutPoller poller,
@@ -27,7 +29,8 @@ namespace NServiceBus.Transport.Msmq
             int numberOfRetries,
             Action<string, Exception, CancellationToken> criticalErrorAction,
             TimeSpan timeToWaitForStoreCircuitBreaker,
-            Dictionary<string, string> faultMetadata)
+            Dictionary<string, string> faultMetadata,
+            TransportTransactionMode transportTransactionMode)
         {
             this.dispatcher = dispatcher;
             this.poller = poller;
@@ -36,6 +39,10 @@ namespace NServiceBus.Transport.Msmq
             this.faultMetadata = faultMetadata;
             pump = messagePump;
             this.errorQueue = errorQueue;
+
+            txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
+                ? TransactionScopeOption.Required
+                : TransactionScopeOption.RequiresNew;
 
             storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker,
                 ex => criticalErrorAction("Failed to store delayed message", ex, CancellationToken.None));
@@ -88,9 +95,13 @@ namespace NServiceBus.Transport.Msmq
 
                 try
                 {
-                    await storage.BeginTransaction(context.TransportTransaction).ConfigureAwait(false);
-                    await storage.Store(timeout, context.TransportTransaction).ConfigureAwait(false);
-                    await storage.CommitTransaction(context.TransportTransaction).ConfigureAwait(false);
+                    Log.Info($"Storage store transaction ={txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
+
+                    using (var tx = new TransactionScope(txOption, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }, TransactionScopeAsyncFlowOption.Enabled))
+                    {
+                        await storage.Store(timeout).ConfigureAwait(false);
+                        tx.Complete();
+                    }
 
                     storeCircuitBreaker.Success();
                 }
@@ -98,10 +109,6 @@ namespace NServiceBus.Transport.Msmq
                 {
                     await storeCircuitBreaker.Failure(e).ConfigureAwait(false);
                     throw new Exception("Error while storing delayed message", e);
-                }
-                finally
-                {
-                    await storage.DisposeTransaction(context.TransportTransaction).ConfigureAwait(false);
                 }
 
                 poller.Signal(timeout.Time);

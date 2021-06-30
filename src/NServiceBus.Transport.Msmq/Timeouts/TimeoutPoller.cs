@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Transactions;
+using NServiceBus;
 using NServiceBus.Logging;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
@@ -12,8 +13,19 @@ using NServiceBus.Unicast.Queuing;
 
 class TimeoutPoller
 {
-    public TimeoutPoller(MsmqMessageDispatcher dispatcher, ITimeoutStorage timeoutStorage, int numberOfRetries, Action<string, Exception, CancellationToken> criticalErrorAction, string timeoutsErrorQueue, Dictionary<string, string> faultMetadata)
+    public TimeoutPoller(
+        MsmqMessageDispatcher dispatcher,
+        ITimeoutStorage timeoutStorage,
+        int numberOfRetries,
+        Action<string, Exception, CancellationToken> criticalErrorAction,
+        string timeoutsErrorQueue,
+        Dictionary<string, string> faultMetadata,
+        TransportTransactionMode transportTransactionMode
+        )
     {
+        txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
+            ? TransactionScopeOption.Required
+            : TransactionScopeOption.RequiresNew;
         this.timeoutStorage = timeoutStorage;
         errorQueue = timeoutsErrorQueue;
         this.faultMetadata = faultMetadata;
@@ -143,45 +155,43 @@ class TimeoutPoller
         return Task.CompletedTask;
     }
 
+    TransactionOptions ReadCommitted = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
+
     async Task Poll(TaskCompletionSource<DateTimeOffset?> result)
     {
         TimeoutItem timeout = null;
         DateTimeOffset now = DateTimeOffset.UtcNow;
         try
         {
-            var tx = timeoutStorage.CreateTransaction();
-            try
+            using (var tx = new TransactionScope(TransactionScopeOption.Required, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
             {
-                await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
-
-                timeout = await timeoutStorage.FetchNextDueTimeout(now, tx).ConfigureAwait(false);
+                timeout = await timeoutStorage.FetchNextDueTimeout(now).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
                 Log.Warn($"Fetch... {timeout != null}");
                 if (timeout != null)
                 {
                     result.SetResult(null);
-                    await HandleDueDelayedMessage(timeout, tx).ConfigureAwait(false);
+                    await HandleDueDelayedMessage(timeout).ConfigureAwait(false);
                 }
                 else
                 {
-                    var nextDueTimeout = await timeoutStorage.Next().ConfigureAwait(false);
-                    if (nextDueTimeout.HasValue)
+                    using (new TransactionScope(TransactionScopeOption.RequiresNew, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        result.SetResult(nextDueTimeout);
-                    }
-                    else
-                    {
-                        //If no timeouts, wait a while
-                        result.SetResult(now.Add(MaxSleepDuration));
+                        var nextDueTimeout = await timeoutStorage.Next().ConfigureAwait(false);
+                        if (nextDueTimeout.HasValue)
+                        {
+                            result.SetResult(nextDueTimeout);
+                        }
+                        else
+                        {
+                            //If no timeouts, wait a while
+                            result.SetResult(now.Add(MaxSleepDuration));
+                        }
                     }
                 }
 
-                await timeoutStorage.CommitTransaction(tx).ConfigureAwait(false);
-            }
-            finally
-            {
-                await timeoutStorage.DisposeTransaction(tx).ConfigureAwait(false);
+                tx.Complete();
             }
         }
         catch (QueueNotFoundException exception)
@@ -197,7 +207,10 @@ class TimeoutPoller
             if (timeout != null)
             {
                 await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
-                await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+                using (new TransactionScope(TransactionScopeOption.RequiresNew, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+                }
 
                 if (timeout.NumberOfRetries > numberOfRetries)
                 {
@@ -216,13 +229,10 @@ class TimeoutPoller
         }
     }
 
-    async Task HandleDueDelayedMessage(TimeoutItem timeout, TransportTransaction transaction)
+    async Task HandleDueDelayedMessage(TimeoutItem timeout)
     {
-        var transportTransaction = new TransportTransaction();
-        transportTransaction.Set(Transaction.Current);
-
         TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
-        var success = await timeoutStorage.Remove(timeout, transaction).ConfigureAwait(false);
+        var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
 
         if (!success)
         {
@@ -232,14 +242,23 @@ class TimeoutPoller
 
         Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
 
-        await dispatcher.DispatchDelayedMessage(
-                timeout.Id,
-                timeout.Headers,
-                timeout.State,
-                timeout.Destination,
-                transportTransaction
-            )
-            .ConfigureAwait(false);
+        Log.Info($"Dispatch transport transaction = {txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
+
+        using (var tx = new TransactionScope(txOption, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+        {
+            var transportTransaction = new TransportTransaction();
+            transportTransaction.Set(Transaction.Current);
+            await dispatcher.DispatchDelayedMessage(
+                    timeout.Id,
+                    timeout.Headers,
+                    timeout.State,
+                    timeout.Destination,
+                    transportTransaction
+                )
+                .ConfigureAwait(false);
+
+            tx.Complete();
+        }
 
         dispatchCircuitBreaker.Success();
     }
@@ -248,37 +267,35 @@ class TimeoutPoller
     {
         try
         {
-            var tx = timeoutStorage.CreateTransaction();
-            try
+            bool success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+
+            if (!success)
             {
-                await timeoutStorage.BeginTransaction(tx).ConfigureAwait(false);
+                // Already dispatched
+                return;
+            }
 
-                bool success = await timeoutStorage.Remove(timeout, tx).ConfigureAwait(false);
+            Dictionary<string, string> headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(timeout.Headers);
 
-                if (!success)
-                {
-                    // Already dispatched
-                    return;
-                }
+            ExceptionHeaderHelper.SetExceptionHeaders(headersAndProperties, exception);
 
-                Dictionary<string, string> headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(timeout.Headers);
+            foreach (KeyValuePair<string, string> pair in faultMetadata)
+            {
+                headersAndProperties[pair.Key] = pair.Value;
+            }
 
-                ExceptionHeaderHelper.SetExceptionHeaders(headersAndProperties, exception);
-
-                foreach (KeyValuePair<string, string> pair in faultMetadata)
-                {
-                    headersAndProperties[pair.Key] = pair.Value;
-                }
+            Log.Info($"Dispatch to error queue transaction = {txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
+            using (var transportTx = new TransactionScope(txOption, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+            {
+                var transportTransaction = new TransportTransaction();
+                transportTransaction.Set(Transaction.Current);
 
                 var outgoingMessage = new OutgoingMessage(timeout.Id, headersAndProperties, timeout.State);
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(errorQueue));
-                await dispatcher.Dispatch(new TransportOperations(transportOperation), tx, CancellationToken.None).ConfigureAwait(false);
+                await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, CancellationToken.None)
+                    .ConfigureAwait(false);
 
-                await timeoutStorage.CommitTransaction(tx).ConfigureAwait(false);
-            }
-            finally
-            {
-                await timeoutStorage.DisposeTransaction(tx).ConfigureAwait(false);
+                transportTx.Complete();
             }
         }
         catch (Exception ex)
@@ -288,6 +305,7 @@ class TimeoutPoller
     }
 
     readonly Dictionary<string, string> faultMetadata;
+    TransactionScopeOption txOption;
     ITimeoutStorage timeoutStorage;
     MsmqMessageDispatcher dispatcher;
     string errorQueue;

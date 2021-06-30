@@ -109,7 +109,7 @@ namespace NServiceBus
 
                 if (requiresDelayedDelivery)
                 {
-                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
+                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
@@ -137,13 +137,13 @@ namespace NServiceBus
                     {Headers.HostDisplayName, hostSettings.HostDisplayName}
                 };
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata);
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode);
 
                 var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
                     new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata);
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
