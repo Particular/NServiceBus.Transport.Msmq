@@ -13,7 +13,7 @@
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
-    public class When_sending_delayed_messages : NServiceBusAcceptanceTest
+    public class When_deferring_a_batch_of_messages : NServiceBusAcceptanceTest
     {
         static readonly TimeSpan Delay = TimeSpan.FromSeconds(25);
         const int NrOfDelayedMessages = 10000;
@@ -85,7 +85,7 @@
 
         static async Task<int> PurgeTimeoutsTable()
         {
-            using (var cn = new SqlConnection(ConfigureEndpointMsmqTransport.StorageConnectionString))
+            using (var cn = new SqlConnection(ConfigureEndpointMsmqTransport.GetStorageConnectionString()))
             {
                 await cn.OpenAsync();
                 using (var cmd = new SqlCommand("DELETE FROM [nservicebus].[dbo].[SendingDelayedMessages.EndpointTimeouts]", cn))
@@ -177,6 +177,6 @@
             }
         }
 
-        static readonly ILog Log = LogManager.GetLogger<When_sending_delayed_messages>();
+        static readonly ILog Log = LogManager.GetLogger<When_deferring_a_batch_of_messages>();
     }
 }

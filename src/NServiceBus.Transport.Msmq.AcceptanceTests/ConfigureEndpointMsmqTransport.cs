@@ -9,7 +9,6 @@ using NServiceBus.AcceptanceTesting.Support;
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
     internal readonly TestableMsmqTransport TransportDefinition = new TestableMsmqTransport();
-    public static readonly string StorageConnectionString = "Server=.;Database=nservicebus;Trusted_Connection=True;";
 
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
@@ -17,7 +16,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     {
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
-        var timeoutStorage = new SqlTimeoutStorage(StorageConnectionString, tableName: "[SendingDelayedMessages.EndpointTimeouts]"); // TODO: Table name MUST NOT be set here
+        var timeoutStorage = new SqlTimeoutStorage(GetStorageConnectionString());
         TransportDefinition.DelayedDelivery = new DelayedDeliverySettings(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
@@ -75,5 +74,16 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         MessageQueue.ClearConnectionCache();
 
         return Task.FromResult(0);
+    }
+
+    public static string GetStorageConnectionString()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            connectionString = @"Server=localhost\sqlexpress;Database=nservicebus;Trusted_Connection=True;";
+        }
+
+        return connectionString;
     }
 }

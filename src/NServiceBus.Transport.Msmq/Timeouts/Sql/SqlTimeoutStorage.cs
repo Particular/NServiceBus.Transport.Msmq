@@ -37,12 +37,6 @@ public class SqlTimeoutStorage : ITimeoutStorage
         createSqlConnection = () => Task.FromResult(new SqlConnection(connectionString));
         this.tableName = tableName;
         this.schema = schema;
-
-        insertCommand = string.Format(SqlInsert, tableName);
-        removeCommand = string.Format(SqlDelete, tableName);
-        bumpFailureCountCommand = string.Format(SqlUpdate, tableName);
-        nextCommand = string.Format(SqlGetNext, tableName);
-        fetchCommand = string.Format(SqlFetch, tableName);
     }
 
     /// <inheritdoc />
@@ -89,7 +83,7 @@ public class SqlTimeoutStorage : ITimeoutStorage
     }
 
     /// <inheritdoc />
-    public Task Initialize(string queueName, CancellationToken cancellationToken)
+    public async Task Initialize(string queueName, CancellationToken cancellationToken)
     {
         if (tableName == null)
         {
@@ -98,11 +92,17 @@ public class SqlTimeoutStorage : ITimeoutStorage
                 tableName = $"[{schema}]";
             }
 
-            tableName += $"[{queueName}Timeouts]";
+            tableName += $"[{queueName}.timeouts]";
         }
 
         var creator = new TimeoutTableCreator(createSqlConnection, tableName);
-        return creator.CreateIfNecessary(cancellationToken);
+        await creator.CreateIfNecessary(cancellationToken).ConfigureAwait(false);
+
+        insertCommand = string.Format(SqlInsert, tableName);
+        removeCommand = string.Format(SqlDelete, tableName);
+        bumpFailureCountCommand = string.Format(SqlUpdate, tableName);
+        nextCommand = string.Format(SqlGetNext, tableName);
+        fetchCommand = string.Format(SqlFetch, tableName);
     }
 
     /// <inheritdoc />

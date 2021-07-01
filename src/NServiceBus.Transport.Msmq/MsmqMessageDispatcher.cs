@@ -53,7 +53,6 @@ namespace NServiceBus.Transport.Msmq
             {
                 if (kvp.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix))
                 {
-                    //TODO: Remove delayed delivery properties
                     properties[kvp.Key] = kvp.Value;
                 }
                 else
@@ -100,11 +99,6 @@ namespace NServiceBus.Transport.Msmq
             else // transportOperation.Properties.DoNotDeliverBefore != null
             {
                 deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
-
-                if (deliverAt < DateTimeOffset.UtcNow)
-                {
-                    // TODO: Do not send to timeout queue. CHeck if core already validates this
-                }
             }
 
             transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;

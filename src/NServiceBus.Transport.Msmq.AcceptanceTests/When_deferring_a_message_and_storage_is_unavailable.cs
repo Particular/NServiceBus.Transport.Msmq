@@ -9,7 +9,7 @@
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
-    public class When_delayed_delivery_storage_is_unavailable : NServiceBusAcceptanceTest
+    public class When_deferring_a_message_and_storage_is_unavailable : NServiceBusAcceptanceTest
     {
         [Test]
         public async Task Should_trigger_store_circuit_breaker()
