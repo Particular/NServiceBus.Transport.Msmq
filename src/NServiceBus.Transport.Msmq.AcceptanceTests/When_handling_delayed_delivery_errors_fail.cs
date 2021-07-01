@@ -61,7 +61,7 @@
                         return Task.CompletedTask;
                     });
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyTimeoutStorage(transport.DelayedDelivery.TimeoutStorage), 1, TimeSpan.FromSeconds(5));
+                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore), 1, TimeSpan.FromSeconds(5));
                 });
             }
 
@@ -106,16 +106,16 @@
             }
         }
 
-        class FaultyTimeoutStorage : ITimeoutStorage
+        class FaultyDelayedMessageStore : IDelayedMessageStore
         {
-            ITimeoutStorage impl;
+            IDelayedMessageStore impl;
 
-            public FaultyTimeoutStorage(ITimeoutStorage impl)
+            public FaultyDelayedMessageStore(IDelayedMessageStore impl)
             {
                 this.impl = impl;
             }
 
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
 
             public Task<DateTimeOffset?> Next() => impl.Next();
 
@@ -126,7 +126,7 @@
                 throw new Exception("Simulated");
             }
 
-            public Task<bool> BumpFailureCount(TimeoutItem timeout)
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout)
             {
                 throw new Exception("Simulated");
             }

@@ -14,7 +14,7 @@
         /// <summary>
         ///
         /// </summary>
-        public ITimeoutStorage TimeoutStorage { get; }
+        public IDelayedMessageStore DelayedMessageStore { get; }
 
         /// <summary>
         /// Number of retries.
@@ -45,11 +45,11 @@
         /// <summary>
         ///
         /// </summary>
-        public DelayedDeliverySettings(ITimeoutStorage timeoutStorage, int retries = 10, TimeSpan? timeToTriggerStoreCircuitBreaker = null)
+        public DelayedDeliverySettings(IDelayedMessageStore delayedMessageStore, int retries = 10, TimeSpan? timeToTriggerStoreCircuitBreaker = null)
         {
-            Guard.AgainstNull(nameof(timeoutStorage), timeoutStorage);
+            Guard.AgainstNull(nameof(delayedMessageStore), delayedMessageStore);
             NumberOfRetries = retries;
-            TimeoutStorage = timeoutStorage;
+            DelayedMessageStore = delayedMessageStore;
             if (timeToTriggerStoreCircuitBreaker.HasValue)
             {
                 this.timeToTriggerStoreCircuitBreaker = timeToTriggerStoreCircuitBreaker.Value;

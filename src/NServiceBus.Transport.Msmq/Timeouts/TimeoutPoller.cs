@@ -15,7 +15,7 @@ class TimeoutPoller
 {
     public TimeoutPoller(
         MsmqMessageDispatcher dispatcher,
-        ITimeoutStorage timeoutStorage,
+        IDelayedMessageStore delayedMessageStore,
         int numberOfRetries,
         Action<string, Exception, CancellationToken> criticalErrorAction,
         string timeoutsErrorQueue,
@@ -26,7 +26,7 @@ class TimeoutPoller
         txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
             ? TransactionScopeOption.Required
             : TransactionScopeOption.RequiresNew;
-        this.timeoutStorage = timeoutStorage;
+        this.delayedMessageStore = delayedMessageStore;
         errorQueue = timeoutsErrorQueue;
         this.faultMetadata = faultMetadata;
         this.numberOfRetries = numberOfRetries;
@@ -162,7 +162,7 @@ class TimeoutPoller
         {
             using (var tx = new TransactionScope(TransactionScopeOption.Required, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
-                timeout = await timeoutStorage.FetchNextDueTimeout(now).ConfigureAwait(false);
+                timeout = await delayedMessageStore.FetchNextDueTimeout(now).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
                 if (timeout != null)
@@ -174,7 +174,7 @@ class TimeoutPoller
                 {
                     using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        var nextDueTimeout = await timeoutStorage.Next().ConfigureAwait(false);
+                        var nextDueTimeout = await delayedMessageStore.Next().ConfigureAwait(false);
                         if (nextDueTimeout.HasValue)
                         {
                             result.SetResult(nextDueTimeout);
@@ -203,9 +203,11 @@ class TimeoutPoller
             if (timeout != null)
             {
                 await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
-                using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+                using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                 {
-                    await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
+                    await delayedMessageStore.IncrementFailureCount(timeout).ConfigureAwait(false);
+                    scope.Complete();
+
                 }
 
                 if (timeout.NumberOfRetries > numberOfRetries)
@@ -228,7 +230,7 @@ class TimeoutPoller
     async Task HandleDueDelayedMessage(TimeoutItem timeout)
     {
         TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
-        var success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+        var success = await delayedMessageStore.Remove(timeout).ConfigureAwait(false);
 
         if (!success)
         {
@@ -261,7 +263,7 @@ class TimeoutPoller
     {
         try
         {
-            bool success = await timeoutStorage.Remove(timeout).ConfigureAwait(false);
+            bool success = await delayedMessageStore.Remove(timeout).ConfigureAwait(false);
 
             if (!success)
             {
@@ -303,7 +305,7 @@ class TimeoutPoller
 
     readonly Dictionary<string, string> faultMetadata;
 
-    ITimeoutStorage timeoutStorage;
+    IDelayedMessageStore delayedMessageStore;
     MsmqMessageDispatcher dispatcher;
     string errorQueue;
     int numberOfRetries;

@@ -4,18 +4,8 @@ namespace NServiceBus.Transport.Msmq.Timeouts
     using System.Threading.Tasks;
     using System.Threading;
 
-    /// <summary>
-    ///
-    /// </summary>
-    public delegate Task<SqlConnection> CreateSqlConnection();
-
     class TimeoutTableCreator
     {
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="createSqlConnection"></param>
-        /// <param name="tableName"></param>
         public TimeoutTableCreator(CreateSqlConnection createSqlConnection, string tableName)
         {
             this.tableName = tableName;
@@ -24,7 +14,7 @@ namespace NServiceBus.Transport.Msmq.Timeouts
 
         public async Task CreateIfNecessary(CancellationToken cancellationToken = default)
         {
-            var sql = string.Format(CreateScript, tableName);
+            var sql = string.Format(SqlConstants.SqlCreateTable, tableName);
             using (var connection = await createSqlConnection().ConfigureAwait(false))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -58,36 +48,5 @@ namespace NServiceBus.Transport.Msmq.Timeouts
 
         CreateSqlConnection createSqlConnection;
         string tableName;
-
-        const string CreateScript = @"
-if not exists (
-    select * from sys.objects
-    where
-        object_id = object_id('{0}')
-        and type in ('U')
-)
-begin
-    create table {0} (
- 	    Id nvarchar(250) not null primary key,
-        Destination nvarchar(200),
-        State varbinary(max),
-        Time datetime,
-        Headers varbinary(max) not null,
-        RetryCount INT NOT NULL default(0)
-        )
-end
-
-if not exists
-(
-    select *
-    from sys.indexes
-    where
-        name = 'Index_Time' and
-        object_id = object_id('{0}')
-)
-begin
-    create index Index_Time on {0} (Time);
-end
-";
     }
 }

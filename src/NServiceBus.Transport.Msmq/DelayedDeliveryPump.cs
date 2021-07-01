@@ -12,7 +12,7 @@ namespace NServiceBus.Transport.Msmq
     {
         readonly MsmqMessageDispatcher dispatcher;
         readonly TimeoutPoller poller;
-        readonly ITimeoutStorage storage;
+        readonly IDelayedMessageStore storage;
         readonly int numberOfRetries;
         readonly MessagePump pump;
         readonly Dictionary<string, string> faultMetadata;
@@ -24,7 +24,7 @@ namespace NServiceBus.Transport.Msmq
 
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
                                    TimeoutPoller poller,
-                                   ITimeoutStorage storage,
+                                   IDelayedMessageStore storage,
                                    MessagePump messagePump,
                                    string errorQueue,
                                    int numberOfRetries,

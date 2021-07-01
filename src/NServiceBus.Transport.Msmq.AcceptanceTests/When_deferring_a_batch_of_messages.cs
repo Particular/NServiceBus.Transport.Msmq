@@ -8,6 +8,7 @@
     using System.Threading.Tasks;
     using System.Transactions;
     using AcceptanceTesting;
+    using AcceptanceTesting.Customization;
     using Logging;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
@@ -88,7 +89,7 @@
             using (var cn = new SqlConnection(ConfigureEndpointMsmqTransport.GetStorageConnectionString()))
             {
                 await cn.OpenAsync();
-                using (var cmd = new SqlCommand("DELETE FROM [nservicebus].[dbo].[SendingDelayedMessages.EndpointTimeouts]", cn))
+                using (var cmd = new SqlCommand($"DELETE FROM [nservicebus].[dbo].[{Conventions.EndpointNamingConvention(typeof(Endpoint))}.timeouts]", cn))
                 {
                     return await cmd.ExecuteNonQueryAsync();
                 }
@@ -112,7 +113,7 @@
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
                     //transport.TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
 
-                    var storage = new WrapTimeoutStorage(transport.DelayedDelivery.TimeoutStorage, context);
+                    var storage = new WrapDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, context);
                     transport.DelayedDelivery = new DelayedDeliverySettings(
                         storage,
                         2,
@@ -142,31 +143,31 @@
         {
         }
 
-        class WrapTimeoutStorage : ITimeoutStorage
+        class WrapDelayedMessageStore : IDelayedMessageStore
         {
-            readonly ITimeoutStorage timeoutStorageImplementation;
+            readonly IDelayedMessageStore delayedMessageStoreImplementation;
             readonly Context context;
 
-            public WrapTimeoutStorage(ITimeoutStorage impl, Context context)
+            public WrapDelayedMessageStore(IDelayedMessageStore impl, Context context)
             {
                 this.context = context;
-                timeoutStorageImplementation = impl;
+                delayedMessageStoreImplementation = impl;
             }
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => timeoutStorageImplementation.Initialize(endpointName, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => delayedMessageStoreImplementation.Initialize(endpointName, transactionMode, cancellationToken);
 
-            public Task<DateTimeOffset?> Next() => timeoutStorageImplementation.Next();
+            public Task<DateTimeOffset?> Next() => delayedMessageStoreImplementation.Next();
 
             public Task Store(TimeoutItem entity)
             {
                 Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
-                return timeoutStorageImplementation.Store(entity);
+                return delayedMessageStoreImplementation.Store(entity);
             }
-            public Task<bool> BumpFailureCount(TimeoutItem timeout) => timeoutStorageImplementation.BumpFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => delayedMessageStoreImplementation.IncrementFailureCount(timeout);
 
-            public Task<bool> Remove(TimeoutItem entity) => timeoutStorageImplementation.Remove(entity);
+            public Task<bool> Remove(TimeoutItem entity) => delayedMessageStoreImplementation.Remove(entity);
             public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
             {
-                var entity = await timeoutStorageImplementation.FetchNextDueTimeout(at);
+                var entity = await delayedMessageStoreImplementation.FetchNextDueTimeout(at);
 
                 if (entity != null)
                 {

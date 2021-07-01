@@ -57,7 +57,7 @@
                 EndpointSetup<DefaultServer>((endpointConfiguration, run) =>
                 {
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new TestTimeoutStorage(transport.DelayedDelivery.TimeoutStorage, (Context)run.ScenarioContext));
+                    transport.DelayedDelivery = new DelayedDeliverySettings(new TestDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, (Context)run.ScenarioContext));
                 });
             }
 
@@ -82,18 +82,18 @@
         {
         }
 
-        class TestTimeoutStorage : ITimeoutStorage
+        class TestDelayedMessageStore : IDelayedMessageStore
         {
-            readonly ITimeoutStorage impl;
+            readonly IDelayedMessageStore impl;
             readonly Context context;
 
-            public TestTimeoutStorage(ITimeoutStorage impl, Context context)
+            public TestDelayedMessageStore(IDelayedMessageStore impl, Context context)
             {
                 this.impl = impl;
                 this.context = context;
             }
 
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
 
             public async Task<DateTimeOffset?> Next()
             {
@@ -110,7 +110,7 @@
 
             public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
 
-            public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => impl.IncrementFailureCount(timeout);
 
             public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }

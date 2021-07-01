@@ -57,7 +57,7 @@
                         return Task.CompletedTask;
                     });
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyTimeoutStorage(transport.DelayedDelivery.TimeoutStorage), 2, TimeSpan.FromSeconds(5));
+                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore), 2, TimeSpan.FromSeconds(5));
                 });
             }
 
@@ -106,16 +106,16 @@
         {
         }
 
-        class FaultyTimeoutStorage : ITimeoutStorage
+        class FaultyDelayedMessageStore : IDelayedMessageStore
         {
-            ITimeoutStorage impl;
+            IDelayedMessageStore impl;
 
-            public FaultyTimeoutStorage(ITimeoutStorage impl)
+            public FaultyDelayedMessageStore(IDelayedMessageStore impl)
             {
                 this.impl = impl;
             }
 
-            public Task Initialize(string endpointName, CancellationToken cancellationToken) => impl.Initialize(endpointName, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
 
             public Task<DateTimeOffset?> Next() => impl.Next();
 
@@ -126,7 +126,7 @@
 
             public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
 
-            public Task<bool> BumpFailureCount(TimeoutItem timeout) => impl.BumpFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => impl.IncrementFailureCount(timeout);
 
             public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
         }

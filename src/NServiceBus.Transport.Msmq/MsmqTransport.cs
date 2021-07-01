@@ -109,7 +109,7 @@ namespace NServiceBus
 
                 if (requiresDelayedDelivery)
                 {
-                    await DelayedDelivery.TimeoutStorage.Initialize(hostSettings.Name, cancellationToken).ConfigureAwait(false);
+                    await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
@@ -137,13 +137,13 @@ namespace NServiceBus
                     {Headers.HostDisplayName, hostSettings.HostDisplayName}
                 };
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.TimeoutStorage, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode);
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode);
 
                 var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
                     new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.TimeoutStorage, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -156,7 +156,7 @@ namespace NServiceBus
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
                 TimeoutQueue = timeoutsQueue,
-                TimeoutStorageType = DelayedDelivery?.TimeoutStorage?.GetType(),
+                TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType(),
             });
 
             var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, timeoutPoller);
