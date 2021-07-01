@@ -20,17 +20,18 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
         readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
         readonly TransactionScopeOption txOption;
+        readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
 
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
-            TimeoutPoller poller,
-            ITimeoutStorage storage,
-            MessagePump messagePump,
-            string errorQueue,
-            int numberOfRetries,
-            Action<string, Exception, CancellationToken> criticalErrorAction,
-            TimeSpan timeToWaitForStoreCircuitBreaker,
-            Dictionary<string, string> faultMetadata,
-            TransportTransactionMode transportTransactionMode)
+                                   TimeoutPoller poller,
+                                   ITimeoutStorage storage,
+                                   MessagePump messagePump,
+                                   string errorQueue,
+                                   int numberOfRetries,
+                                   Action<string, Exception, CancellationToken> criticalErrorAction,
+                                   TimeSpan timeToWaitForStoreCircuitBreaker,
+                                   Dictionary<string, string> faultMetadata,
+                                   TransportTransactionMode transportTransactionMode)
         {
             this.dispatcher = dispatcher;
             this.poller = poller;
@@ -95,9 +96,7 @@ namespace NServiceBus.Transport.Msmq
 
                 try
                 {
-                    Log.Info($"Storage store transaction ={txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
-
-                    using (var tx = new TransactionScope(txOption, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }, TransactionScopeAsyncFlowOption.Enabled))
+                    using (var tx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                     {
                         await storage.Store(timeout).ConfigureAwait(false);
                         tx.Complete();

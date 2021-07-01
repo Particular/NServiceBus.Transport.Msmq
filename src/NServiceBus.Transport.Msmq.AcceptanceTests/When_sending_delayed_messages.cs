@@ -19,16 +19,12 @@
         const int NrOfDelayedMessages = 10000;
 
         [Test]
-        [Explicit]
-        [Timeout(600000)]
         [TestCase(TransportTransactionMode.None)]
         [TestCase(TransportTransactionMode.ReceiveOnly)]
         [TestCase(TransportTransactionMode.SendsAtomicWithReceive)]
         [TestCase(TransportTransactionMode.TransactionScope)]
         public async Task Should_work_for_transaction_mode(TransportTransactionMode transactionMode)
         {
-            //AppDomain.CurrentDomain.FirstChanceException += (s, e) => Log.Fatal("FirstChanceException" + new StackTrace(e.Exception, 1), e.Exception);
-
             Requires.DelayedDelivery();
 
             var deliverAt = DateTimeOffset.UtcNow + Delay; //To ensure this timeout would never be actually dispatched during this test

@@ -148,14 +148,11 @@ class TimeoutPoller
         var waitTime = nextPoll - DateTimeOffset.UtcNow;
         if (waitTime > TimeSpan.Zero)
         {
-            //return Task.Delay(1000, cancellationToken);
             return Task.Delay(waitTime, cancellationToken);
         }
 
         return Task.CompletedTask;
     }
-
-    TransactionOptions ReadCommitted = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
 
     async Task Poll(TaskCompletionSource<DateTimeOffset?> result)
     {
@@ -163,12 +160,11 @@ class TimeoutPoller
         DateTimeOffset now = DateTimeOffset.UtcNow;
         try
         {
-            using (var tx = new TransactionScope(TransactionScopeOption.Required, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+            using (var tx = new TransactionScope(TransactionScopeOption.Required, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
                 timeout = await timeoutStorage.FetchNextDueTimeout(now).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
-                Log.Warn($"Fetch... {timeout != null}");
                 if (timeout != null)
                 {
                     result.SetResult(null);
@@ -176,7 +172,7 @@ class TimeoutPoller
                 }
                 else
                 {
-                    using (new TransactionScope(TransactionScopeOption.RequiresNew, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+                    using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                     {
                         var nextDueTimeout = await timeoutStorage.Next().ConfigureAwait(false);
                         if (nextDueTimeout.HasValue)
@@ -207,7 +203,7 @@ class TimeoutPoller
             if (timeout != null)
             {
                 await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
-                using (new TransactionScope(TransactionScopeOption.RequiresNew, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+                using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                 {
                     await timeoutStorage.BumpFailureCount(timeout).ConfigureAwait(false);
                 }
@@ -242,9 +238,7 @@ class TimeoutPoller
 
         Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
 
-        Log.Info($"Dispatch transport transaction = {txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
-
-        using (var tx = new TransactionScope(txOption, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+        using (var tx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
         {
             var transportTransaction = new TransportTransaction();
             transportTransaction.Set(Transaction.Current);
@@ -285,7 +279,7 @@ class TimeoutPoller
             }
 
             Log.Info($"Dispatch to error queue transaction = {txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
-            using (var transportTx = new TransactionScope(txOption, ReadCommitted, TransactionScopeAsyncFlowOption.Enabled))
+            using (var transportTx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
                 var transportTransaction = new TransportTransaction();
                 transportTransaction.Set(Transaction.Current);
@@ -304,8 +298,11 @@ class TimeoutPoller
         }
     }
 
+    static readonly ILog Log = LogManager.GetLogger<TimeoutPoller>();
+    static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
+
     readonly Dictionary<string, string> faultMetadata;
-    TransactionScopeOption txOption;
+
     ITimeoutStorage timeoutStorage;
     MsmqMessageDispatcher dispatcher;
     string errorQueue;
@@ -313,13 +310,11 @@ class TimeoutPoller
     RepeatedFailuresOverTimeCircuitBreaker fetchCircuitBreaker;
     RepeatedFailuresOverTimeCircuitBreaker dispatchCircuitBreaker;
     FailureRateCircuitBreaker failureHandlingCircuitBreaker;
-
     Task loopTask;
     Task completionTask;
-
-    static readonly ILog Log = LogManager.GetLogger<TimeoutPoller>();
-    static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
     Channel<bool> signalQueue;
     Channel<Task> taskQueue;
     CancellationTokenSource tokenSource;
+    TransactionScopeOption txOption;
+    TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
 }
