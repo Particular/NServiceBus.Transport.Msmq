@@ -8,6 +8,7 @@ namespace NServiceBus
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Faults;
     using Features;
     using Routing;
     using Support;
@@ -17,17 +18,19 @@ namespace NServiceBus
     /// <summary>
     /// Transport definition for MSMQ.
     /// </summary>
-    public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
+    public partial class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
+        const string TimeoutQueueSuffix = ".timeouts";
+
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
         /// </summary>
-        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, false, false, true)
+        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, true, false, true)
         {
         }
 
         /// <inheritdoc />
-        public override Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
+        public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
             Guard.AgainstNull(nameof(hostSettings), hostSettings);
             Guard.AgainstNull(nameof(receivers), receivers);
@@ -35,6 +38,45 @@ namespace NServiceBus
 
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
+
+            var queuesToCreate = receivers
+                .Select(r => r.ReceiveAddress)
+                .Concat(sendingAddresses)
+                .ToHashSet();
+
+            string timeoutsQueue = null;
+            string timeoutsErrorQueue = null;
+            var requiresDelayedDelivery = DelayedDelivery != null;
+
+            if (requiresDelayedDelivery)
+            {
+                if (receivers.Length > 0)
+                {
+                    var mainReceiver = receivers[0];
+                    var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
+                    timeoutsQueue = new MsmqAddress($"{mainQueueAddress.Queue}{TimeoutQueueSuffix}", mainQueueAddress.Machine).ToString();
+                    timeoutsErrorQueue = mainReceiver.ErrorQueue;
+                }
+                else
+                {
+                    if (hostSettings.CoreSettings != null)
+                    {
+                        if (!hostSettings.CoreSettings.TryGetExplicitlyConfiguredErrorQueueAddress(out var coreErrorQueue))
+                        {
+                            throw new Exception("Delayed delivery requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
+                        }
+
+                        timeoutsErrorQueue = coreErrorQueue;
+                        timeoutsQueue = MsmqAddress.Parse($"{hostSettings.Name}{TimeoutQueueSuffix}").ToString(); //Use name of the endpoint as the timeouts queue name. Use local machine
+                    }
+                    else
+                    {
+                        throw new Exception("Timeouts are not supported for send-only configurations outside of an NServiceBus endpoint.");
+                    }
+                }
+                queuesToCreate.Add(timeoutsQueue);
+                queuesToCreate.Add(timeoutsErrorQueue);
+            }
 
             if (hostSettings.CoreSettings != null)
             {
@@ -64,16 +106,44 @@ namespace NServiceBus
             {
                 var installerUser = GetInstallationUserName();
                 var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
-                var queuesToCreate = receivers
-                    .Select(r => r.ReceiveAddress)
-                    .Concat(sendingAddresses)
-                    .ToArray();
+
+                if (requiresDelayedDelivery)
+                {
+                    await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
+                }
+
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
             foreach (var address in sendingAddresses)
             {
                 QueuePermissions.CheckQueue(address);
+            }
+
+            var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue, OnSendCallbackForTesting);
+
+            DelayedDeliveryPump delayedDeliveryPump = null;
+            TimeoutPoller timeoutPoller = null;
+            if (requiresDelayedDelivery)
+            {
+                QueuePermissions.CheckQueue(timeoutsQueue);
+                QueuePermissions.CheckQueue(timeoutsErrorQueue);
+
+                var staticFaultMetadata = new Dictionary<string, string>
+                {
+                    {FaultsHeaderKeys.FailedQ, timeoutsQueue},
+                    {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
+                    {Headers.ProcessingEndpoint, hostSettings.Name},
+                    {Headers.HostDisplayName, hostSettings.HostDisplayName}
+                };
+
+                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode);
+
+                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
+                    new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
+
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -84,13 +154,63 @@ namespace NServiceBus
                 UseTransactionalQueues,
                 UseJournalQueue,
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
-                TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue)
+                TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
+                TimeoutQueue = timeoutsQueue,
+                TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType(),
             });
 
-            var msmqTransportInfrastructure = new MsmqTransportInfrastructure(this);
-            msmqTransportInfrastructure.SetupReceivers(receivers, hostSettings.CriticalErrorAction);
+            var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, timeoutPoller);
+            await infrastructure.Start(cancellationToken).ConfigureAwait(false);
 
-            return Task.FromResult<TransportInfrastructure>(msmqTransportInfrastructure);
+            return infrastructure;
+        }
+
+        Dictionary<string, IMessageReceiver> CreateReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
+        {
+            var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
+
+            foreach (var receiver in receivers)
+            {
+                if (receiver.UsePublishSubscribe)
+                {
+                    throw new NotImplementedException("MSMQ does not support native pub/sub.");
+                }
+
+                // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
+                CheckEndpointNameComplianceForMsmq.Check(receiver.ReceiveAddress);
+                QueuePermissions.CheckQueue(receiver.ReceiveAddress);
+
+                var pump = new MessagePump(
+                    transactionMode =>
+                        SelectReceiveStrategy(transactionMode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout,
+                    TransportTransactionMode,
+                    IgnoreIncomingTimeToBeReceivedHeaders,
+                    criticalErrorAction,
+                    receiver
+                );
+
+                messagePumps.Add(pump.Id, pump);
+            }
+
+            return messagePumps;
+        }
+
+        static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
+        {
+            switch (minimumConsistencyGuarantee)
+            {
+                case TransportTransactionMode.TransactionScope:
+                    return new TransactionScopeStrategy(transactionOptions, new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.SendsAtomicWithReceive:
+                    return new SendsAtomicWithReceiveNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.ReceiveOnly:
+                    return new ReceiveOnlyNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
+                case TransportTransactionMode.None:
+                    return new NoTransactionStrategy();
+                default:
+                    throw new NotSupportedException($"TransportTransactionMode {minimumConsistencyGuarantee} is not supported by the MSMQ transport");
+            }
         }
 
         void ValidateIfDtcIsAvailable()
@@ -123,6 +243,7 @@ namespace NServiceBus
             {
                 queueName = address.BaseAddress;
             }
+
             var queue = new StringBuilder(queueName);
             if (address.Discriminator != null)
             {
@@ -137,7 +258,7 @@ namespace NServiceBus
 
         /// <inheritdoc />
         public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() =>
-            new TransportTransactionMode[]
+            new[]
             {
                 TransportTransactionMode.None,
                 TransportTransactionMode.ReceiveOnly,
@@ -157,13 +278,13 @@ namespace NServiceBus
         public bool CreateQueues { get; set; } = true;
 
         /// <summary>
-        /// This setting should be used with caution. Configures whether to store undeliverable messages in the dead letter queue. Disabling the dead letter queue should be used with caution. Setting this to <c>false</c> should only be used where loss of messages is an acceptable. 
+        /// This setting should be used with caution. Configures whether to store undeliverable messages in the dead letter queue. Disabling the dead letter queue should be used with caution. Setting this to <c>false</c> should only be used where loss of messages is an acceptable.
         /// </summary>
         public bool UseDeadLetterQueue { get; set; } = true;
 
         /// <summary>
         /// Configures MSMQ to cache connections to a remote queue and re-use them
-        /// as needed instead of creating new connections for each message. 
+        /// as needed instead of creating new connections for each message.
         /// Turning connection caching off will negatively impact the message throughput in most scenarios.
         /// </summary>
         public bool UseConnectionCache { get; set; } = true;
@@ -171,7 +292,7 @@ namespace NServiceBus
         /// <summary>
         /// This setting should be used with caution. When set to <c>false</c>, any message that has
         /// an exception during processing will not be rolled back to the queue. Therefore this setting must only
-        /// be disabled when loss of messages is an acceptable scenario. 
+        /// be disabled when loss of messages is an acceptable scenario.
         /// </summary>
         public bool UseTransactionalQueues { get; set; } = true;
 
@@ -221,6 +342,16 @@ namespace NServiceBus
         public string CreateQueuesForUser { get; set; }
 
         /// <summary>
+        /// Use timeouts managed via external storage
+        /// </summary>
+        public DelayedDeliverySettings DelayedDelivery { get; set; }
+
+        /// <summary>
+        /// The callback that can be used to inject failures to the dispatcher for testing.
+        /// </summary>
+        internal Action<TransportTransaction, UnicastTransportOperation> OnSendCallbackForTesting { get; set; }
+
+        /// <summary>
         /// Allows to change the transaction isolation level and timeout for the `TransactionScope` used to receive messages.
         /// </summary>
         /// <remarks>
@@ -268,5 +399,6 @@ namespace NServiceBus
         protected internal TimeSpan MessageEnumeratorTimeout { get; set; } = TimeSpan.FromSeconds(1);
 
         internal MsmqScopeOptions TransactionScopeOptions { get; private set; } = new MsmqScopeOptions();
+
     }
 }

@@ -109,8 +109,8 @@ namespace NServiceBus.Transport.Msmq
             }
 
             var body = await ReadStream(bodyStream, cancellationToken).ConfigureAwait(false);
-            var messageContext = new MessageContext(messageId, headers, body, transaction, context);
 
+            var messageContext = new MessageContext(messageId, headers, body, transaction, context);
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
 
@@ -143,6 +143,7 @@ namespace NServiceBus.Transport.Msmq
             return body;
         }
 
+
         protected bool IsQueuesTransactional => errorQueue.Transactional;
 
         MessageQueue inputQueue;
@@ -152,6 +153,6 @@ namespace NServiceBus.Transport.Msmq
         Action<string, Exception, CancellationToken> criticalError;
         bool ignoreIncomingTimeToBeReceivedHeaders;
 
-        static ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
+        static readonly ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
     }
 }

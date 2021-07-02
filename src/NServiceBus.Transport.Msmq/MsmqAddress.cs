@@ -121,6 +121,11 @@ namespace NServiceBus.Transport.Msmq
             return Queue + "@" + Machine;
         }
 
+        public bool IsEmpty()
+        {
+            return string.IsNullOrEmpty(Queue) && string.IsNullOrEmpty(Machine);
+        }
+
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         const string PREFIX_TCP = "FormatName:" + DIRECTPREFIX_TCP;
         const string PREFIX = "FormatName:" + DIRECTPREFIX;

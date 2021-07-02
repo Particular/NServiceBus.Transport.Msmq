@@ -14,15 +14,17 @@ namespace NServiceBus.Transport.Msmq
         public MessagePump(
             Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory,
             TimeSpan messageEnumeratorTimeout,
+            TransportTransactionMode transactionMode,
+            bool ignoreIncomingTimeToBeReceivedHeaders,
             Action<string, Exception, CancellationToken> criticalErrorAction,
-            MsmqTransport transportSettings,
             ReceiveSettings receiveSettings)
         {
             Id = receiveSettings.Id;
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
+            this.transactionMode = transactionMode;
+            this.ignoreIncomingTimeToBeReceivedHeaders = ignoreIncomingTimeToBeReceivedHeaders;
             this.criticalErrorAction = criticalErrorAction;
-            this.transportSettings = transportSettings;
             this.receiveSettings = receiveSettings;
         }
 
@@ -41,7 +43,7 @@ namespace NServiceBus.Transport.Msmq
             inputQueue = new MessageQueue(inputAddress.FullPath, false, true, QueueAccessMode.Receive);
             errorQueue = new MessageQueue(errorAddress.FullPath, false, true, QueueAccessMode.Send);
 
-            if (transportSettings.TransportTransactionMode != TransportTransactionMode.None && !QueueIsTransactional())
+            if (transactionMode != TransportTransactionMode.None && !QueueIsTransactional())
             {
                 throw new ArgumentException(
                     $"Queue must be transactional if you configure the endpoint to be transactional ({receiveSettings.ReceiveAddress}).");
@@ -54,8 +56,8 @@ namespace NServiceBus.Transport.Msmq
                 inputQueue.Purge();
             }
 
-            receiveStrategy = receiveStrategyFactory(transportSettings.TransportTransactionMode);
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, transportSettings.IgnoreIncomingTimeToBeReceivedHeaders);
+            receiveStrategy = receiveStrategyFactory(transactionMode);
+            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, ignoreIncomingTimeToBeReceivedHeaders);
 
             maxConcurrency = limitations.MaxConcurrency;
             concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
@@ -280,8 +282,9 @@ namespace NServiceBus.Transport.Msmq
         RepeatedFailuresOverTimeCircuitBreaker receiveCircuitBreaker;
         Func<TransportTransactionMode, ReceiveStrategy> receiveStrategyFactory;
         TimeSpan messageEnumeratorTimeout;
+        readonly TransportTransactionMode transactionMode;
+        readonly bool ignoreIncomingTimeToBeReceivedHeaders;
         readonly Action<string, Exception, CancellationToken> criticalErrorAction;
-        readonly MsmqTransport transportSettings;
         readonly ReceiveSettings receiveSettings;
 
         static ILog Logger = LogManager.GetLogger<MessagePump>();

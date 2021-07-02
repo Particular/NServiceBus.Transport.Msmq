@@ -30,6 +30,7 @@
                     {
                         return;
                     }
+                    context.Set(message);
 
                     if (!TryExtractHeaders(message, out var headers))
                     {

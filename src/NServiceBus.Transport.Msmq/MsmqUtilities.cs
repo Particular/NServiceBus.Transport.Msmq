@@ -44,7 +44,7 @@ namespace NServiceBus.Transport.Msmq
 
         public static Dictionary<string, string> ExtractHeaders(Message msmqMessage)
         {
-            var headers = DeserializeMessageHeaders(msmqMessage);
+            var headers = DeserializeMessageHeaders(msmqMessage.Extension);
 
             //note: we can drop this line when we no longer support interop btw v3 + v4
             if (msmqMessage.ResponseQueue != null && !headers.ContainsKey(Headers.ReplyToAddress))
@@ -78,18 +78,17 @@ namespace NServiceBus.Transport.Msmq
             return message.CorrelationId.Replace("\\0", string.Empty);
         }
 
-        static Dictionary<string, string> DeserializeMessageHeaders(Message m)
+        public static Dictionary<string, string> DeserializeMessageHeaders(byte[] data)
         {
             var result = new Dictionary<string, string>();
 
-            if (m.Extension.Length == 0)
+            if (data.Length == 0)
             {
                 return result;
             }
 
             //This is to make us compatible with v3 messages that are affected by this bug:
             //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
-            var data = m.Extension;
             var xmlLength = data.LastIndexOf(EndTag) + EndTag.Length; // Ignore any data after last </ArrayOfHeaderInfo>
             object o;
             using (var stream = new MemoryStream(buffer: data, index: 0, count: xmlLength, writable: false, publiclyVisible: true))
@@ -114,7 +113,7 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        public static Message Convert(OutgoingMessage message, DispatchProperties dispatchProperties)
+        public static Message Convert(OutgoingMessage message)
         {
             var result = new Message();
 
@@ -123,15 +122,9 @@ namespace NServiceBus.Transport.Msmq
                 result.BodyStream = new MemoryStream(message.Body);
             }
 
-
             AssignMsmqNativeCorrelationId(message, result);
 
             result.Recoverable = true;
-
-            if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
-            {
-                result.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
-            }
 
             var addCorrIdHeader = !message.Headers.ContainsKey("CorrId");
 
@@ -153,6 +146,7 @@ namespace NServiceBus.Transport.Msmq
                 }
 
                 headerSerializer.Serialize(stream, headers);
+
                 result.Extension = stream.ToArray();
             }
 
@@ -165,6 +159,47 @@ namespace NServiceBus.Transport.Msmq
 
             result.AppSpecific = (int)messageIntent;
 
+
+            return result;
+        }
+
+        public static Message ConvertTimeout(OutgoingMessage message, DispatchProperties dispatchProperties)
+        {
+            var result = new Message();
+
+            if (message.Body != null)
+            {
+                result.BodyStream = new MemoryStream(message.Body);
+            }
+
+            result.Recoverable = true;
+
+            if (dispatchProperties.DiscardIfNotReceivedBefore?.MaxTime < MessageQueue.InfiniteTimeout)
+            {
+                result.TimeToBeReceived = dispatchProperties.DiscardIfNotReceivedBefore.MaxTime;
+            }
+
+            using (var stream = new MemoryStream())
+            {
+                var headers = message.Headers.Select(pair => new HeaderInfo
+                {
+                    Key = pair.Key,
+                    Value = pair.Value
+                }).ToList();
+
+                headerSerializer.Serialize(stream, headers);
+                headerSerializer.Serialize(stream, dispatchProperties);
+                result.Extension = stream.ToArray();
+            }
+
+            var messageIntent = default(MessageIntentEnum);
+
+            if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
+            {
+                Enum.TryParse(messageIntentString, true, out messageIntent);
+            }
+
+            result.AppSpecific = (int)messageIntent;
 
             return result;
         }
@@ -209,6 +244,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        public const string PropertyHeaderPrefix = "NServiceBus.Timeouts.Properties.";
         const string DIRECTPREFIX = "DIRECT=OS:";
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";

@@ -2,10 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Test.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\NServiceBus.Transport.Msmq\ExceptionExtensions.cs" Link="ExceptionExtensions.cs" />
   </ItemGroup>
 
   <ItemGroup>

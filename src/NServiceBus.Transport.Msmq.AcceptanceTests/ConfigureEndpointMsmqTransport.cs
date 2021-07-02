@@ -16,6 +16,8 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     {
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
+        var timeoutStorage = new SqlServerDelayedMessageStore(GetStorageConnectionString());
+        TransportDefinition.DelayedDelivery = new DelayedDeliverySettings(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 
@@ -72,5 +74,16 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         MessageQueue.ClearConnectionCache();
 
         return Task.FromResult(0);
+    }
+
+    public static string GetStorageConnectionString()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            connectionString = @"Server=localhost\sqlexpress;Database=nservicebus;Trusted_Connection=True;";
+        }
+
+        return connectionString;
     }
 }

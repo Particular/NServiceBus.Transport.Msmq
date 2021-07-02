@@ -1,16 +1,34 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.AcceptanceTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.TransportTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.7.2", FrameworkDisplayName=".NET Framework 4.7.2")]
 namespace NServiceBus
 {
+    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = default);
     public static class DeadLetterQueueOptionExtensions
     {
         public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = true) { }
     }
+    public class DelayedDeliverySettings
+    {
+        public DelayedDeliverySettings(NServiceBus.IDelayedMessageStore delayedMessageStore, int retries = 10, System.TimeSpan? timeToTriggerStoreCircuitBreaker = default) { }
+        public NServiceBus.IDelayedMessageStore DelayedMessageStore { get; }
+        public int NumberOfRetries { get; set; }
+        public System.TimeSpan TimeToTriggerStoreCircuitBreaker { get; set; }
+    }
     public static class EndpointInstanceExtensions
     {
         public static NServiceBus.Routing.EndpointInstance AtMachine(this NServiceBus.Routing.EndpointInstance instance, string machineName) { }
+    }
+    public interface IDelayedMessageStore
+    {
+        System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> Remove(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Store(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
     }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
@@ -78,6 +96,7 @@ namespace NServiceBus
         public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyCustomLabelToOutgoingMessages { get; set; }
         public bool CreateQueues { get; set; }
         public string CreateQueuesForUser { get; set; }
+        public NServiceBus.DelayedDeliverySettings DelayedDelivery { get; set; }
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
         protected System.TimeSpan MessageEnumeratorTimeout { get; set; }
         public System.TimeSpan TimeToReachQueue { get; set; }
@@ -128,6 +147,17 @@ namespace NServiceBus
             "rom version 3.0.0. Will be removed in version 4.0.0.", false)]
         public NServiceBus.MsmqTransportSettings UseNonTransactionalQueues() { }
     }
+    public class SqlServerDelayedMessageStore : NServiceBus.IDelayedMessageStore
+    {
+        public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
+        public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
+        public System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> Remove(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Store(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+    }
 }
 namespace NServiceBus.Transport.Msmq
 {
@@ -138,4 +168,14 @@ namespace NServiceBus.Transport.Msmq
         public string Key { get; set; }
         public string Value { get; set; }
     }
+}
+public class TimeoutItem
+{
+    public TimeoutItem() { }
+    public string Destination { get; set; }
+    public byte[] Headers { get; set; }
+    public string Id { get; set; }
+    public int NumberOfRetries { get; set; }
+    public byte[] State { get; set; }
+    public System.DateTime Time { get; set; }
 }
