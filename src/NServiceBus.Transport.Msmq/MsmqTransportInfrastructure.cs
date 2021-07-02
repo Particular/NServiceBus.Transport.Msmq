@@ -19,11 +19,11 @@ namespace NServiceBus.Transport.Msmq
             Receivers = receivers;
         }
 
-        public async Task Start()
+        public async Task Start(CancellationToken cancellationToken = default)
         {
             if (delayedDeliveryPump != null)
             {
-                await delayedDeliveryPump.Start().ConfigureAwait(false);
+                await delayedDeliveryPump.Start(cancellationToken).ConfigureAwait(false);
                 timeoutPoller.Start();
             }
         }
@@ -33,7 +33,7 @@ namespace NServiceBus.Transport.Msmq
             if (delayedDeliveryPump != null)
             {
                 await delayedDeliveryPump.Stop(cancellationToken).ConfigureAwait(false);
-                await timeoutPoller.Stop().ConfigureAwait(false);
+                await timeoutPoller.Stop(cancellationToken).ConfigureAwait(false);
             }
         }
     }

@@ -108,20 +108,21 @@
                 this.impl = impl;
             }
 
-            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
+                => impl.Initialize(endpointName, transactionMode, cancellationToken);
 
-            public Task<DateTimeOffset?> Next() => impl.Next();
+            public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => impl.Next(cancellationToken);
 
-            public Task Store(TimeoutItem entity)
+            public Task Store(TimeoutItem entity, CancellationToken cancellationToken = default)
             {
                 throw new Exception("Simulated");
             }
 
-            public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
+            public Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default) => impl.Remove(entity, cancellationToken);
 
-            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => impl.IncrementFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default) => impl.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default) => impl.FetchNextDueTimeout(at, cancellationToken);
         }
     }
 }

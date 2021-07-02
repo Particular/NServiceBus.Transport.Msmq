@@ -84,7 +84,9 @@
             //Assert.True(context.CriticalActionCalled);
         }
 
+#pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
         static async Task<int> PurgeTimeoutsTable()
+#pragma warning restore PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
         {
             using (var cn = new SqlConnection(ConfigureEndpointMsmqTransport.GetStorageConnectionString()))
             {
@@ -153,21 +155,22 @@
                 this.context = context;
                 delayedMessageStoreImplementation = impl;
             }
-            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => delayedMessageStoreImplementation.Initialize(endpointName, transactionMode, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
+                => delayedMessageStoreImplementation.Initialize(endpointName, transactionMode, cancellationToken);
 
-            public Task<DateTimeOffset?> Next() => delayedMessageStoreImplementation.Next();
+            public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Next(cancellationToken);
 
-            public Task Store(TimeoutItem entity)
+            public Task Store(TimeoutItem entity, CancellationToken cancellationToken = default)
             {
                 Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
-                return delayedMessageStoreImplementation.Store(entity);
+                return delayedMessageStoreImplementation.Store(entity, cancellationToken);
             }
-            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => delayedMessageStoreImplementation.IncrementFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<bool> Remove(TimeoutItem entity) => delayedMessageStoreImplementation.Remove(entity);
-            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
+            public Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Remove(entity, cancellationToken);
+            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
             {
-                var entity = await delayedMessageStoreImplementation.FetchNextDueTimeout(at);
+                var entity = await delayedMessageStoreImplementation.FetchNextDueTimeout(at, cancellationToken);
 
                 if (entity != null)
                 {

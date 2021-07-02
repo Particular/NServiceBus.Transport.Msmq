@@ -93,26 +93,27 @@
                 this.context = context;
             }
 
-            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken) => impl.Initialize(endpointName, transactionMode, cancellationToken);
+            public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
+                => impl.Initialize(endpointName, transactionMode, cancellationToken);
 
-            public async Task<DateTimeOffset?> Next()
+            public async Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default)
             {
-                var next = await impl.Next().ConfigureAwait(false);
+                var next = await impl.Next(cancellationToken).ConfigureAwait(false);
                 context.LongDelayFetched = true;
                 return next;
             }
 
-            public async Task Store(TimeoutItem entity)
+            public async Task Store(TimeoutItem entity, CancellationToken cancellationToken = default)
             {
-                await impl.Store(entity).ConfigureAwait(false);
+                await impl.Store(entity, cancellationToken).ConfigureAwait(false);
                 context.LongTimeoutStored = true;
             }
 
-            public Task<bool> Remove(TimeoutItem entity) => impl.Remove(entity);
+            public Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default) => impl.Remove(entity, cancellationToken);
 
-            public Task<bool> IncrementFailureCount(TimeoutItem timeout) => impl.IncrementFailureCount(timeout);
+            public Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default) => impl.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at) => impl.FetchNextDueTimeout(at);
+            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default) => impl.FetchNextDueTimeout(at, cancellationToken);
         }
     }
 }

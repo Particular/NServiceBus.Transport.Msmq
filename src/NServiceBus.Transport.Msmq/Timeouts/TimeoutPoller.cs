@@ -50,7 +50,7 @@ class TimeoutPoller
         completionTask = Task.Run(() => AwaitHandleTasks());
     }
 
-    public async Task Stop()
+    public async Task Stop(CancellationToken cancellationToken = default)
     {
         tokenSource.Cancel();
         await loopTask.ConfigureAwait(false);
@@ -67,7 +67,12 @@ class TimeoutPoller
         }
     }
 
+    /// <summary>
+    /// This method does not accept a cancellation token because it need to finish all the tasks that have been started even if cancellation is under way
+    /// </summary>
+#pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     async Task AwaitHandleTasks()
+#pragma warning restore PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     {
         while (await taskQueue.Reader.WaitToReadAsync().ConfigureAwait(false)) //if this returns false the channel is completed
         {
@@ -91,10 +96,12 @@ class TimeoutPoller
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+#pragma warning disable PS0021 // Highlight when a try block passes multiple cancellation tokens
                 try
+#pragma warning restore PS0021 // Highlight when a try block passes multiple cancellation tokens
                 {
                     var completionSource = new TaskCompletionSource<DateTimeOffset?>();
-                    var handleTask = Poll(completionSource);
+                    var handleTask = Poll(completionSource, cancellationToken);
                     await taskQueue.Writer.WriteAsync(handleTask, cancellationToken).ConfigureAwait(false);
                     var nextPoll = await completionSource.Task.ConfigureAwait(false);
 
@@ -102,7 +109,7 @@ class TimeoutPoller
                     {
                         using (var waitCancelled = new CancellationTokenSource())
                         {
-                            var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token);
+                            var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token, cancellationToken);
 
                             var waitTask = WaitIfNeeded(nextPoll.Value, combinedSource.Token);
                             var signalTask = WaitForSignal(combinedSource.Token);
@@ -112,15 +119,16 @@ class TimeoutPoller
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    //Shutting down
                     break;
                 }
                 catch (Exception e)
                 {
                     Log.Error("Failed to poll and dispatch due timeouts from storage.", e);
                     //Poll and HandleDueDelayedMessage have their own exception handling logic so any exception here is likely going to be related to the transaction itself
-                    await fetchCircuitBreaker.Failure(e).ConfigureAwait(false);
+                    await fetchCircuitBreaker.Failure(e, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -137,9 +145,9 @@ class TimeoutPoller
         {
             await signalQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            //Ignore
+            //Shutting down
         }
     }
 
@@ -154,7 +162,7 @@ class TimeoutPoller
         return Task.CompletedTask;
     }
 
-    async Task Poll(TaskCompletionSource<DateTimeOffset?> result)
+    async Task Poll(TaskCompletionSource<DateTimeOffset?> result, CancellationToken cancellationToken)
     {
         TimeoutItem timeout = null;
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -162,19 +170,19 @@ class TimeoutPoller
         {
             using (var tx = new TransactionScope(TransactionScopeOption.Required, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
-                timeout = await delayedMessageStore.FetchNextDueTimeout(now).ConfigureAwait(false);
+                timeout = await delayedMessageStore.FetchNextDueTimeout(now, cancellationToken).ConfigureAwait(false);
                 fetchCircuitBreaker.Success();
 
                 if (timeout != null)
                 {
                     result.SetResult(null);
-                    await HandleDueDelayedMessage(timeout).ConfigureAwait(false);
+                    await HandleDueDelayedMessage(timeout, cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
                     using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        var nextDueTimeout = await delayedMessageStore.Next().ConfigureAwait(false);
+                        var nextDueTimeout = await delayedMessageStore.Next(cancellationToken).ConfigureAwait(false);
                         if (nextDueTimeout.HasValue)
                         {
                             result.SetResult(nextDueTimeout);
@@ -194,30 +202,35 @@ class TimeoutPoller
         {
             if (timeout != null)
             {
-                await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
+                await TrySendDelayedMessageToErrorQueue(timeout, exception, cancellationToken).ConfigureAwait(false);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            //Shutting down
+            throw;
         }
         catch (Exception exception)
         {
             Log.Error("Failure during timeout polling.", exception);
             if (timeout != null)
             {
-                await dispatchCircuitBreaker.Failure(exception).ConfigureAwait(false);
+                await dispatchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
                 using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                 {
-                    await delayedMessageStore.IncrementFailureCount(timeout).ConfigureAwait(false);
+                    await delayedMessageStore.IncrementFailureCount(timeout, cancellationToken).ConfigureAwait(false);
                     scope.Complete();
 
                 }
 
                 if (timeout.NumberOfRetries > numberOfRetries)
                 {
-                    await TrySendDelayedMessageToErrorQueue(timeout, exception).ConfigureAwait(false);
+                    await TrySendDelayedMessageToErrorQueue(timeout, exception, cancellationToken).ConfigureAwait(false);
                 }
             }
             else
             {
-                await fetchCircuitBreaker.Failure(exception).ConfigureAwait(false);
+                await fetchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -227,10 +240,10 @@ class TimeoutPoller
         }
     }
 
-    async Task HandleDueDelayedMessage(TimeoutItem timeout)
+    async Task HandleDueDelayedMessage(TimeoutItem timeout, CancellationToken cancellationToken)
     {
         TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
-        var success = await delayedMessageStore.Remove(timeout).ConfigureAwait(false);
+        var success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
 
         if (!success)
         {
@@ -244,14 +257,13 @@ class TimeoutPoller
         {
             var transportTransaction = new TransportTransaction();
             transportTransaction.Set(Transaction.Current);
-            await dispatcher.DispatchDelayedMessage(
-                    timeout.Id,
-                    timeout.Headers,
-                    timeout.State,
-                    timeout.Destination,
-                    transportTransaction
-                )
-                .ConfigureAwait(false);
+            dispatcher.DispatchDelayedMessage(
+                timeout.Id,
+                timeout.Headers,
+                timeout.State,
+                timeout.Destination,
+                transportTransaction
+            );
 
             tx.Complete();
         }
@@ -259,11 +271,11 @@ class TimeoutPoller
         dispatchCircuitBreaker.Success();
     }
 
-    async Task TrySendDelayedMessageToErrorQueue(TimeoutItem timeout, Exception exception)
+    async Task TrySendDelayedMessageToErrorQueue(TimeoutItem timeout, Exception exception, CancellationToken cancellationToken)
     {
         try
         {
-            bool success = await delayedMessageStore.Remove(timeout).ConfigureAwait(false);
+            bool success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
 
             if (!success)
             {
@@ -293,6 +305,10 @@ class TimeoutPoller
 
                 transportTx.Complete();
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            //Shutting down
         }
         catch (Exception ex)
         {

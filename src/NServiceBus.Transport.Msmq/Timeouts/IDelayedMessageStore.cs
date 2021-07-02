@@ -16,38 +16,42 @@ namespace NServiceBus
         /// <param name="transactionMode">The transaction mode selected for the transport. The storage implementation should throw an exception if it can't support specified
         /// transaction mode e.g. TransactionScope mode requires the storage to enlist in a distributed transaction managed by the DTC.</param>
         /// <param name="cancellationToken">The cancellation token set if the endpoint begins to shut down while the Initialize method is executing.</param>
-        Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken);
+        Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Returns the date and time set for the next delayed message to become due or null if there are no delayed messages stored.
         /// </summary>
         /// <returns></returns>
-        Task<DateTimeOffset?> Next();
+        Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Stores a delayed message.
         /// </summary>
         /// <param name="entity">Object representing a delayed message.</param>
-        Task Store(TimeoutItem entity);
+        /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
+        Task Store(TimeoutItem entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Removes a due delayed message that has been dispatched to its destination from the store.
         /// </summary>
         /// <param name="entity">Object representing a delayed message previously returned by FetchNextDueTimeout.</param>
+        /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
         /// <returns>True if the removal succeeded. False if there was nothing to remove because the delayed message was already gone.</returns>
-        Task<bool> Remove(TimeoutItem entity);
+        Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Increments the counter of failures for a given due delayed message.
         /// </summary>
         /// <param name="entity">Object representing a delayed message previously returned by FetchNextDueTimeout.</param>
+        /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
         /// <returns>True if the increment succeeded. False if the delayed message was already gone.</returns>
-        Task<bool> IncrementFailureCount(TimeoutItem entity);
+        Task<bool> IncrementFailureCount(TimeoutItem entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves the oldest due delayed message from the store or returns null if there is no due delayed messages.
         /// </summary>
         /// <param name="at">The point in time to which to compare the due date of the messages.</param>
-        Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at);
+        /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
+        Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default);
     }
 }

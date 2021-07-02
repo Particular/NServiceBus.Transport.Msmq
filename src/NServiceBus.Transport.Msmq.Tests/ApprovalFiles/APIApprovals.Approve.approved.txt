@@ -5,7 +5,7 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.7.2", FrameworkDisplayName=".NET Framework 4.7.2")]
 namespace NServiceBus
 {
-    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection();
+    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = default);
     public static class DeadLetterQueueOptionExtensions
     {
         public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = true) { }
@@ -23,12 +23,12 @@ namespace NServiceBus
     }
     public interface IDelayedMessageStore
     {
-        System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at);
-        System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem entity);
-        System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.Task<System.DateTimeOffset?> Next();
-        System.Threading.Tasks.Task<bool> Remove(TimeoutItem entity);
-        System.Threading.Tasks.Task Store(TimeoutItem entity);
+        System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> Remove(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Store(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
     }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
@@ -151,12 +151,12 @@ namespace NServiceBus
     {
         public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
         public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
-        public System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at) { }
-        public System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem timeout) { }
-        public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.Task<System.DateTimeOffset?> Next() { }
-        public System.Threading.Tasks.Task<bool> Remove(TimeoutItem timeout) { }
-        public System.Threading.Tasks.Task Store(TimeoutItem timeout) { }
+        public System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> Remove(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Store(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
 namespace NServiceBus.Transport.Msmq

@@ -43,7 +43,7 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        public Task DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction)
+        public void DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction)
         {
             var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
             var headers = new Dictionary<string, string>();
@@ -64,7 +64,6 @@ namespace NServiceBus.Transport.Msmq
             var request = new OutgoingMessage(id, headers, body);
 
             SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination, properties, DispatchConsistency.Isolated));
-            return Task.CompletedTask;
         }
 
         public const string TimeoutDestination = "NServiceBus.Timeout.Destination";

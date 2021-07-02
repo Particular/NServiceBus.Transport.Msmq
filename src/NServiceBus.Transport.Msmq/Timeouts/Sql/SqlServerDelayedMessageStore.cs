@@ -11,7 +11,7 @@ namespace NServiceBus
     /// <summary>
     /// Factory method for creating SQL Server connections.
     /// </summary>
-    public delegate Task<SqlConnection> CreateSqlConnection();
+    public delegate Task<SqlConnection> CreateSqlConnection(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Implementation of the delayed message store based on the SQL Server.
@@ -35,7 +35,7 @@ namespace NServiceBus
         /// <param name="schema">(optional) schema to use. Defaults to dbo</param>
         /// <param name="tableName">(optional) name of the table where delayed messages are stored. Defaults to name of the endpoint with .Delayed suffix.</param>
         public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null)
-            : this(() => Task.FromResult(new SqlConnection(connectionString)), schema, tableName)
+            : this(token => Task.FromResult(new SqlConnection(connectionString)), schema, tableName)
         {
         }
 
@@ -53,9 +53,9 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task Store(TimeoutItem timeout)
+        public async Task Store(TimeoutItem timeout, CancellationToken cancellationToken = default)
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
+            using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(insertCommand, cn))
             {
                 cmd.Parameters.AddWithValue("@id", timeout.Id);
@@ -63,40 +63,40 @@ namespace NServiceBus
                 cmd.Parameters.AddWithValue("@time", timeout.Time);
                 cmd.Parameters.AddWithValue("@headers", timeout.Headers);
                 cmd.Parameters.AddWithValue("@state", timeout.State);
-                await cn.OpenAsync().ConfigureAwait(false);
-                _ = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                _ = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
 
         /// <inheritdoc />
-        public async Task<bool> Remove(TimeoutItem timeout)
+        public async Task<bool> Remove(TimeoutItem timeout, CancellationToken cancellationToken = default)
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
+            using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(removeCommand, cn))
             {
                 cmd.Parameters.AddWithValue("@id", timeout.Id);
-                await cn.OpenAsync().ConfigureAwait(false);
-                var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
             }
         }
 
         /// <inheritdoc />
-        public async Task<bool> IncrementFailureCount(TimeoutItem timeout)
+        public async Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default)
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
+            using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
             {
                 cmd.Parameters.AddWithValue("@id", timeout.Id);
-                await cn.OpenAsync().ConfigureAwait(false);
-                var affected = await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
             }
         }
 
         /// <inheritdoc />
-        public async Task Initialize(string queueName, TransportTransactionMode transactionMode, CancellationToken cancellationToken)
+        public async Task Initialize(string queueName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
         {
             if (tableName == null)
             {
@@ -116,30 +116,30 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task<DateTimeOffset?> Next()
+        public async Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default)
         {
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
+            using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(nextCommand, cn))
             {
-                await cn.OpenAsync().ConfigureAwait(false);
-                var result = (DateTime?)await cmd.ExecuteScalarAsync().ConfigureAwait(false);
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                var result = (DateTime?)await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                 return result.HasValue ? (DateTimeOffset?)new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
             }
         }
 
         /// <inheritdoc />
-        public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at)
+        public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
         {
             TimeoutItem result = null;
-            using (var cn = await createSqlConnection().ConfigureAwait(false))
+            using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(fetchCommand, cn))
             {
                 cmd.Parameters.AddWithValue("@time", at.UtcDateTime);
 
-                await cn.OpenAsync().ConfigureAwait(false);
-                using (var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow).ConfigureAwait(false))
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                using (var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow, cancellationToken).ConfigureAwait(false))
                 {
-                    if (await reader.ReadAsync().ConfigureAwait(false))
+                    if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     {
                         result = new TimeoutItem
                         {

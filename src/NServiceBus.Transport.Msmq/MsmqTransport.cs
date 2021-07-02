@@ -160,7 +160,7 @@ namespace NServiceBus
             });
 
             var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, timeoutPoller);
-            await infrastructure.Start().ConfigureAwait(false);
+            await infrastructure.Start(cancellationToken).ConfigureAwait(false);
 
             return infrastructure;
         }

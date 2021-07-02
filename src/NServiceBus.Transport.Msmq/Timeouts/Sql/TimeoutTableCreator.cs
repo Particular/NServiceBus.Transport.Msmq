@@ -15,7 +15,7 @@ namespace NServiceBus.Transport.Msmq.Timeouts
         public async Task CreateIfNecessary(CancellationToken cancellationToken = default)
         {
             var sql = string.Format(SqlConstants.SqlCreateTable, tableName);
-            using (var connection = await createSqlConnection().ConfigureAwait(false))
+            using (var connection = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 await Execute(sql, connection, cancellationToken).ConfigureAwait(false);

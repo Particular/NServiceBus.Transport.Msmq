@@ -49,18 +49,18 @@ namespace NServiceBus.Transport.Msmq
                 ex => criticalErrorAction("Failed to store delayed message", ex, CancellationToken.None));
         }
 
-        public async Task Start()
+        public async Task Start(CancellationToken cancellationToken = default)
         {
-            await pump.Initialize(PushRuntimeSettings.Default, TimeoutReceived, OnError, CancellationToken.None).ConfigureAwait(false);
-            await pump.StartReceive(CancellationToken.None).ConfigureAwait(false);
+            await pump.Initialize(PushRuntimeSettings.Default, TimeoutReceived, OnError, cancellationToken).ConfigureAwait(false);
+            await pump.StartReceive(cancellationToken).ConfigureAwait(false);
         }
 
-        public Task Stop(CancellationToken cancellationToken)
+        public Task Stop(CancellationToken cancellationToken = default)
         {
             return pump.StopReceive(cancellationToken);
         }
 
-        async Task TimeoutReceived(MessageContext context, CancellationToken cancellationtoken)
+        async Task TimeoutReceived(MessageContext context, CancellationToken cancellationToken)
         {
             if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination, out var destination))
             {
@@ -81,7 +81,7 @@ namespace NServiceBus.Transport.Msmq
 
             if (diff.Ticks > 0) // Due
             {
-                await dispatcher.DispatchDelayedMessage(id, message.Extension, context.Body, destination, context.TransportTransaction).ConfigureAwait(false);
+                dispatcher.DispatchDelayedMessage(id, message.Extension, context.Body, destination, context.TransportTransaction);
             }
             else
             {
@@ -98,15 +98,20 @@ namespace NServiceBus.Transport.Msmq
                 {
                     using (var tx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                     {
-                        await storage.Store(timeout).ConfigureAwait(false);
+                        await storage.Store(timeout, cancellationToken).ConfigureAwait(false);
                         tx.Complete();
                     }
 
                     storeCircuitBreaker.Success();
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    //Shutting down
+                    return;
+                }
                 catch (Exception e)
                 {
-                    await storeCircuitBreaker.Failure(e).ConfigureAwait(false);
+                    await storeCircuitBreaker.Failure(e, cancellationToken).ConfigureAwait(false);
                     throw new Exception("Error while storing delayed message", e);
                 }
 
