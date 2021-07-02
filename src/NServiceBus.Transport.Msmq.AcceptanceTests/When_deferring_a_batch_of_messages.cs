@@ -17,7 +17,7 @@
     public class When_deferring_a_batch_of_messages : NServiceBusAcceptanceTest
     {
         static readonly TimeSpan Delay = TimeSpan.FromSeconds(25);
-        const int NrOfDelayedMessages = 10000;
+        const int NrOfDelayedMessages = 1000;
 
         [Test]
         [TestCase(TransportTransactionMode.None)]

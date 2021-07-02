@@ -49,7 +49,7 @@ namespace NServiceBus
         {
             createSqlConnection = connectionFactory;
             this.tableName = tableName;
-            this.schema = schema;
+            this.schema = schema ?? "dbo";
         }
 
         /// <inheritdoc />
@@ -100,22 +100,19 @@ namespace NServiceBus
         {
             if (tableName == null)
             {
-                if (schema != null)
-                {
-                    tableName = $"[{schema}]";
-                }
-
-                tableName += $"[{queueName}.timeouts]";
+                tableName = $"{queueName}.timeouts";
             }
 
-            var creator = new TimeoutTableCreator(createSqlConnection, tableName);
+            var quotedFullName = $"{SqlNameHelper.Quote(schema)}.{SqlNameHelper.Quote(tableName)}";
+
+            var creator = new TimeoutTableCreator(createSqlConnection, quotedFullName);
             await creator.CreateIfNecessary(cancellationToken).ConfigureAwait(false);
 
-            insertCommand = string.Format(SqlConstants.SqlInsert, tableName);
-            removeCommand = string.Format(SqlConstants.SqlDelete, tableName);
-            bumpFailureCountCommand = string.Format(SqlConstants.SqlUpdate, tableName);
-            nextCommand = string.Format(SqlConstants.SqlGetNext, tableName);
-            fetchCommand = string.Format(SqlConstants.SqlFetch, tableName);
+            insertCommand = string.Format(SqlConstants.SqlInsert, quotedFullName);
+            removeCommand = string.Format(SqlConstants.SqlDelete, quotedFullName);
+            bumpFailureCountCommand = string.Format(SqlConstants.SqlUpdate, quotedFullName);
+            nextCommand = string.Format(SqlConstants.SqlGetNext, quotedFullName);
+            fetchCommand = string.Format(SqlConstants.SqlFetch, quotedFullName);
         }
 
         /// <inheritdoc />
