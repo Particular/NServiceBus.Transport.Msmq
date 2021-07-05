@@ -29,7 +29,7 @@ namespace NServiceBus
         /// </summary>
         /// <param name="entity">Object representing a delayed message.</param>
         /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
-        Task Store(TimeoutItem entity, CancellationToken cancellationToken = default);
+        Task Store(DelayedMessage entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Removes a due delayed message that has been dispatched to its destination from the store.
@@ -37,7 +37,7 @@ namespace NServiceBus
         /// <param name="entity">Object representing a delayed message previously returned by FetchNextDueTimeout.</param>
         /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
         /// <returns>True if the removal succeeded. False if there was nothing to remove because the delayed message was already gone.</returns>
-        Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default);
+        Task<bool> Remove(DelayedMessage entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Increments the counter of failures for a given due delayed message.
@@ -45,13 +45,13 @@ namespace NServiceBus
         /// <param name="entity">Object representing a delayed message previously returned by FetchNextDueTimeout.</param>
         /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
         /// <returns>True if the increment succeeded. False if the delayed message was already gone.</returns>
-        Task<bool> IncrementFailureCount(TimeoutItem entity, CancellationToken cancellationToken = default);
+        Task<bool> IncrementFailureCount(DelayedMessage entity, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves the oldest due delayed message from the store or returns null if there is no due delayed messages.
         /// </summary>
         /// <param name="at">The point in time to which to compare the due date of the messages.</param>
         /// <param name="cancellationToken">The cancellation token for cooperative cancellation</param>
-        Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default);
+        Task<DelayedMessage> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default);
     }
 }

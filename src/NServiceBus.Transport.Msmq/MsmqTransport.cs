@@ -14,6 +14,7 @@ namespace NServiceBus
     using Support;
     using Transport;
     using Transport.Msmq;
+    using Transport.Msmq.DelayedDelivery;
 
     /// <summary>
     /// Transport definition for MSMQ.
@@ -123,7 +124,7 @@ namespace NServiceBus
             var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue, OnSendCallbackForTesting);
 
             DelayedDeliveryPump delayedDeliveryPump = null;
-            TimeoutPoller timeoutPoller = null;
+            DueDelayedMessagePoller dueDelayedMessagePoller = null;
             if (requiresDelayedDelivery)
             {
                 QueuePermissions.CheckQueue(timeoutsQueue);
@@ -137,13 +138,16 @@ namespace NServiceBus
                     {Headers.HostDisplayName, hostSettings.HostDisplayName}
                 };
 
-                timeoutPoller = new TimeoutPoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode);
+                dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
+                    DelayedDelivery.TimeToTriggerFetchCircuitBreaker,
+                    DelayedDelivery.TimeToTriggerDispatchCircuitBreaker,
+                    DelayedDelivery.MaximumRecoveryFailuresPerSecond);
 
                 var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
                     MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
                     new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, timeoutPoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -159,7 +163,7 @@ namespace NServiceBus
                 TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType(),
             });
 
-            var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, timeoutPoller);
+            var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, dueDelayedMessagePoller);
             await infrastructure.Start(cancellationToken).ConfigureAwait(false);
 
             return infrastructure;
@@ -342,7 +346,7 @@ namespace NServiceBus
         public string CreateQueuesForUser { get; set; }
 
         /// <summary>
-        /// Use timeouts managed via external storage
+        /// Enable delayed delivery of messages. Required for delayed retries and Saga timeouts.
         /// </summary>
         public DelayedDeliverySettings DelayedDelivery { get; set; }
 

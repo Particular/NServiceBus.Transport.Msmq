@@ -1,8 +1,8 @@
-namespace NServiceBus.Transport.Msmq.Timeouts
+namespace NServiceBus.Transport.Msmq.DelayedDelivery.Sql
 {
     using System.Data.SqlClient;
-    using System.Threading.Tasks;
     using System.Threading;
+    using System.Threading.Tasks;
 
     class TimeoutTableCreator
     {

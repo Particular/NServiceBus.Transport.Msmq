@@ -1,4 +1,4 @@
-namespace NServiceBus.Transport.Msmq
+namespace NServiceBus.Transport.Msmq.DelayedDelivery
 {
     using System;
     using System.Collections.Generic;
@@ -10,20 +10,8 @@ namespace NServiceBus.Transport.Msmq
 
     class DelayedDeliveryPump
     {
-        readonly MsmqMessageDispatcher dispatcher;
-        readonly TimeoutPoller poller;
-        readonly IDelayedMessageStore storage;
-        readonly int numberOfRetries;
-        readonly MessagePump pump;
-        readonly Dictionary<string, string> faultMetadata;
-        readonly string errorQueue;
-        RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
-        readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
-        readonly TransactionScopeOption txOption;
-        readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
-
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
-                                   TimeoutPoller poller,
+                                   DueDelayedMessagePoller poller,
                                    IDelayedMessageStore storage,
                                    MessagePump messagePump,
                                    string errorQueue,
@@ -85,11 +73,11 @@ namespace NServiceBus.Transport.Msmq
             }
             else
             {
-                var timeout = new TimeoutItem
+                var timeout = new DelayedMessage
                 {
                     Destination = destination,
                     Id = id,
-                    State = context.Body,
+                    Body = context.Body,
                     Time = at.UtcDateTime,
                     Headers = message.Extension
                 };
@@ -143,5 +131,18 @@ namespace NServiceBus.Transport.Msmq
 
             return ErrorHandleResult.Handled;
         }
+
+        readonly MsmqMessageDispatcher dispatcher;
+        readonly DueDelayedMessagePoller poller;
+        readonly IDelayedMessageStore storage;
+        readonly int numberOfRetries;
+        readonly MessagePump pump;
+        readonly Dictionary<string, string> faultMetadata;
+        readonly string errorQueue;
+        RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
+        readonly TransactionScopeOption txOption;
+        readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
+
+        static readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
     }
 }

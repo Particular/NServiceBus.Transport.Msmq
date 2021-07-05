@@ -12,10 +12,23 @@ namespace NServiceBus
     }
     public class DelayedDeliverySettings
     {
-        public DelayedDeliverySettings(NServiceBus.IDelayedMessageStore delayedMessageStore, int retries = 10, System.TimeSpan? timeToTriggerStoreCircuitBreaker = default) { }
+        public DelayedDeliverySettings(NServiceBus.IDelayedMessageStore delayedMessageStore, int retries = 10, System.TimeSpan? timeToTriggerStoreCircuitBreaker = default, System.TimeSpan? timeToTriggerFetchCircuitBreaker = default, System.TimeSpan? timeToTriggerDispatchCircuitBreaker = default, int maximumRecoveryFailuresPerSecond = 1) { }
         public NServiceBus.IDelayedMessageStore DelayedMessageStore { get; }
+        public int MaximumRecoveryFailuresPerSecond { get; set; }
         public int NumberOfRetries { get; set; }
+        public System.TimeSpan TimeToTriggerDispatchCircuitBreaker { get; set; }
+        public System.TimeSpan TimeToTriggerFetchCircuitBreaker { get; set; }
         public System.TimeSpan TimeToTriggerStoreCircuitBreaker { get; set; }
+    }
+    public class DelayedMessage
+    {
+        public DelayedMessage() { }
+        public byte[] Body { get; set; }
+        public string Destination { get; set; }
+        public byte[] Headers { get; set; }
+        public string Id { get; set; }
+        public int NumberOfRetries { get; set; }
+        public System.DateTime Time { get; set; }
     }
     public static class EndpointInstanceExtensions
     {
@@ -23,12 +36,12 @@ namespace NServiceBus
     }
     public interface IDelayedMessageStore
     {
-        System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> Remove(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task Store(TimeoutItem entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
     }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
@@ -151,12 +164,12 @@ namespace NServiceBus
     {
         public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
         public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
-        public System.Threading.Tasks.Task<TimeoutItem> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> IncrementFailureCount(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> Remove(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task Store(TimeoutItem timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
 namespace NServiceBus.Transport.Msmq
@@ -168,14 +181,4 @@ namespace NServiceBus.Transport.Msmq
         public string Key { get; set; }
         public string Value { get; set; }
     }
-}
-public class TimeoutItem
-{
-    public TimeoutItem() { }
-    public string Destination { get; set; }
-    public byte[] Headers { get; set; }
-    public string Id { get; set; }
-    public int NumberOfRetries { get; set; }
-    public byte[] State { get; set; }
-    public System.DateTime Time { get; set; }
 }

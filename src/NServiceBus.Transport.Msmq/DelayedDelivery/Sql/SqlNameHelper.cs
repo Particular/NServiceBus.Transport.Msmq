@@ -1,4 +1,4 @@
-namespace NServiceBus
+namespace NServiceBus.Transport.Msmq.DelayedDelivery.Sql
 {
     class SqlNameHelper
     {

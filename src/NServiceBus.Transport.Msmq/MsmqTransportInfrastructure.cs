@@ -4,17 +4,18 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
+    using DelayedDelivery;
     using Transport;
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
         readonly DelayedDeliveryPump delayedDeliveryPump;
-        readonly TimeoutPoller timeoutPoller;
+        readonly DueDelayedMessagePoller dueDelayedMessagePoller;
 
-        public MsmqTransportInfrastructure(IReadOnlyDictionary<string, IMessageReceiver> receivers, MsmqMessageDispatcher dispatcher, DelayedDeliveryPump delayedDeliveryPump, TimeoutPoller timeoutPoller)
+        public MsmqTransportInfrastructure(IReadOnlyDictionary<string, IMessageReceiver> receivers, MsmqMessageDispatcher dispatcher, DelayedDeliveryPump delayedDeliveryPump, DueDelayedMessagePoller dueDelayedMessagePoller)
         {
             this.delayedDeliveryPump = delayedDeliveryPump;
-            this.timeoutPoller = timeoutPoller;
+            this.dueDelayedMessagePoller = dueDelayedMessagePoller;
             Dispatcher = dispatcher;
             Receivers = receivers;
         }
@@ -24,7 +25,7 @@ namespace NServiceBus.Transport.Msmq
             if (delayedDeliveryPump != null)
             {
                 await delayedDeliveryPump.Start(cancellationToken).ConfigureAwait(false);
-                timeoutPoller.Start();
+                dueDelayedMessagePoller.Start();
             }
         }
 
@@ -33,7 +34,7 @@ namespace NServiceBus.Transport.Msmq
             if (delayedDeliveryPump != null)
             {
                 await delayedDeliveryPump.Stop(cancellationToken).ConfigureAwait(false);
-                await timeoutPoller.Stop(cancellationToken).ConfigureAwait(false);
+                await dueDelayedMessagePoller.Stop(cancellationToken).ConfigureAwait(false);
             }
         }
     }

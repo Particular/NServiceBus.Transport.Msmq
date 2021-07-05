@@ -160,15 +160,15 @@
 
             public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Next(cancellationToken);
 
-            public Task Store(TimeoutItem entity, CancellationToken cancellationToken = default)
+            public Task Store(DelayedMessage entity, CancellationToken cancellationToken = default)
             {
                 Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
                 return delayedMessageStoreImplementation.Store(entity, cancellationToken);
             }
-            public Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.IncrementFailureCount(timeout, cancellationToken);
+            public Task<bool> IncrementFailureCount(DelayedMessage timeout, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Remove(entity, cancellationToken);
-            public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
+            public Task<bool> Remove(DelayedMessage entity, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Remove(entity, cancellationToken);
+            public async Task<DelayedMessage> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
             {
                 var entity = await delayedMessageStoreImplementation.FetchNextDueTimeout(at, cancellationToken);
 
