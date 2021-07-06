@@ -34,12 +34,13 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             this.numberOfRetries = numberOfRetries;
             this.dispatcher = dispatcher;
             fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", timeToTriggerFetchCircuitBreaker,
-                ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex, CancellationToken.None));
+                ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex, tokenSource?.Token ?? CancellationToken.None));
 
             dispatchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageDispatch", timeToTriggerDispatchCircuitBreaker,
-                ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex, CancellationToken.None));
+                ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex, tokenSource?.Token ?? CancellationToken.None));
 
-            failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond, ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex, CancellationToken.None));
+            failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond,
+                ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex, tokenSource?.Token ?? CancellationToken.None));
 
             signalQueue = Channel.CreateBounded<bool>(1);
             taskQueue = Channel.CreateBounded<Task>(2);
@@ -70,7 +71,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         }
 
         /// <summary>
-        /// This method does not accept a cancellation token because it need to finish all the tasks that have been started even if cancellation is under way
+        /// This method does not accept a cancellation token because it needs to finish all the tasks that have been started even if cancellation is under way.
         /// </summary>
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
         async Task AwaitHandleTasks()
@@ -83,6 +84,11 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     try
                     {
                         await task.ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //Shutting down
+                        Log.Debug("A shutdown was triggered and Poll task has been cancelled.");
                     }
                     catch (Exception e)
                     {
@@ -102,6 +108,11 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     try
 #pragma warning restore PS0021 // Highlight when a try block passes multiple cancellation tokens
                     {
+
+                        //We create a TaskCompletionSource source here and pass it to spawned Poll task. Once the Poll task is done with fetching
+                        //the next due timeout, we continue with the loop. This allows us to run the Poll tasks in an overlapping way so that at any time there is
+                        //one Poll task fetching and one dispatching.
+
                         var completionSource = new TaskCompletionSource<DateTimeOffset?>();
                         var handleTask = Poll(completionSource, cancellationToken);
                         await taskQueue.Writer.WriteAsync(handleTask, cancellationToken).ConfigureAwait(false);
@@ -109,9 +120,12 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
                         if (nextPoll.HasValue)
                         {
+                            //We wait either for a signal that a new delayed message has been stored or until next timeout should be due
+                            //After waiting we cancel the token so that the task waiting for the signal is cancelled and does not "eat" the next
+                            //signal when it is raised in the next iteration of this loop
                             using (var waitCancelled = new CancellationTokenSource())
                             {
-                                var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token, cancellationToken);
+                                var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token);
 
                                 var waitTask = WaitIfNeeded(nextPoll.Value, combinedSource.Token);
                                 var signalTask = WaitForSignal(combinedSource.Token);
@@ -124,6 +138,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
                         //Shutting down
+                        Log.Debug("A shutdown was triggered, canceling the Loop operation.");
                         break;
                     }
                     catch (Exception e)
@@ -149,7 +164,8 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                //Shutting down
+                //Shutting down or no signal arrived while the wait period was over
+                Log.Debug("No new delayed messages have been stored while waiting for the next due delayed message.");
             }
         }
 
@@ -196,7 +212,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                             }
                         }
                     }
-
                     tx.Complete();
                 }
             }
@@ -222,7 +237,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     {
                         await delayedMessageStore.IncrementFailureCount(timeout, cancellationToken).ConfigureAwait(false);
                         scope.Complete();
-
                     }
 
                     if (timeout.NumberOfRetries > numberOfRetries)
@@ -253,14 +267,14 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                 return;
             }
 
-            Log.DebugFormat("Timeout {0} over due for {1}", timeout.Id, diff);
+            Log.DebugFormat("Timeout {0} over due for {1}", timeout.MessageId, diff);
 
             using (var tx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
                 var transportTransaction = new TransportTransaction();
                 transportTransaction.Set(Transaction.Current);
                 dispatcher.DispatchDelayedMessage(
-                    timeout.Id,
+                    timeout.MessageId,
                     timeout.Headers,
                     timeout.Body,
                     timeout.Destination,
@@ -294,13 +308,13 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     headersAndProperties[pair.Key] = pair.Value;
                 }
 
-                Log.Info($"Dispatch to error queue transaction = {txOption}, Enlist = {txOption == TransactionScopeOption.Required}");
+                Log.InfoFormat("Move {0} to error queue", timeout.MessageId);
                 using (var transportTx = new TransactionScope(txOption, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
                 {
                     var transportTransaction = new TransportTransaction();
                     transportTransaction.Set(Transaction.Current);
 
-                    var outgoingMessage = new OutgoingMessage(timeout.Id, headersAndProperties, timeout.Body);
+                    var outgoingMessage = new OutgoingMessage(timeout.MessageId, headersAndProperties, timeout.Body);
                     var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(errorQueue));
                     await dispatcher.Dispatch(new TransportOperations(transportOperation), transportTransaction, CancellationToken.None)
                         .ConfigureAwait(false);
@@ -311,10 +325,11 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 //Shutting down
+                Log.Debug("Aborted sending delayed message to error queue due to shutdown.");
             }
             catch (Exception ex)
             {
-                Log.Error($"Failed to move delayed message {timeout.Id} to the error queue {errorQueue} after {timeout.NumberOfRetries} failed attempts at dispatching it to the destination", ex);
+                Log.Error($"Failed to move delayed message {timeout.MessageId} to the error queue {errorQueue} after {timeout.NumberOfRetries} failed attempts at dispatching it to the destination", ex);
             }
         }
 

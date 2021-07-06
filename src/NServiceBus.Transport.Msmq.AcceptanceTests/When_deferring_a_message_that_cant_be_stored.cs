@@ -50,7 +50,13 @@
                 {
                     endpointConfiguration.SendFailedMessagesTo(Conventions.EndpointNamingConvention(typeof(ErrorSpy)));
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore), 2);
+
+                    transport.DelayedDelivery =
+                        new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore))
+                        {
+                            NumberOfRetries = 2,
+                            TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
+                        };
                 });
             }
 

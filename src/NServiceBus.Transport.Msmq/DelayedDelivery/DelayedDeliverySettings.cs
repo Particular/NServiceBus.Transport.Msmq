@@ -89,37 +89,10 @@
         /// Configures delayed delivery.
         /// </summary>
         /// <param name="delayedMessageStore">The store to keep delayed messages.</param>
-        /// <param name="retries">Number of retries when trying to forward due delayed messages.</param>
-        /// <param name="timeToTriggerStoreCircuitBreaker">Time to wait before triggering the circuit breaker that monitors the storing of delayed messages in the database. Defaults to 30 seconds.</param>
-        /// <param name="timeToTriggerFetchCircuitBreaker">Time to wait before triggering the circuit breaker that monitors the fetching of due delayed messages from the database. Defaults to 30 seconds.</param>
-        /// <param name="timeToTriggerDispatchCircuitBreaker">Time to wait before triggering the circuit breaker that monitors the dispatching of due delayed messages to the destination. Defaults to 30 seconds.</param>
-        /// <param name="maximumRecoveryFailuresPerSecond">Maximum number of recovery failures per second that triggers the recovery circuit breaker. Defaults to 1/s.</param>
-        public DelayedDeliverySettings(IDelayedMessageStore delayedMessageStore,
-            int retries = 10,
-            TimeSpan? timeToTriggerStoreCircuitBreaker = null,
-            TimeSpan? timeToTriggerFetchCircuitBreaker = null,
-            TimeSpan? timeToTriggerDispatchCircuitBreaker = null,
-            int maximumRecoveryFailuresPerSecond = 1)
+        public DelayedDeliverySettings(IDelayedMessageStore delayedMessageStore)
         {
             Guard.AgainstNull(nameof(delayedMessageStore), delayedMessageStore);
-            NumberOfRetries = retries;
             DelayedMessageStore = delayedMessageStore;
-            MaximumRecoveryFailuresPerSecond = maximumRecoveryFailuresPerSecond;
-
-            if (timeToTriggerStoreCircuitBreaker.HasValue)
-            {
-                this.timeToTriggerStoreCircuitBreaker = timeToTriggerStoreCircuitBreaker.Value;
-            }
-
-            if (timeToTriggerFetchCircuitBreaker.HasValue)
-            {
-                this.timeToTriggerFetchCircuitBreaker = timeToTriggerFetchCircuitBreaker.Value;
-            }
-
-            if (timeToTriggerDispatchCircuitBreaker.HasValue)
-            {
-                this.timeToTriggerDispatchCircuitBreaker = timeToTriggerDispatchCircuitBreaker.Value;
-            }
         }
     }
 }

@@ -58,7 +58,7 @@ namespace NServiceBus
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(insertCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 cmd.Parameters.AddWithValue("@destination", timeout.Destination);
                 cmd.Parameters.AddWithValue("@time", timeout.Time);
                 cmd.Parameters.AddWithValue("@headers", timeout.Headers);
@@ -75,7 +75,7 @@ namespace NServiceBus
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(removeCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
@@ -88,7 +88,7 @@ namespace NServiceBus
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
@@ -143,7 +143,7 @@ namespace NServiceBus
                     {
                         result = new DelayedMessage
                         {
-                            Id = (string)reader[0],
+                            MessageId = (string)reader[0],
                             Destination = (string)reader[1],
                             Time = (DateTime)reader[2],
                             Headers = (byte[])reader[3],

@@ -116,11 +116,12 @@
                     //transport.TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
 
                     var storage = new WrapDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, context);
-                    transport.DelayedDelivery = new DelayedDeliverySettings(
-                        storage,
-                        2,
-                        TimeSpan.FromSeconds(5)
-                        );
+                    transport.DelayedDelivery =
+                        new DelayedDeliverySettings(storage)
+                        {
+                            NumberOfRetries = 2,
+                            TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
+                        };
                 });
             }
 

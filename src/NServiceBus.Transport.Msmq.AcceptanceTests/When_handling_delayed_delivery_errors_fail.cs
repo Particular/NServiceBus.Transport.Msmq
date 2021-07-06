@@ -61,7 +61,12 @@
                         return Task.CompletedTask;
                     });
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore), 1, TimeSpan.FromSeconds(5));
+                    transport.DelayedDelivery =
+                        new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore))
+                        {
+                            NumberOfRetries = 1,
+                            TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
+                        };
                 });
             }
 

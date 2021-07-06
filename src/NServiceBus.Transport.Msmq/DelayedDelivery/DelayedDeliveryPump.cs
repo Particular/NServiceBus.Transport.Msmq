@@ -76,7 +76,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                 var timeout = new DelayedMessage
                 {
                     Destination = destination,
-                    Id = id,
+                    MessageId = id,
                     Body = context.Body,
                     Time = at.UtcDateTime,
                     Headers = message.Extension

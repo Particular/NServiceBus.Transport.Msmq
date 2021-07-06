@@ -16,7 +16,7 @@ namespace NServiceBus
         /// <summary>
         /// Native message ID
         /// </summary>
-        public string Id { get; set; }
+        public string MessageId { get; set; }
 
         /// <summary>
         /// The body of the message.
