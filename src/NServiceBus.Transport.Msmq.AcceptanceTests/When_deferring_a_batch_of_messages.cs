@@ -79,9 +79,6 @@
                     }).DoNotFailOnErrorMessages();
                 })
                 .Run();
-
-            //Assert.False(context.Processed);
-            //Assert.True(context.CriticalActionCalled);
         }
 
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
@@ -113,8 +110,6 @@
                 {
                     var context = (Context)run.ScenarioContext;
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    //transport.TransportTransactionMode = TransportTransactionMode.ReceiveOnly;
-
                     var storage = new WrapDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, context);
                     transport.DelayedDelivery =
                         new DelayedDeliverySettings(storage)
@@ -156,19 +151,25 @@
                 this.context = context;
                 delayedMessageStoreImplementation = impl;
             }
+
             public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
                 => delayedMessageStoreImplementation.Initialize(endpointName, transactionMode, cancellationToken);
 
-            public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Next(cancellationToken);
+            public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default)
+                => delayedMessageStoreImplementation.Next(cancellationToken);
 
             public Task Store(DelayedMessage entity, CancellationToken cancellationToken = default)
             {
                 Transaction.Current.TransactionCompleted += (s, e) => context.StoringTimeouts.Signal();
                 return delayedMessageStoreImplementation.Store(entity, cancellationToken);
             }
-            public Task<bool> IncrementFailureCount(DelayedMessage timeout, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<bool> Remove(DelayedMessage entity, CancellationToken cancellationToken = default) => delayedMessageStoreImplementation.Remove(entity, cancellationToken);
+            public Task<bool> IncrementFailureCount(DelayedMessage timeout, CancellationToken cancellationToken = default)
+                => delayedMessageStoreImplementation.IncrementFailureCount(timeout, cancellationToken);
+
+            public Task<bool> Remove(DelayedMessage entity, CancellationToken cancellationToken = default)
+                => delayedMessageStoreImplementation.Remove(entity, cancellationToken);
+
             public async Task<DelayedMessage> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
             {
                 var entity = await delayedMessageStoreImplementation.FetchNextDueTimeout(at, cancellationToken);
