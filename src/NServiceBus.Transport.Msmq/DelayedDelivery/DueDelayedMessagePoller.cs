@@ -87,7 +87,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     }
                     catch (OperationCanceledException)
                     {
-                        //Shutting down
                         Log.Debug("A shutdown was triggered and Poll task has been cancelled.");
                     }
                     catch (Exception e)
@@ -137,7 +136,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
-                        //Shutting down
                         Log.Debug("A shutdown was triggered, canceling the Loop operation.");
                         break;
                     }
@@ -164,7 +162,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                //Shutting down or no signal arrived while the wait period was over
                 Log.Debug("No new delayed messages have been stored while waiting for the next due delayed message.");
             }
         }
