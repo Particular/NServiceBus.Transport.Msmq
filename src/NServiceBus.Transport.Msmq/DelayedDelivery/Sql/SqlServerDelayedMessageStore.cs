@@ -5,7 +5,7 @@ namespace NServiceBus
     using System.Data.SqlClient;
     using System.Threading;
     using System.Threading.Tasks;
-    using Transport.Msmq.Timeouts;
+    using Transport.Msmq.DelayedDelivery.Sql;
 
     //TODO: Either we should expect that the connection created by the factory is open of we should make it non-async
     /// <summary>
@@ -53,16 +53,16 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task Store(TimeoutItem timeout, CancellationToken cancellationToken = default)
+        public async Task Store(DelayedMessage timeout, CancellationToken cancellationToken = default)
         {
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(insertCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 cmd.Parameters.AddWithValue("@destination", timeout.Destination);
                 cmd.Parameters.AddWithValue("@time", timeout.Time);
                 cmd.Parameters.AddWithValue("@headers", timeout.Headers);
-                cmd.Parameters.AddWithValue("@state", timeout.State);
+                cmd.Parameters.AddWithValue("@state", timeout.Body);
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 _ = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -70,12 +70,12 @@ namespace NServiceBus
 
 
         /// <inheritdoc />
-        public async Task<bool> Remove(TimeoutItem timeout, CancellationToken cancellationToken = default)
+        public async Task<bool> Remove(DelayedMessage timeout, CancellationToken cancellationToken = default)
         {
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(removeCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
@@ -83,12 +83,12 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default)
+        public async Task<bool> IncrementFailureCount(DelayedMessage timeout, CancellationToken cancellationToken = default)
         {
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(bumpFailureCountCommand, cn))
             {
-                cmd.Parameters.AddWithValue("@id", timeout.Id);
+                cmd.Parameters.AddWithValue("@id", timeout.MessageId);
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var affected = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 return affected == 1;
@@ -128,9 +128,9 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
+        public async Task<DelayedMessage> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default)
         {
-            TimeoutItem result = null;
+            DelayedMessage result = null;
             using (var cn = await createSqlConnection(cancellationToken).ConfigureAwait(false))
             using (var cmd = new SqlCommand(fetchCommand, cn))
             {
@@ -141,13 +141,13 @@ namespace NServiceBus
                 {
                     if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        result = new TimeoutItem
+                        result = new DelayedMessage
                         {
-                            Id = (string)reader[0],
+                            MessageId = (string)reader[0],
                             Destination = (string)reader[1],
                             Time = (DateTime)reader[2],
                             Headers = (byte[])reader[3],
-                            State = (byte[])reader[4],
+                            Body = (byte[])reader[4],
                             NumberOfRetries = (int)reader[5]
                         };
                     }

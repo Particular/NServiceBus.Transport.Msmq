@@ -50,7 +50,13 @@
                 {
                     endpointConfiguration.SendFailedMessagesTo(Conventions.EndpointNamingConvention(typeof(ErrorSpy)));
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore), 2);
+
+                    transport.DelayedDelivery =
+                        new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore))
+                        {
+                            NumberOfRetries = 2,
+                            TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
+                        };
                 });
             }
 
@@ -113,16 +119,16 @@
 
             public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => impl.Next(cancellationToken);
 
-            public Task Store(TimeoutItem entity, CancellationToken cancellationToken = default)
+            public Task Store(DelayedMessage entity, CancellationToken cancellationToken = default)
             {
                 throw new Exception("Simulated");
             }
 
-            public Task<bool> Remove(TimeoutItem entity, CancellationToken cancellationToken = default) => impl.Remove(entity, cancellationToken);
+            public Task<bool> Remove(DelayedMessage entity, CancellationToken cancellationToken = default) => impl.Remove(entity, cancellationToken);
 
-            public Task<bool> IncrementFailureCount(TimeoutItem timeout, CancellationToken cancellationToken = default) => impl.IncrementFailureCount(timeout, cancellationToken);
+            public Task<bool> IncrementFailureCount(DelayedMessage timeout, CancellationToken cancellationToken = default) => impl.IncrementFailureCount(timeout, cancellationToken);
 
-            public Task<TimeoutItem> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default) => impl.FetchNextDueTimeout(at, cancellationToken);
+            public Task<DelayedMessage> FetchNextDueTimeout(DateTimeOffset at, CancellationToken cancellationToken = default) => impl.FetchNextDueTimeout(at, cancellationToken);
         }
     }
 }

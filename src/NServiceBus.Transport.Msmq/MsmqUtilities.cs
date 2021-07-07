@@ -87,7 +87,7 @@ namespace NServiceBus.Transport.Msmq
                 return result;
             }
 
-            //This is to make us compatible with v3 messages that are affected by this bug:
+            //This is to make us compatible with v3 messages that are affected by this issue:
             //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
             var xmlLength = data.LastIndexOf(EndTag) + EndTag.Length; // Ignore any data after last </ArrayOfHeaderInfo>
             object o;
