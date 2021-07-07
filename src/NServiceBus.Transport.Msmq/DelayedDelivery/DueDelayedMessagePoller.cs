@@ -221,7 +221,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                //Shutting down
+                //Shutting down. Bubble up the exception. Will be awaited by AwaitHandleTasks method that catches OperationCanceledExceptions
                 throw;
             }
             catch (Exception exception)
