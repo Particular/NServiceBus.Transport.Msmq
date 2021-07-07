@@ -3,7 +3,6 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using System;
     using System.Collections.Generic;
     using System.Threading;
-    using System.Threading.Channels;
     using System.Threading.Tasks;
     using System.Transactions;
     using Logging;
@@ -41,23 +40,18 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
             failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond,
                 ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex, tokenSource?.Token ?? CancellationToken.None));
-
-            signalQueue = Channel.CreateBounded<bool>(1);
-            taskQueue = Channel.CreateBounded<Task>(2);
         }
 
         public void Start()
         {
             tokenSource = new CancellationTokenSource();
             loopTask = Task.Run(() => Loop(tokenSource.Token));
-            completionTask = Task.Run(() => AwaitHandleTasks());
         }
 
         public async Task Stop(CancellationToken cancellationToken = default)
         {
             tokenSource.Cancel();
             await loopTask.ConfigureAwait(false);
-            await completionTask.ConfigureAwait(false);
         }
 
         public void Signal(DateTimeOffset timeoutTime)
@@ -65,201 +59,124 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             //If the next timeout is within a minute from now, trigger the poller
             if (DateTimeOffset.UtcNow.Add(MaxSleepDuration) > timeoutTime)
             {
-                //If there is something already in the queue we are fine.
-                signalQueue.Writer.TryWrite(true);
-            }
-        }
-
-        /// <summary>
-        /// This method does not accept a cancellation token because it needs to finish all the tasks that have been started even if cancellation is under way.
-        /// </summary>
-#pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
-        async Task AwaitHandleTasks()
-#pragma warning restore PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
-        {
-            while (await taskQueue.Reader.WaitToReadAsync().ConfigureAwait(false)) //if this returns false the channel is completed
-            {
-                while (taskQueue.Reader.TryRead(out var task))
+                try
                 {
-                    try
-                    {
-                        await task.ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Log.Debug("A shutdown was triggered and Poll task has been cancelled.");
-                    }
-                    catch (Exception e)
-                    {
-                        failureHandlingCircuitBreaker.Failure(e);
-                    }
+                    breakLoop.Release();
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // Loop already spinning
                 }
             }
         }
 
         async Task Loop(CancellationToken cancellationToken)
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                while (!cancellationToken.IsCancellationRequested)
+                try
                 {
-#pragma warning disable PS0021 // Highlight when a try block passes multiple cancellation tokens
-                    try
-#pragma warning restore PS0021 // Highlight when a try block passes multiple cancellation tokens
-                    {
-
-                        //We create a TaskCompletionSource source here and pass it to spawned Poll task. Once the Poll task is done with fetching
-                        //the next due timeout, we continue with the loop. This allows us to run the Poll tasks in an overlapping way so that at any time there is
-                        //one Poll task fetching and one dispatching.
-
-                        var completionSource = new TaskCompletionSource<DateTimeOffset?>();
-                        var handleTask = Poll(completionSource, cancellationToken);
-                        await taskQueue.Writer.WriteAsync(handleTask, cancellationToken).ConfigureAwait(false);
-                        var nextPoll = await completionSource.Task.ConfigureAwait(false);
-
-                        if (nextPoll.HasValue)
-                        {
-                            //We wait either for a signal that a new delayed message has been stored or until next timeout should be due
-                            //After waiting we cancel the token so that the task waiting for the signal is cancelled and does not "eat" the next
-                            //signal when it is raised in the next iteration of this loop
-                            using (var waitCancelled = new CancellationTokenSource())
-                            {
-                                var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token);
-
-                                var waitTask = WaitIfNeeded(nextPoll.Value, combinedSource.Token);
-                                var signalTask = WaitForSignal(combinedSource.Token);
-
-                                await Task.WhenAny(waitTask, signalTask).ConfigureAwait(false);
-                                waitCancelled.Cancel();
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                    {
-                        Log.Debug("A shutdown was triggered, canceling the Loop operation.");
-                        break;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error("Failed to poll and dispatch due timeouts from storage.", e);
-                        //Poll and HandleDueDelayedMessage have their own exception handling logic so any exception here is likely going to be related to the transaction itself
-                        await fetchCircuitBreaker.Failure(e, cancellationToken).ConfigureAwait(false);
-                    }
+                    await Poll(cancellationToken).ConfigureAwait(false);
+                    var next = await Next(cancellationToken).ConfigureAwait(false);
+                    await Task.WhenAny(Task.Delay(next, cancellationToken), breakLoop.WaitAsync(cancellationToken)).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    Log.Debug("A shutdown was triggered, canceling the Loop operation.");
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Failed to poll and dispatch due timeouts from storage.", e);
+                    //Poll and HandleDueDelayedMessage have their own exception handling logic so any exception here is likely going to be related to the transaction itself
+                    await fetchCircuitBreaker.Failure(e, cancellationToken).ConfigureAwait(false);
                 }
             }
-            finally
-            {
-                //No matter what we need to complete the writer so that we can stop gracefully
-                taskQueue.Writer.Complete();
-            }
         }
 
-        async Task WaitForSignal(CancellationToken cancellationToken)
+        async Task<TimeSpan> Next(CancellationToken cancellationToken)
         {
-            try
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
             {
-                await signalQueue.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                Log.Debug("No new delayed messages have been stored while waiting for the next due delayed message.");
+                var nextDueTimeout = await delayedMessageStore.Next(cancellationToken).ConfigureAwait(false);
+                if (nextDueTimeout.HasValue)
+                {
+                    var duration = nextDueTimeout.Value - now;
+                    if (duration < MaxSleepDuration)
+                    {
+                        return duration;
+                    }
+                }
+                return MaxSleepDuration;
             }
         }
 
-        Task WaitIfNeeded(DateTimeOffset nextPoll, CancellationToken cancellationToken)
-        {
-            var waitTime = nextPoll - DateTimeOffset.UtcNow;
-            if (waitTime > TimeSpan.Zero)
-            {
-                return Task.Delay(waitTime, cancellationToken);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        async Task Poll(TaskCompletionSource<DateTimeOffset?> result, CancellationToken cancellationToken)
+        async Task Poll(CancellationToken cancellationToken)
         {
             DelayedMessage timeout = null;
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            try
+            do
             {
-                using (var tx = new TransactionScope(TransactionScopeOption.Required, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+                try
                 {
-                    timeout = await delayedMessageStore.FetchNextDueTimeout(now, cancellationToken).ConfigureAwait(false);
-                    fetchCircuitBreaker.Success();
+                    using (var tx = new TransactionScope(TransactionScopeOption.Required, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+                    {
+                        timeout = await delayedMessageStore.FetchNextDueTimeout(now, cancellationToken).ConfigureAwait(false);
+                        fetchCircuitBreaker.Success();
 
+                        if (timeout != null)
+                        {
+                            Dispatch(timeout);
+                            var success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
+                            if (!success)
+                            {
+                                Log.WarnFormat("Potential more-than-once dispatch as delayed message already removed from storage.");
+                            }
+                        }
+
+                        tx.Complete();
+                    }
+                }
+                catch (QueueNotFoundException exception)
+                {
                     if (timeout != null)
-                    {
-                        result.SetResult(null);
-                        HandleDueDelayedMessage(timeout, cancellationToken);
-
-                        var success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
-                        if (!success)
-                        {
-                            Log.WarnFormat("Potential more-than-once dispatch as delayed message already removed from storage.");
-                        }
-                    }
-                    else
-                    {
-                        using (new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
-                        {
-                            var nextDueTimeout = await delayedMessageStore.Next(cancellationToken).ConfigureAwait(false);
-                            if (nextDueTimeout.HasValue)
-                            {
-                                result.SetResult(nextDueTimeout);
-                            }
-                            else
-                            {
-                                //If no timeouts, wait a while
-                                result.SetResult(now.Add(MaxSleepDuration));
-                            }
-                        }
-                    }
-                    tx.Complete();
-                }
-            }
-            catch (QueueNotFoundException exception)
-            {
-                if (timeout != null)
-                {
-                    await TrySendDelayedMessageToErrorQueue(timeout, exception, cancellationToken).ConfigureAwait(false);
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                //Shutting down. Bubble up the exception. Will be awaited by AwaitHandleTasks method that catches OperationCanceledExceptions
-                throw;
-            }
-            catch (Exception exception)
-            {
-                Log.Error("Failure during timeout polling.", exception);
-                if (timeout != null)
-                {
-                    await dispatchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
-                    using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
-                    {
-                        await delayedMessageStore.IncrementFailureCount(timeout, cancellationToken).ConfigureAwait(false);
-                        scope.Complete();
-                    }
-
-                    if (timeout.NumberOfRetries > numberOfRetries)
                     {
                         await TrySendDelayedMessageToErrorQueue(timeout, exception, cancellationToken).ConfigureAwait(false);
                     }
                 }
-                else
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    await fetchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
+                    //Shutting down. Bubble up the exception. Will be awaited by AwaitHandleTasks method that catches OperationCanceledExceptions
+                    throw;
                 }
-            }
-            finally
-            {
-                //In case we failed before SetResult
-                result.TrySetResult(null);
-            }
+                catch (Exception exception)
+                {
+                    failureHandlingCircuitBreaker.Failure(exception); // TODO: Moved here but don't know exactly what its intent was.
+                    Log.Error("Failure during timeout polling.", exception);
+                    if (timeout != null)
+                    {
+                        await dispatchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
+                        using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+                        {
+                            await delayedMessageStore.IncrementFailureCount(timeout, cancellationToken).ConfigureAwait(false);
+                            scope.Complete();
+                        }
+
+                        if (timeout.NumberOfRetries > numberOfRetries)
+                        {
+                            await TrySendDelayedMessageToErrorQueue(timeout, exception, cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        await fetchCircuitBreaker.Failure(exception, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+            } while (timeout != null);
         }
 
-        void HandleDueDelayedMessage(DelayedMessage timeout, CancellationToken cancellationToken)
+        void Dispatch(DelayedMessage timeout)
         {
             TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
 
@@ -342,11 +259,9 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         RepeatedFailuresOverTimeCircuitBreaker dispatchCircuitBreaker;
         FailureRateCircuitBreaker failureHandlingCircuitBreaker;
         Task loopTask;
-        Task completionTask;
-        Channel<bool> signalQueue;
-        Channel<Task> taskQueue;
         CancellationTokenSource tokenSource;
         TransactionScopeOption txOption;
         TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
+        readonly SemaphoreSlim breakLoop = new SemaphoreSlim(1);
     }
 }
