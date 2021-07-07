@@ -191,7 +191,13 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     if (timeout != null)
                     {
                         result.SetResult(null);
-                        await HandleDueDelayedMessage(timeout, cancellationToken).ConfigureAwait(false);
+                        HandleDueDelayedMessage(timeout, cancellationToken);
+
+                        var success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
+                        if (!success)
+                        {
+                            Log.WarnFormat("Potential more-than-once dispatch as delayed message already removed from storage.");
+                        }
                     }
                     else
                     {
@@ -253,16 +259,9 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             }
         }
 
-        async Task HandleDueDelayedMessage(DelayedMessage timeout, CancellationToken cancellationToken)
+        void HandleDueDelayedMessage(DelayedMessage timeout, CancellationToken cancellationToken)
         {
             TimeSpan diff = DateTimeOffset.UtcNow - new DateTimeOffset(timeout.Time, TimeSpan.Zero);
-            var success = await delayedMessageStore.Remove(timeout, cancellationToken).ConfigureAwait(false);
-
-            if (!success)
-            {
-                // Already dispatched
-                return;
-            }
 
             Log.DebugFormat("Timeout {0} over due for {1}", timeout.MessageId, diff);
 
