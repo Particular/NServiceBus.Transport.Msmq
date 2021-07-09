@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
@@ -14,6 +15,7 @@
         [Test]
         public async Task Should_trigger_circuit_breaker()
         {
+            AppDomain.CurrentDomain.FirstChanceException += (sender, args) => Console.WriteLine("\nFirstChanceException\n" + args.Exception.ToString().Replace("\n", "\n\t") + new StackTrace(args.Exception, 1).ToString().Replace("\n", "\n\t"));
             Requires.DelayedDelivery();
 
             var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
@@ -32,9 +34,9 @@
                 .Done(c => c.CriticalActionCalled)
                 .Run();
 
-            Assert.False(context.Processed);
-            Assert.False(context.MovedToErrorQueue);
-            Assert.True(context.CriticalActionCalled);
+            Assert.False(context.Processed, nameof(context.Processed)); // When remove fails dispatch should be rolled back
+            Assert.False(context.MovedToErrorQueue, nameof(context.MovedToErrorQueue));
+            Assert.True(context.CriticalActionCalled, nameof(context.CriticalActionCalled));
             StringAssert.AreEqualIgnoringCase("Failed to execute error handling for delayed message forwarding", context.FailureMessage);
         }
 
