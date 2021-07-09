@@ -34,7 +34,7 @@
                 .Done(c => c.CriticalActionCalled)
                 .Run();
 
-            Assert.True(context.Processed, nameof(context.Processed)); // Dispatch succeeds, remove fails
+            Assert.False(context.Processed, nameof(context.Processed)); // When remove fails dispatch should be rolled back
             Assert.False(context.MovedToErrorQueue, nameof(context.MovedToErrorQueue));
             Assert.True(context.CriticalActionCalled, nameof(context.CriticalActionCalled));
             StringAssert.AreEqualIgnoringCase("Failed to execute error handling for delayed message forwarding", context.FailureMessage);

@@ -63,7 +63,7 @@ namespace NServiceBus.Transport.Msmq
 
             var request = new OutgoingMessage(id, headers, body);
 
-            SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination, properties, DispatchConsistency.Isolated));
+            SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination, properties));
         }
 
         public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
