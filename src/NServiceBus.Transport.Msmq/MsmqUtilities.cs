@@ -117,9 +117,9 @@ namespace NServiceBus.Transport.Msmq
         {
             var result = new Message();
 
-            if (message.Body != null)
+            if (!message.Body.IsEmpty)
             {
-                result.BodyStream = new MemoryStream(message.Body);
+                result.BodyStream = new ReadOnlyStream(message.Body);
             }
 
             AssignMsmqNativeCorrelationId(message, result);
@@ -167,9 +167,9 @@ namespace NServiceBus.Transport.Msmq
         {
             var result = new Message();
 
-            if (message.Body != null)
+            if (!message.Body.IsEmpty)
             {
-                result.BodyStream = new MemoryStream(message.Body);
+                result.BodyStream = new ReadOnlyStream(message.Body);
             }
 
             result.Recoverable = true;

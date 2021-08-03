@@ -43,7 +43,7 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
-        public void DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction)
+        public void DispatchDelayedMessage(string id, byte[] extension, ReadOnlyMemory<byte> body, string destination, TransportTransaction transportTransaction)
         {
             var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
             var headers = new Dictionary<string, string>();
