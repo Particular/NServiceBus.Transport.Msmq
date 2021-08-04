@@ -77,7 +77,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                 {
                     Destination = destination,
                     MessageId = id,
-                    Body = context.Body,
+                    Body = context.Body.ToArray(),
                     Time = at.UtcDateTime,
                     Headers = message.Extension
                 };

@@ -21,7 +21,7 @@ namespace NServiceBus
         /// <summary>
         /// The body of the message.
         /// </summary>
-        public ReadOnlyMemory<byte> Body { get; set; }
+        public byte[] Body { get; set; }
 
         /// <summary>
         /// The serialized headers of the message
