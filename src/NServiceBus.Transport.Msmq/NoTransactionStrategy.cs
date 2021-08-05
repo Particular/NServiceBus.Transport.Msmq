@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Buffers;
     using System.Messaging;
     using System.Threading;
     using System.Threading.Tasks;
@@ -22,24 +23,30 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
-
             var transportTransaction = new TransportTransaction();
             var context = new ContextBag();
 
             context.Set(message);
 
-            using (var bodyStream = message.BodyStream)
+            var length = (int)message.BodyStream.Length;
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
+            try
             {
+                _ = await message.BodyStream.ReadAsync(buffer, 0, length, cancellationToken).ConfigureAwait(false);
+                var body = buffer.AsMemory(0, length);
+
                 try
                 {
-                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context, cancellationToken).ConfigureAwait(false);
+                    await TryProcessMessage(message.Id, headers, body, transportTransaction, context, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
                 {
-                    message.BodyStream.Position = 0;
-
-                    await HandleError(message, ex, transportTransaction, 1, context, cancellationToken).ConfigureAwait(false);
+                    await HandleError(message, body, ex, transportTransaction, 1, context, cancellationToken).ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
     }

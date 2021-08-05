@@ -1,6 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
+    using System.Buffers;
     using System.Collections.Generic;
     using System.Messaging;
     using System.Threading;
@@ -72,29 +73,39 @@ namespace NServiceBus.Transport.Msmq
 
             transportTransaction.Set(msmqTransaction);
 
-            if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
-            {
-                var errorHandleResult = await HandleError(message, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts, failureInfo.Context, cancellationToken).ConfigureAwait(false);
-
-                if (errorHandleResult == ErrorHandleResult.Handled)
-                {
-                    return true;
-                }
-            }
+            var length = (int)message.BodyStream.Length;
+            var buffer = ArrayPool<byte>.Shared.Rent(length);
 
             try
             {
-                using (var bodyStream = message.BodyStream)
-                {
-                    await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context, cancellationToken).ConfigureAwait(false);
-                }
-                return true;
-            }
-            catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
-            {
-                failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex, context);
+                _ = await message.BodyStream.ReadAsync(buffer, 0, length, cancellationToken).ConfigureAwait(false);
+                var body = buffer.AsMemory(0, length);
 
-                return false;
+                if (failureInfoStorage.TryGetFailureInfoForMessage(message.Id, out var failureInfo))
+                {
+                    var errorHandleResult = await HandleError(message, body, failureInfo.Exception, transportTransaction, failureInfo.NumberOfProcessingAttempts, failureInfo.Context, cancellationToken).ConfigureAwait(false);
+
+                    if (errorHandleResult == ErrorHandleResult.Handled)
+                    {
+                        return true;
+                    }
+                }
+
+                try
+                {
+                    await TryProcessMessage(message.Id, headers, body, transportTransaction, context, cancellationToken).ConfigureAwait(false);
+                    return true;
+                }
+                catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
+                {
+                    failureInfoStorage.RecordFailureInfoForMessage(message.Id, ex, context);
+
+                    return false;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 
