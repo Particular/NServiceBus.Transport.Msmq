@@ -95,11 +95,11 @@
                 });
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyHandler : IHandleMessages<MyEvent>
             {
                 TestContext context;
 
-                public MyEventHandler(TestContext context)
+                public MyHandler(TestContext context)
                 {
                     this.context = context;
                 }
@@ -125,11 +125,11 @@
                 });
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyHandler : IHandleMessages<MyEvent>
             {
                 TestContext context;
 
-                public MyEventHandler(TestContext context)
+                public MyHandler(TestContext context)
                 {
                     this.context = context;
                 }
