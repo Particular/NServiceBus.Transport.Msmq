@@ -82,11 +82,11 @@
                 }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyHandler : IHandleMessages<MyEvent>
             {
                 TestContext context;
 
-                public MyEventHandler(TestContext context)
+                public MyHandler(TestContext context)
                 {
                     this.context = context;
                 }

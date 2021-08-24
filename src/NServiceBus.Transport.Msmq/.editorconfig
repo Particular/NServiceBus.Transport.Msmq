@@ -1,0 +1,5 @@
+[*.cs]
+
+# Justification: MSMQ is sunset
+dotnet_diagnostic.PS0022.severity = none
+dotnet_diagnostic.PS0023.severity = none

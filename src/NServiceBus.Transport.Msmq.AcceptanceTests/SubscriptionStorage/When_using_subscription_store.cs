@@ -73,10 +73,10 @@
                 }, p => p.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
             }
 
-            public class MyEventHandler : IHandleMessages<MyEvent>
+            public class MyHandler : IHandleMessages<MyEvent>
             {
                 readonly Context scenarioContext;
-                public MyEventHandler(Context scenarioContext)
+                public MyHandler(Context scenarioContext)
                 {
                     this.scenarioContext = scenarioContext;
                 }
