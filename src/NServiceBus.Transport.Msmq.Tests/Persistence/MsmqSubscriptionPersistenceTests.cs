@@ -47,7 +47,7 @@
             Assert.AreEqual($"{endpointName}.Subscriptions", MsmqSubscriptionPersistence.DetermineStorageQueueName(PrepareSettings(endpointName)));
         }
 
-        static ReadOnlySettings PrepareSettings(string endpointName = "DefaultEndpoint", string configuredStorageQueueName = null)
+        static IReadOnlySettings PrepareSettings(string endpointName = "DefaultEndpoint", string configuredStorageQueueName = null)
         {
             var settings = new SettingsHolder();
 

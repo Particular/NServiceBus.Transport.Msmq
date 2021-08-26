@@ -102,7 +102,7 @@
 
             public class MessageHandler : IHandleMessages<Message>
             {
-                public MessageHandler(Context testContext, ReadOnlySettings settings)
+                public MessageHandler(Context testContext, IReadOnlySettings settings)
                 {
                     this.testContext = testContext;
                     this.settings = settings;
@@ -124,7 +124,7 @@
                 }
 
                 Context testContext;
-                ReadOnlySettings settings;
+                IReadOnlySettings settings;
             }
         }
 

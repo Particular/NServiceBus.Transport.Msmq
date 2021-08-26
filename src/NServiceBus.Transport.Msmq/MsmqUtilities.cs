@@ -52,9 +52,9 @@ namespace NServiceBus.Transport.Msmq
                 headers[Headers.ReplyToAddress] = GetIndependentAddressForQueue(msmqMessage.ResponseQueue).ToString();
             }
 
-            if (Enum.IsDefined(typeof(MessageIntentEnum), msmqMessage.AppSpecific) && !headers.ContainsKey(Headers.MessageIntent))
+            if (Enum.IsDefined(typeof(MessageIntent), msmqMessage.AppSpecific) && !headers.ContainsKey(Headers.MessageIntent))
             {
-                headers[Headers.MessageIntent] = ((MessageIntentEnum)msmqMessage.AppSpecific).ToString();
+                headers[Headers.MessageIntent] = ((MessageIntent)msmqMessage.AppSpecific).ToString();
             }
 
             headers[Headers.CorrelationId] = GetCorrelationId(msmqMessage, headers);
@@ -150,7 +150,7 @@ namespace NServiceBus.Transport.Msmq
                 result.Extension = stream.ToArray();
             }
 
-            var messageIntent = default(MessageIntentEnum);
+            var messageIntent = default(MessageIntent);
 
             if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
             {
@@ -192,7 +192,7 @@ namespace NServiceBus.Transport.Msmq
                 result.Extension = stream.ToArray();
             }
 
-            var messageIntent = default(MessageIntentEnum);
+            var messageIntent = default(MessageIntent);
 
             if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
             {
