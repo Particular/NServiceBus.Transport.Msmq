@@ -138,8 +138,8 @@
 
             public class MyMessageHandler : IHandleMessages<RequestA>
             {
-                readonly ReadOnlySettings settings;
-                public MyMessageHandler(ReadOnlySettings settings)
+                readonly IReadOnlySettings settings;
+                public MyMessageHandler(IReadOnlySettings settings)
                 {
                     this.settings = settings;
                 }
@@ -163,8 +163,8 @@
 
             public class MyMessageHandler : IHandleMessages<RequestB>
             {
-                readonly ReadOnlySettings settings;
-                public MyMessageHandler(ReadOnlySettings settings)
+                readonly IReadOnlySettings settings;
+                public MyMessageHandler(IReadOnlySettings settings)
                 {
                     this.settings = settings;
                 }

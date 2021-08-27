@@ -74,7 +74,7 @@
         {
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id",
-                    new Dictionary<string, string> { { Headers.MessageIntent, MessageIntentEnum.Send.ToString() } },
+                    new Dictionary<string, string> { { Headers.MessageIntent, MessageIntent.Send.ToString() } },
                     new byte[0]));
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 

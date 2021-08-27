@@ -43,7 +43,7 @@ namespace NServiceBus.Transport.Msmq
                 : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
         }
 
-        IInstanceMappingLoader CreateInstanceMappingLoader(ReadOnlySettings settings)
+        IInstanceMappingLoader CreateInstanceMappingLoader(IReadOnlySettings settings)
         {
             var uri = settings.Get<Uri>(PathSettingsKey);
 

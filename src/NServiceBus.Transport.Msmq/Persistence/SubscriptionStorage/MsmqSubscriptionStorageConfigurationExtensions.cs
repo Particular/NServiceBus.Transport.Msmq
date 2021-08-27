@@ -22,7 +22,7 @@
             persistenceExtensions.GetSettings().Set(MsmqPersistenceQueueConfigurationKey, queue);
         }
 
-        internal static string GetConfiguredMsmqPersistenceSubscriptionQueue(this ReadOnlySettings settings)
+        internal static string GetConfiguredMsmqPersistenceSubscriptionQueue(this IReadOnlySettings settings)
         {
             return settings.GetOrDefault<string>(MsmqPersistenceQueueConfigurationKey);
         }

@@ -26,7 +26,7 @@
             context.Services.AddSingleton<ISubscriptionStorage>(storage);
         }
 
-        internal static string DetermineStorageQueueName(ReadOnlySettings settings)
+        internal static string DetermineStorageQueueName(IReadOnlySettings settings)
         {
             var configuredQueueName = settings.GetConfiguredMsmqPersistenceSubscriptionQueue();
 
