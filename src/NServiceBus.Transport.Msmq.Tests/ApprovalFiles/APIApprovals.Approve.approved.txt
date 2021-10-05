@@ -58,6 +58,12 @@ namespace NServiceBus
     public static class MsmqConfigurationExtensions
     {
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ApplyLabelToMessages(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
+        [System.Obsolete("The MSMQ transport does not support a connection string. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 3.0.0.", true)]
+        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ConnectionString(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.Func<string> connectionString) { }
+        [System.Obsolete("The MSMQ transport does not support a connection string. The member currently thr" +
+            "ows a NotImplementedException. Will be removed in version 3.0.0.", true)]
+        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ConnectionString(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, string connectionString) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableConnectionCachingForSends(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableDeadLetterQueueing(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
