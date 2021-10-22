@@ -12,12 +12,14 @@ namespace NServiceBus.Transport.Msmq
     using Performance.TimeToBeReceived;
     using Transport;
     using Unicast.Queuing;
+    using NServiceBus.DelayedDelivery;
 
     class MsmqMessageDispatcher : IDispatchMessages
     {
-        public MsmqMessageDispatcher(MsmqSettings settings)
+        public MsmqMessageDispatcher(MsmqSettings settings, string timeoutsQueue)
         {
             this.settings = settings;
+            this.timeoutsQueue = timeoutsQueue;
         }
 
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
@@ -41,12 +43,84 @@ namespace NServiceBus.Transport.Msmq
         {
             var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
 
+            context.Set<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, headersAndProperties.)
+
             var request = new OutgoingMessage(id, headersAndProperties, body);
 
             ExecuteTransportOperation(transportTransaction, new UnicastTransportOperation(request, destination), context);
         }
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
+        {
+            var isDelayedMessage = context.TryGetDeliveryConstraint<DoNotDeliverBefore>(out var doNotDeliverBefore) || context.TryGetDeliveryConstraint<DelayDeliveryWith>(out var delayDeliveryWith);
+
+            if (isDelayedMessage)
+            {
+                ////// calculate deliveryAt
+                SendToDelayedDeliveryQueue(transaction, transportOperation, DateTime.Now);
+            }
+            else
+            {
+                SendToDestination(transaction, transportOperation, context);
+            }
+        }
+
+        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation, DateTime deliverAt)
+        {
+            var message = transportOperation.Message;
+
+            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
+            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
+            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+
+            var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
+
+            // DLQ
+            // Journaling
+            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = "true";
+            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = settings.UseJournalQueue.ToString();
+
+            try
+            {
+                using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
+                {
+                    using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
+                    {
+                        toSend.UseDeadLetterQueue = true; //Always used DLQ for delayed messages
+                        toSend.UseJournalQueue = settings.UseJournalQueue;
+
+                        if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
+                        {
+                            q.Send(toSend, string.Empty, GetIsolatedTransactionType());
+                            return;
+                        }
+
+                        if (TryGetNativeTransaction(transaction, out var activeTransaction))
+                        {
+                            q.Send(toSend, string.Empty, activeTransaction);
+                            return;
+                        }
+
+                        q.Send(toSend, string.Empty, GetTransactionTypeForSend());
+                    }
+                }
+            }
+            catch (MessageQueueException ex)
+            {
+                if (ex.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
+                {
+                    throw new QueueNotFoundException(timeoutsQueue, $"Failed to send the message to the local delayed delivery queue [{timeoutsQueue}]: queue does not exist.", ex);
+                }
+
+                ThrowFailedToSendException(timeoutsQueue, ex);
+            }
+            catch (Exception ex)
+            {
+                ThrowFailedToSendException(timeoutsQueue, ex);
+            }
+        }
+
+        void SendToDestination(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
         {
             var message = transportOperation.Message;
 
@@ -69,13 +143,13 @@ namespace NServiceBus.Transport.Msmq
                     throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
                 }
             }
-
             try
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
                 {
                     using (var toSend = MsmqUtilities.Convert(message, deliveryConstraints))
                     {
+                        // or check headers for NServiceBus.Timeouts.Properties.DeadLetterQueueOptionExtensions.KeyDeadLetterQueue
                         if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
                         {
                             toSend.UseDeadLetterQueue = useDeadLetterQueue;
@@ -88,6 +162,7 @@ namespace NServiceBus.Transport.Msmq
                                 : settings.UseDeadLetterQueue;
                         }
 
+                        // or check headers for NServiceBus.Timeouts.Properties.JournalOptionExtensions.KeyJournaling
                         toSend.UseJournalQueue = context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue)
                             ? useJournalQueue
                             : settings.UseJournalQueue;
@@ -214,5 +289,6 @@ namespace NServiceBus.Transport.Msmq
         public const string TimeoutAt = "NServiceBus.Timeout.Expire";
 
         MsmqSettings settings;
+        readonly string timeoutsQueue;
     }
 }
