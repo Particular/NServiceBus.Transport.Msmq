@@ -43,8 +43,6 @@ namespace NServiceBus.Transport.Msmq
         {
             var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
 
-            context.Set<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, headersAndProperties.)
-
             var request = new OutgoingMessage(id, headersAndProperties, body);
 
             ExecuteTransportOperation(transportTransaction, new UnicastTransportOperation(request, destination), context);
@@ -52,12 +50,19 @@ namespace NServiceBus.Transport.Msmq
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
         {
-            var isDelayedMessage = context.TryGetDeliveryConstraint<DoNotDeliverBefore>(out var doNotDeliverBefore) || context.TryGetDeliveryConstraint<DelayDeliveryWith>(out var delayDeliveryWith);
-
-            if (isDelayedMessage)
+            DateTimeOffset? deliverAt = null;
+            if (context.TryGetDeliveryConstraint<DoNotDeliverBefore>(out var doNotDeliverBefore))
             {
-                ////// calculate deliveryAt
-                SendToDelayedDeliveryQueue(transaction, transportOperation, DateTime.Now);
+                deliverAt = doNotDeliverBefore.At;
+            }
+            else if (context.TryGetDeliveryConstraint<DelayDeliveryWith>(out var delayDeliveryWith))
+            {
+                deliverAt = DateTimeOffset.UtcNow + delayDeliveryWith.Delay;
+            }
+
+            if (deliverAt.HasValue)
+            {
+                SendToDelayedDeliveryQueue(transaction, transportOperation, deliverAt.Value);
             }
             else
             {
@@ -65,7 +70,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation, DateTime deliverAt)
+        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation, DateTimeOffset deliverAt)
         {
             var message = transportOperation.Message;
 
@@ -75,8 +80,7 @@ namespace NServiceBus.Transport.Msmq
 
             var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
 
-            // DLQ
-            // Journaling
+            // Always used DLQ for delayed messages
             transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = "true";
             transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = settings.UseJournalQueue.ToString();
 
@@ -86,7 +90,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
                     {
-                        toSend.UseDeadLetterQueue = true; //Always used DLQ for delayed messages
+                        toSend.UseDeadLetterQueue = true; // Always used DLQ for delayed messages
                         toSend.UseJournalQueue = settings.UseJournalQueue;
 
                         if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)

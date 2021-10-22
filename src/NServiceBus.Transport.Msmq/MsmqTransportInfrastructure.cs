@@ -114,7 +114,7 @@ namespace NServiceBus.Transport.Msmq
             CheckMachineNameForCompliance.Check();
 
             return new TransportSendInfrastructure(
-                () => new MsmqMessageDispatcher(msmqSettings),
+                () => new MsmqMessageDispatcher(msmqSettings, timeoutsQueue),
                 () =>
                 {
                     foreach (var address in queueBindings.SendingAddresses)
