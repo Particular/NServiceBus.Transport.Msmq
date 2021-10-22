@@ -37,6 +37,15 @@ namespace NServiceBus.Transport.Msmq
             return TaskEx.CompletedTask;
         }
 
+        public void DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction, ContextBag context)
+        {
+            var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
+
+            var request = new OutgoingMessage(id, headersAndProperties, body);
+
+            ExecuteTransportOperation(transportTransaction, new UnicastTransportOperation(request, destination), context);
+        }
+
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
         {
             var message = transportOperation.Message;
@@ -200,6 +209,9 @@ namespace NServiceBus.Transport.Msmq
                 ? MessageQueueTransactionType.Automatic
                 : MessageQueueTransactionType.Single;
         }
+
+        public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
+        public const string TimeoutAt = "NServiceBus.Timeout.Expire";
 
         MsmqSettings settings;
     }

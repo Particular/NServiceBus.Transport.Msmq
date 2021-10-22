@@ -31,5 +31,17 @@
                 throw new ArgumentOutOfRangeException(argumentName);
             }
         }
+
+        public static void AgainstNegativeAndZero(string argumentName, int? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+            if (value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(argumentName);
+            }
+        }
     }
 }
