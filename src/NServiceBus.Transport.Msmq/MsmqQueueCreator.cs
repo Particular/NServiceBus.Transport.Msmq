@@ -8,9 +8,13 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqQueueCreator : ICreateQueues
     {
-        public MsmqQueueCreator(bool useTransactionalQueues)
+        public MsmqQueueCreator(bool useTransactionalQueues, IDelayedMessageStore delayedMessageStore = null, string endpointName = null, string timeoutsQueue = null, string timeoutsErrorQueue = null)
         {
             this.useTransactionalQueues = useTransactionalQueues;
+            this.timeoutsQueue = timeoutsQueue;
+            this.timeoutsErrorQueue = timeoutsErrorQueue;
+            this.delayedMessageStore = delayedMessageStore;
+            this.endpointName = endpointName;
         }
 
         public Task CreateQueueIfNecessary(QueueBindings queueBindings, string identity)
@@ -23,6 +27,14 @@ namespace NServiceBus.Transport.Msmq
             foreach (var sendingAddress in queueBindings.SendingAddresses)
             {
                 CreateQueueIfNecessary(sendingAddress, identity);
+            }
+
+            if (timeoutsQueue != null)
+            {
+                CreateQueueIfNecessary(timeoutsQueue, identity);
+                CreateQueueIfNecessary(timeoutsErrorQueue, identity);
+
+                return delayedMessageStore.Initialize(endpointName, TransportTransactionMode.TransactionScope);
             }
 
             return TaskEx.CompletedTask;
@@ -77,8 +89,11 @@ namespace NServiceBus.Transport.Msmq
         }
 
         bool useTransactionalQueues;
-
+        string timeoutsQueue;
         static readonly string LocalAdministratorsGroupName = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null).Translate(typeof(NTAccount)).ToString();
         static ILog Logger = LogManager.GetLogger<MsmqQueueCreator>();
+        string timeoutsErrorQueue;
+        IDelayedMessageStore delayedMessageStore;
+        string endpointName;
     }
 }
