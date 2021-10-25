@@ -5,10 +5,10 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using System.Threading.Tasks;
     using System.Transactions;
     using Logging;
-    using NServiceBus.Extensibility;
+    using Extensibility;
     using Routing;
 
-    class DelayedDeliveryPump
+    class DelayedDeliveryPump : IPushMessages
     {
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
                                    DueDelayedMessagePoller poller,
@@ -16,40 +16,40 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                                    MessagePump messagePump,
                                    string errorQueue,
                                    int numberOfRetries,
-                                   Action<string, Exception> criticalErrorAction,
-                                   CriticalError criticalError,
                                    TimeSpan timeToWaitForStoreCircuitBreaker,
-                                   Dictionary<string, string> faultMetadata,
-                                   TransportTransactionMode transportTransactionMode,
-                                   PushSettings pushSettings)
+                                   Dictionary<string, string> faultMetadata)
         {
             this.dispatcher = dispatcher;
             this.poller = poller;
             this.storage = storage;
             this.numberOfRetries = numberOfRetries;
+            this.timeToWaitForStoreCircuitBreaker = timeToWaitForStoreCircuitBreaker;
             this.faultMetadata = faultMetadata;
             pump = messagePump;
             this.errorQueue = errorQueue;
-            this.criticalError = criticalError;
-            this.pushSettings = pushSettings;
+        }
 
-            txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
+        public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
+        {
+            txOption = settings.RequiredTransactionMode == TransportTransactionMode.TransactionScope
                 ? TransactionScopeOption.Required
                 : TransactionScopeOption.RequiresNew;
 
-            storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker,
-                ex => criticalErrorAction("Failed to store delayed message", ex));
+            storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker, ex => criticalError.Raise("Failed to store delayed message", ex));
+            poller.Init(criticalError, settings);
+            return pump.Init(TimeoutReceived, OnError, criticalError, settings);
         }
 
-        public async Task Start()
+        public void Start(PushRuntimeSettings limitations)
         {
-            await pump.Init(TimeoutReceived, OnError, criticalError, pushSettings).ConfigureAwait(false);
-            pump.Start(PushRuntimeSettings.Default);
+            pump.Start(limitations);
+            poller.Start();
         }
 
-        public Task Stop()
+        public async Task Stop()
         {
-            return pump.Stop();
+            await pump.Stop().ConfigureAwait(false);
+            await poller.Stop().ConfigureAwait(false);
         }
 
         async Task TimeoutReceived(MessageContext context)
@@ -140,14 +140,14 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         readonly DueDelayedMessagePoller poller;
         readonly IDelayedMessageStore storage;
         readonly int numberOfRetries;
+        readonly TimeSpan timeToWaitForStoreCircuitBreaker;
         readonly MessagePump pump;
         readonly Dictionary<string, string> faultMetadata;
         readonly string errorQueue;
-        readonly CriticalError criticalError;
-        readonly PushSettings pushSettings;
-        RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
-        readonly TransactionScopeOption txOption;
         readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
+
+        RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
+        TransactionScopeOption txOption;
 
         static readonly ILog Log = LogManager.GetLogger<DelayedDeliveryPump>();
     }

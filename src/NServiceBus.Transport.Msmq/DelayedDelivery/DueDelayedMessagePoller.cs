@@ -7,7 +7,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using System.Threading.Tasks;
     using System.Transactions;
     using Logging;
-    using NServiceBus.Extensibility;
+    using Extensibility;
     using Routing;
     using Unicast.Queuing;
 
@@ -17,34 +17,40 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             MsmqMessageDispatcher dispatcher,
             IDelayedMessageStore delayedMessageStore,
             int numberOfRetries,
-            Action<string, Exception> criticalErrorAction,
             string timeoutsErrorQueue,
             Dictionary<string, string> faultMetadata,
-            TransportTransactionMode transportTransactionMode,
             TimeSpan timeToTriggerFetchCircuitBreaker,
             TimeSpan timeToTriggerDispatchCircuitBreaker,
             int maximumRecoveryFailuresPerSecond
         )
         {
-            txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
-                ? TransactionScopeOption.Required
-                : TransactionScopeOption.RequiresNew;
             this.delayedMessageStore = delayedMessageStore;
             errorQueue = timeoutsErrorQueue;
             this.faultMetadata = faultMetadata;
+            this.timeToTriggerFetchCircuitBreaker = timeToTriggerFetchCircuitBreaker;
+            this.timeToTriggerDispatchCircuitBreaker = timeToTriggerDispatchCircuitBreaker;
+            this.maximumRecoveryFailuresPerSecond = maximumRecoveryFailuresPerSecond;
             this.numberOfRetries = numberOfRetries;
             this.dispatcher = dispatcher;
-            fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", timeToTriggerFetchCircuitBreaker,
-                ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex));
-
-            dispatchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageDispatch", timeToTriggerDispatchCircuitBreaker,
-                ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex));
-
-            failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond,
-                ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex));
 
             signalQueue = Channel.CreateBounded<bool>(1);
             taskQueue = Channel.CreateBounded<Task>(2);
+        }
+
+        public void Init(CriticalError criticalError, PushSettings pushSettings)
+        {
+            txOption = pushSettings.RequiredTransactionMode == TransportTransactionMode.TransactionScope
+                ? TransactionScopeOption.Required
+                : TransactionScopeOption.RequiresNew;
+
+            fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", timeToTriggerFetchCircuitBreaker,
+                ex => criticalError.Raise("Failed to fetch due delayed messages from the storage", ex));
+
+            dispatchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageDispatch", timeToTriggerDispatchCircuitBreaker,
+                ex => criticalError.Raise("Failed to dispatch delayed messages to destination", ex));
+
+            failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond,
+                ex => criticalError.Raise("Failed to execute error handling for delayed message forwarding", ex));
         }
 
         public void Start()
@@ -331,6 +337,9 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
 
         readonly Dictionary<string, string> faultMetadata;
+        readonly TimeSpan timeToTriggerFetchCircuitBreaker;
+        readonly TimeSpan timeToTriggerDispatchCircuitBreaker;
+        readonly int maximumRecoveryFailuresPerSecond;
 
         IDelayedMessageStore delayedMessageStore;
         MsmqMessageDispatcher dispatcher;
