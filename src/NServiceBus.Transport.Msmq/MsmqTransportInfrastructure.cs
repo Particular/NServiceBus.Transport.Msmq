@@ -6,6 +6,8 @@ namespace NServiceBus.Transport.Msmq
     using System.Text;
     using System.Threading.Tasks;
     using System.Transactions;
+    using NServiceBus.DelayedDelivery;
+    using NServiceBus.Transport.Msmq.DelayedDelivery;
     using Performance.TimeToBeReceived;
     using Routing;
     using Settings;
@@ -14,7 +16,9 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
+        const string TimeoutQueueSuffix = "timeouts";
+
+        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration, Func<LogicalAddress> localAddress, string timeoutsErrorQueue)
         {
             this.settings = settings;
             this.msmqSettings = msmqSettings;
@@ -22,13 +26,30 @@ namespace NServiceBus.Transport.Msmq
             this.isTransactional = isTransactional;
             this.outBoxRunning = outBoxRunning;
             this.auditMessageExpiration = auditMessageExpiration;
+            this.localAddress = localAddress;
+            this.timeoutsErrorQueue = timeoutsErrorQueue;
+
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                constraints = new[]
+                {
+                    typeof(DiscardIfNotReceivedBefore),
+                    typeof(NonDurableDelivery),
+                    typeof(DelayDeliveryWith),
+                    typeof(DoNotDeliverBefore)
+                };
+            }
+            else
+            {
+                constraints = new[]
+                {
+                    typeof(DiscardIfNotReceivedBefore),
+                    typeof(NonDurableDelivery)
+                };
+            }
         }
 
-        public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
-        {
-            typeof(DiscardIfNotReceivedBefore),
-            typeof(NonDurableDelivery)
-        };
+        public override IEnumerable<Type> DeliveryConstraints => constraints;
 
         public override TransportTransactionMode TransactionMode { get; } = TransportTransactionMode.TransactionScope;
         public override OutboundRoutingPolicy OutboundRoutingPolicy { get; } = new OutboundRoutingPolicy(OutboundRoutingType.Unicast, OutboundRoutingType.Unicast, OutboundRoutingType.Unicast);
@@ -83,6 +104,14 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
+            string timeoutsQueue = null;
+            string timeoutsErrorQueue = null;
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                timeoutsQueue = ToTransportAddress(localAddress().CreateQualifiedAddress(TimeoutQueueSuffix));
+                timeoutsErrorQueue = this.timeoutsErrorQueue;
+            }
+
             // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
             foreach (var queue in queueBindings.ReceivingAddresses)
             {
@@ -95,7 +124,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     if (msmqSettings.ExecuteInstaller)
                     {
-                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues);
+                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, timeoutsQueue, timeoutsErrorQueue);
                     }
                     return new NullQueueCreator();
                 },
@@ -112,6 +141,23 @@ namespace NServiceBus.Transport.Msmq
         public override TransportSendInfrastructure ConfigureSendInfrastructure()
         {
             CheckMachineNameForCompliance.Check();
+
+            string timeoutsQueue = null;
+            string timeoutsErrorQueue = null;
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                timeoutsQueue = ToTransportAddress(localAddress().CreateQualifiedAddress(TimeoutQueueSuffix));
+                timeoutsErrorQueue = this.timeoutsErrorQueue;
+
+                var dispatcher = new MsmqMessageDispatcher(msmqSettings, timeoutsQueue);
+
+                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
+                    msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerFetchCircuitBreaker,
+                    msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerDispatchCircuitBreaker,
+                    msmqSettings.NativeDelayedDeliverySettings.MaximumRecoveryFailuresPerSecond);
+
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, hostSettings.CriticalErrorAction, msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
+            }
 
             return new TransportSendInfrastructure(
                 () => new MsmqMessageDispatcher(msmqSettings, timeoutsQueue),
@@ -141,6 +187,11 @@ namespace NServiceBus.Transport.Msmq
                 TimeToReachQueue = GetFormattedTimeToReachQueue(msmqSettings.TimeToReachQueue)
             });
 
+            if (delayedDeliveryPump != null)
+            {
+                return delayedDeliveryPump.Start();
+            }
+
             return Task.FromResult(0);
         }
 
@@ -163,5 +214,9 @@ namespace NServiceBus.Transport.Msmq
         bool isTransactional;
         bool outBoxRunning;
         TimeSpan auditMessageExpiration;
+        Func<LogicalAddress> localAddress;
+        string timeoutsErrorQueue;
+        Type[] constraints;
+        DelayedDeliveryPump delayedDeliveryPump;
     }
 }

@@ -184,5 +184,22 @@ namespace NServiceBus
             Guard.AgainstNull(nameof(config), config);
             config.GetSettings().Set("IgnoreIncomingTimeToBeReceivedHeaders", true);
         }
+
+        /// <summary>
+        /// Configures native delayed delivery.
+        /// </summary>
+        public static DelayedDeliverySettings NativeDelayedDelivery(this TransportExtensions<MsmqTransport> config, IDelayedMessageStore delayedMessageStore)
+        {
+            var sendOnlyEndpoint = config.GetSettings().GetOrDefault<bool>("Endpoint.SendOnly");
+            if (sendOnlyEndpoint)
+            {
+                throw new Exception("Delayed delivery is only supported for endpoints capable of receiving messages.");
+            }
+
+            var delayedDeliverySettings = new DelayedDeliverySettings(delayedMessageStore);
+            config.GetSettings().Set("NativeDelayedDeliverySettings", delayedDeliverySettings);
+
+            return delayedDeliverySettings;
+        }
     }
 }

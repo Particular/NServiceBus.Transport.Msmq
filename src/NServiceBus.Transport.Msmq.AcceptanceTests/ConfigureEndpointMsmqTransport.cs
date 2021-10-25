@@ -74,5 +74,16 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         return Task.FromResult(0);
     }
 
+    public static string GetStorageConnectionString()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            connectionString = @"Data Source=(localdb)\ProjectsV13;Initial Catalog=Msmq;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        }
+
+        return connectionString;
+    }
+
     QueueBindings queueBindings;
 }

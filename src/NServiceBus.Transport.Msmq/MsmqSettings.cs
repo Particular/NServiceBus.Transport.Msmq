@@ -81,6 +81,12 @@ namespace NServiceBus.Transport.Msmq
                 DisableNativeTtbrInTransactions = disableNativeTtbrInTransactions;
             }
 
+            if (settings.TryGet<DelayedDeliverySettings>("NativeDelayedDeliverySettings", out var delayedDeliverySettings))
+            {
+                UseNativeDelayedDelivery = true;
+                NativeDelayedDeliverySettings = delayedDeliverySettings;
+            }
+
             IgnoreIncomingTimeToBeReceivedHeaders = settings.GetOrDefault<bool>("IgnoreIncomingTimeToBeReceivedHeaders");
         }
 
@@ -107,5 +113,9 @@ namespace NServiceBus.Transport.Msmq
         public bool DisableNativeTtbrInTransactions { get; set; }
 
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
+
+        public bool UseNativeDelayedDelivery { get; set; }
+
+        public DelayedDeliverySettings NativeDelayedDeliverySettings { get; set; }
     }
 }

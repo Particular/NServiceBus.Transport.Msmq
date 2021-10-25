@@ -20,7 +20,8 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                                    CriticalError criticalError,
                                    TimeSpan timeToWaitForStoreCircuitBreaker,
                                    Dictionary<string, string> faultMetadata,
-                                   TransportTransactionMode transportTransactionMode)
+                                   TransportTransactionMode transportTransactionMode,
+                                   PushSettings pushSettings)
         {
             this.dispatcher = dispatcher;
             this.poller = poller;
@@ -30,6 +31,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             pump = messagePump;
             this.errorQueue = errorQueue;
             this.criticalError = criticalError;
+            this.pushSettings = pushSettings;
 
             txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
                 ? TransactionScopeOption.Required
@@ -41,7 +43,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
         public async Task Start()
         {
-            await pump.Init(TimeoutReceived, OnError, criticalError, null).ConfigureAwait(false);
+            await pump.Init(TimeoutReceived, OnError, criticalError, pushSettings).ConfigureAwait(false);
             pump.Start(PushRuntimeSettings.Default);
         }
 
@@ -142,6 +144,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         readonly Dictionary<string, string> faultMetadata;
         readonly string errorQueue;
         readonly CriticalError criticalError;
+        readonly PushSettings pushSettings;
         RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
         readonly TransactionScopeOption txOption;
         readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };

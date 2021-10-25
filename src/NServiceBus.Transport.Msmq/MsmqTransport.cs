@@ -72,7 +72,14 @@ transport.TimeToReachQueue(timespanValue);";
 
             settings.TryGetAuditMessageExpiration(out var auditMessageExpiration);
 
-            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration);
+            if (!settings.TryGet(out TransportTransactionMode requestedTransportTransactionMode))
+            {
+                requestedTransportTransactionMode = TransportTransactionMode.TransactionScope;
+            }
+
+            settings.TryGet("TransportPurgeOnStartupSettingsKey", out bool purgeOnStartup);
+
+            return new MsmqTransportInfrastructure(settings, msmqSettings, settings.Get<QueueBindings>(), isTransactional, outBoxRunning, auditMessageExpiration, () => settings.LogicalAddress(), settings.ErrorQueueAddress());
         }
 
         static bool IsTransactional(ReadOnlySettings settings)
