@@ -37,6 +37,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
             storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker, ex => criticalError.Raise("Failed to store delayed message", ex));
             poller.Init(criticalError, settings);
+
             return pump.Init(TimeoutReceived, OnError, criticalError, settings);
         }
 
