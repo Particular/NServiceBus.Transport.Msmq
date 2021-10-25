@@ -7,6 +7,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Threading.Tasks;
     using System.Transactions;
     using NServiceBus.DelayedDelivery;
+    using NServiceBus.Faults;
     using NServiceBus.Transport.Msmq.DelayedDelivery;
     using Performance.TimeToBeReceived;
     using Routing;
@@ -149,14 +150,45 @@ namespace NServiceBus.Transport.Msmq
                 timeoutsQueue = ToTransportAddress(localAddress().CreateQualifiedAddress(TimeoutQueueSuffix));
                 timeoutsErrorQueue = this.timeoutsErrorQueue;
 
+                var staticFaultMetadata = new Dictionary<string, string>
+                {
+                    {FaultsHeaderKeys.FailedQ, timeoutsQueue},
+                    {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
+                    {Headers.ProcessingEndpoint, hostSettings.Name},
+                    {Headers.HostDisplayName, hostSettings.HostDisplayName}
+                };
+
                 var dispatcher = new MsmqMessageDispatcher(msmqSettings, timeoutsQueue);
 
-                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
+                var criticalErrorAction = settings.GetOrDefault<Func<ICriticalErrorContext, Task>>("onCriticalErrorAction");
+
+                var transportTransactionMode = settings.Get<TransportTransactionMode>();
+
+                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher,
+                    msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore,
+                    msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries,
+                    criticalErrorAction,
+                    timeoutsErrorQueue,
+                    staticFaultMetadata,
+                    transportTransactionMode,
                     msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerFetchCircuitBreaker,
                     msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerDispatchCircuitBreaker,
                     msmqSettings.NativeDelayedDeliverySettings.MaximumRecoveryFailuresPerSecond);
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, hostSettings.CriticalErrorAction, msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
+                msmqSettings.ScopeOptions = msmqSettings.ScopeOptions ?? new MsmqScopeOptions();
+
+                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, msmqSettings.ScopeOptions.TransactionOptions), MessageEnumeratorTimeout, false);
+
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher,
+                    dueDelayedMessagePoller,
+                    msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore,
+                    delayedDeliveryMessagePump,
+                    timeoutsErrorQueue,
+                    msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries,
+                    hostSettings.CriticalErrorAction,
+                    msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker,
+                    staticFaultMetadata,
+                    transportTransactionMode);
             }
 
             return new TransportSendInfrastructure(

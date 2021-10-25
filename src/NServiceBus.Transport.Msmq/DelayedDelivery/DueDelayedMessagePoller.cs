@@ -17,7 +17,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             MsmqMessageDispatcher dispatcher,
             IDelayedMessageStore delayedMessageStore,
             int numberOfRetries,
-            Action<string, Exception, CancellationToken> criticalErrorAction,
+            Action<string, Exception> criticalErrorAction,
             string timeoutsErrorQueue,
             Dictionary<string, string> faultMetadata,
             TransportTransactionMode transportTransactionMode,
@@ -35,13 +35,13 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             this.numberOfRetries = numberOfRetries;
             this.dispatcher = dispatcher;
             fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", timeToTriggerFetchCircuitBreaker,
-                ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex, tokenSource?.Token ?? CancellationToken.None));
+                ex => criticalErrorAction("Failed to fetch due delayed messages from the storage", ex));
 
             dispatchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageDispatch", timeToTriggerDispatchCircuitBreaker,
-                ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex, tokenSource?.Token ?? CancellationToken.None));
+                ex => criticalErrorAction("Failed to dispatch delayed messages to destination", ex));
 
             failureHandlingCircuitBreaker = new FailureRateCircuitBreaker("MsmqDelayedMessageFailureHandling", maximumRecoveryFailuresPerSecond,
-                ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex, tokenSource?.Token ?? CancellationToken.None));
+                ex => criticalErrorAction("Failed to execute error handling for delayed message forwarding", ex));
 
             signalQueue = Channel.CreateBounded<bool>(1);
             taskQueue = Channel.CreateBounded<Task>(2);
