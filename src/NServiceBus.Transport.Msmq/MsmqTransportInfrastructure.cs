@@ -177,7 +177,7 @@ namespace NServiceBus.Transport.Msmq
 
                 msmqSettings.ScopeOptions = msmqSettings.ScopeOptions ?? new MsmqScopeOptions();
 
-                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, msmqSettings.ScopeOptions.TransactionOptions), MessageEnumeratorTimeout, false);
+                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, false);
 
                 delayedDeliveryPump = new DelayedDeliveryPump(dispatcher,
                     dueDelayedMessagePoller,
