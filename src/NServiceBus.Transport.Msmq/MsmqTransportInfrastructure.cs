@@ -145,7 +145,13 @@ namespace NServiceBus.Transport.Msmq
                 {
                     if (msmqSettings.ExecuteInstaller)
                     {
-                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.NativeDelayedDeliverySettings?.DelayedMessageStore, localAddress().EndpointInstance.Endpoint, timeoutsQueue, timeoutsErrorQueue);
+                        string endpointName = null;
+                        if (msmqSettings.NativeDelayedDeliverySettings != null)
+                        {
+                            endpointName = localAddress().EndpointInstance.Endpoint;
+                        }
+
+                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.NativeDelayedDeliverySettings?.DelayedMessageStore, endpointName, timeoutsQueue, timeoutsErrorQueue);
                     }
                     return new NullQueueCreator();
                 },
