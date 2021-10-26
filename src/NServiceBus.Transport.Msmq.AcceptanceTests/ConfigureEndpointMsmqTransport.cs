@@ -79,7 +79,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
         if (string.IsNullOrEmpty(connectionString))
         {
-            connectionString = @"Data Source=(localdb)\ProjectsV13;Initial Catalog=Msmq;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+            connectionString = @"Server=localhost\sqlexpress;Database=nservicebus;Trusted_Connection=True;";
         }
 
         return connectionString;
