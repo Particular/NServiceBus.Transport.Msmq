@@ -5,6 +5,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Messaging;
     using System.Threading.Tasks;
     using System.Transactions;
+    using NServiceBus.Extensibility;
     using Transport;
 
     class TransactionScopeStrategy : ReceiveStrategy
@@ -79,7 +80,10 @@ namespace NServiceBus.Transport.Msmq
             {
                 using (var bodyStream = message.BodyStream)
                 {
-                    var shouldAbortMessageProcessing = await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction).ConfigureAwait(false);
+                    var context = new ContextBag();
+                    context.Set(message);
+
+                    var shouldAbortMessageProcessing = await TryProcessMessage(message.Id, headers, bodyStream, transportTransaction, context).ConfigureAwait(false);
 
                     if (shouldAbortMessageProcessing)
                     {

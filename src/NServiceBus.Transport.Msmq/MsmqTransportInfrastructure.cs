@@ -130,7 +130,7 @@ namespace NServiceBus.Transport.Msmq
 
                 var delayedDeliveryMessagePump = new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, false);
 
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata);
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsQueue, timeoutsErrorQueue, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata);
             }
 
             // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.

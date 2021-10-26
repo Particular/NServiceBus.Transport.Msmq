@@ -14,6 +14,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                                    DueDelayedMessagePoller poller,
                                    IDelayedMessageStore storage,
                                    MessagePump messagePump,
+                                   string timeoutsQueue,
                                    string errorQueue,
                                    int numberOfRetries,
                                    TimeSpan timeToWaitForStoreCircuitBreaker,
@@ -27,6 +28,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             this.faultMetadata = faultMetadata;
             pump = messagePump;
             this.errorQueue = errorQueue;
+            this.timeoutsQueue = timeoutsQueue;
         }
 
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
@@ -37,6 +39,9 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
             storeCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("DelayedDeliveryStore", timeToWaitForStoreCircuitBreaker, ex => criticalError.Raise("Failed to store delayed message", ex));
             poller.Init(criticalError, settings);
+
+            // Make sure to use the timeouts input queue
+            settings = new PushSettings(timeoutsQueue, settings.ErrorQueue, settings.PurgeOnStartup, settings.RequiredTransactionMode);
 
             return pump.Init(TimeoutReceived, OnError, criticalError, settings);
         }
@@ -145,6 +150,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         readonly MessagePump pump;
         readonly Dictionary<string, string> faultMetadata;
         readonly string errorQueue;
+        readonly string timeoutsQueue;
         readonly TransactionOptions transactionOptions = new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted };
 
         RepeatedFailuresOverTimeCircuitBreaker storeCircuitBreaker;
