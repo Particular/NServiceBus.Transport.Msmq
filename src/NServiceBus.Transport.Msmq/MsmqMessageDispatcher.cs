@@ -41,11 +41,25 @@ namespace NServiceBus.Transport.Msmq
 
         public void DispatchDelayedMessage(string id, byte[] extension, byte[] body, string destination, TransportTransaction transportTransaction, ContextBag context)
         {
-            var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
+            var headers = MsmqUtilities.DeserializeMessageHeaders(extension);
 
-            var request = new OutgoingMessage(id, headersAndProperties, body);
+            if (headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var deadLetterQueue))
+            {
+                context.Set(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, bool.Parse(deadLetterQueue));
+            }
+            if (headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
+            {
+                context.Set(JournalOptionExtensions.KeyJournaling, bool.Parse(useJournalQueue));
+            }
 
-            ExecuteTransportOperation(transportTransaction, new UnicastTransportOperation(request, destination), context);
+            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination);
+            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + TimeoutAt);
+            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue);
+            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling);
+
+            var request = new OutgoingMessage(id, headers, body);
+
+            SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination), context);
         }
 
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
@@ -62,7 +76,7 @@ namespace NServiceBus.Transport.Msmq
 
             if (deliverAt.HasValue)
             {
-                SendToDelayedDeliveryQueue(transaction, transportOperation, deliverAt.Value);
+                SendToDelayedDeliveryQueue(transaction, transportOperation, context, deliverAt.Value);
             }
             else
             {
@@ -70,19 +84,24 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation, DateTimeOffset deliverAt)
+        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context, DateTimeOffset deliverAt)
         {
             var message = transportOperation.Message;
-
-            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
-            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
-            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
-
+            var headers = message.Headers;
             var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
 
-            // Always used DLQ for delayed messages
-            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = "true";
-            transportOperation.Message.Headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = settings.UseJournalQueue.ToString();
+
+            headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
+            headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+
+            if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+            {
+                headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
+            }
+            if (context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
+            {
+                headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
+            }
 
             try
             {
@@ -90,7 +109,7 @@ namespace NServiceBus.Transport.Msmq
                 {
                     using (var toSend = MsmqUtilities.Convert(message, transportOperation.DeliveryConstraints))
                     {
-                        toSend.UseDeadLetterQueue = true; // Always used DLQ for delayed messages
+                        toSend.UseDeadLetterQueue = true; // Always used DLQ for sending delayed messages to the satellite
                         toSend.UseJournalQueue = settings.UseJournalQueue;
 
                         if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)

@@ -81,7 +81,7 @@ namespace NServiceBus.Transport.Msmq
                 DisableNativeTtbrInTransactions = disableNativeTtbrInTransactions;
             }
 
-            if (settings.TryGet<DelayedDeliverySettings>("NativeDelayedDeliverySettings", out var delayedDeliverySettings))
+            if (settings.TryGet<DelayedDeliverySettings>(out var delayedDeliverySettings))
             {
                 UseNativeDelayedDelivery = true;
                 NativeDelayedDeliverySettings = delayedDeliverySettings;

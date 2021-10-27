@@ -1,18 +1,16 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
-    public class When_deferring_a_message_properties_should_be_cleaned_up : NServiceBusAcceptanceTest
+    public class When_deferring_a_message_customizations_should_be_applied : NServiceBusAcceptanceTest
     {
         [Test]
-        public async Task Properties_should_be_removed_from_headers()
+        public async Task Customizations_should_be_applied()
         {
             var shortDelay = TimeSpan.FromSeconds(10);
 
@@ -24,19 +22,25 @@
                     options.DelayDeliveryWith(shortDelay);
                     options.RouteToThisEndpoint();
 
+                    //Non-default options
+                    options.UseJournalQueue(true);
+                    options.UseDeadLetterQueue(false);
+
                     return session.Send(new MyMessage(), options);
                 }))
                 .Done(c => c.Processed)
                 .Run();
 
             Assert.True(context.Processed);
-            Assert.True(context.Headers.All(x => !x.Key.StartsWith("NServiceBus.Timeouts.Properties.")));
+            Assert.True(context.UseJournalQueue);
+            Assert.False(context.UseDeadLetterQueue);
         }
 
         public class Context : ScenarioContext
         {
             public bool Processed { get; set; }
-            public IReadOnlyDictionary<string, string> Headers { get; set; }
+            public bool UseJournalQueue { get; set; }
+            public bool UseDeadLetterQueue { get; set; }
         }
 
         public class Endpoint : EndpointConfigurationBuilder
@@ -64,8 +68,11 @@
 
                 public Task Handle(MyMessage message, IMessageHandlerContext context)
                 {
-                    testContext.Headers = context.MessageHeaders;
                     testContext.Processed = true;
+                    var nativeMessage = context.Extensions.Get<System.Messaging.Message>();
+
+                    testContext.UseDeadLetterQueue = nativeMessage.UseDeadLetterQueue;
+                    testContext.UseJournalQueue = nativeMessage.UseJournalQueue;
 
                     return Task.FromResult(0);
                 }

@@ -17,7 +17,7 @@
         /// <summary>
         /// The store to keep delayed messages.
         /// </summary>
-        public IDelayedMessageStore DelayedMessageStore { get; }
+        public IDelayedMessageStore DelayedMessageStore { get; internal set; }
 
         /// <summary>
         /// Number of retries when trying to forward due delayed messages.
@@ -83,16 +83,6 @@
                 Guard.AgainstNegativeAndZero("value", value);
                 maximumRecoveryFailuresPerSecond = value;
             }
-        }
-
-        /// <summary>
-        /// Configures delayed delivery.
-        /// </summary>
-        /// <param name="delayedMessageStore">The store to keep delayed messages.</param>
-        public DelayedDeliverySettings(IDelayedMessageStore delayedMessageStore)
-        {
-            Guard.AgainstNull(nameof(delayedMessageStore), delayedMessageStore);
-            DelayedMessageStore = delayedMessageStore;
         }
     }
 }

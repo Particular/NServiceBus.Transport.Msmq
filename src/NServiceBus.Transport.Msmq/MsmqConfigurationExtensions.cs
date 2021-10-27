@@ -196,8 +196,11 @@ namespace NServiceBus
                 throw new Exception("Delayed delivery is only supported for endpoints capable of receiving messages.");
             }
 
-            var delayedDeliverySettings = new DelayedDeliverySettings(delayedMessageStore);
-            config.GetSettings().Set("NativeDelayedDeliverySettings", delayedDeliverySettings);
+            //Enable hybrid mode in which timeout manager is still running in the core to process remaining timeouts.
+            config.GetSettings().Set("NServiceBus.TimeoutManager.EnableMigrationMode", true);
+
+            var delayedDeliverySettings = config.GetSettings().GetOrCreate<DelayedDeliverySettings>();
+            delayedDeliverySettings.DelayedMessageStore = delayedMessageStore;
 
             return delayedDeliverySettings;
         }
