@@ -15,7 +15,7 @@ namespace NServiceBus
     }
     public class DelayedDeliverySettings
     {
-        public DelayedDeliverySettings(NServiceBus.IDelayedMessageStore delayedMessageStore) { }
+        public DelayedDeliverySettings() { }
         public NServiceBus.IDelayedMessageStore DelayedMessageStore { get; }
         public int MaximumRecoveryFailuresPerSecond { get; set; }
         public int NumberOfRetries { get; set; }
