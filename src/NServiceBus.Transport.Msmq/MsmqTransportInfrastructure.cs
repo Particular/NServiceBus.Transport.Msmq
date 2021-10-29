@@ -6,6 +6,9 @@ namespace NServiceBus.Transport.Msmq
     using System.Text;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Faults;
+    using NServiceBus.DelayedDelivery;
+    using DelayedDelivery;
     using Performance.TimeToBeReceived;
     using Routing;
     using Settings;
@@ -14,7 +17,9 @@ namespace NServiceBus.Transport.Msmq
 
     class MsmqTransportInfrastructure : TransportInfrastructure
     {
-        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration)
+        const string TimeoutQueueSuffix = "timeouts";
+
+        public MsmqTransportInfrastructure(ReadOnlySettings settings, MsmqSettings msmqSettings, QueueBindings queueBindings, bool isTransactional, bool outBoxRunning, TimeSpan auditMessageExpiration, Func<LogicalAddress> localAddress, string timeoutsErrorQueue)
         {
             this.settings = settings;
             this.msmqSettings = msmqSettings;
@@ -22,13 +27,30 @@ namespace NServiceBus.Transport.Msmq
             this.isTransactional = isTransactional;
             this.outBoxRunning = outBoxRunning;
             this.auditMessageExpiration = auditMessageExpiration;
+            this.localAddress = localAddress;
+            this.timeoutsErrorQueue = timeoutsErrorQueue;
+
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                constraints = new[]
+                {
+                    typeof(DiscardIfNotReceivedBefore),
+                    typeof(NonDurableDelivery),
+                    typeof(DelayDeliveryWith),
+                    typeof(DoNotDeliverBefore)
+                };
+            }
+            else
+            {
+                constraints = new[]
+                {
+                    typeof(DiscardIfNotReceivedBefore),
+                    typeof(NonDurableDelivery)
+                };
+            }
         }
 
-        public override IEnumerable<Type> DeliveryConstraints { get; } = new[]
-        {
-            typeof(DiscardIfNotReceivedBefore),
-            typeof(NonDurableDelivery)
-        };
+        public override IEnumerable<Type> DeliveryConstraints => constraints;
 
         public override TransportTransactionMode TransactionMode { get; } = TransportTransactionMode.TransactionScope;
         public override OutboundRoutingPolicy OutboundRoutingPolicy { get; } = new OutboundRoutingPolicy(OutboundRoutingType.Unicast, OutboundRoutingType.Unicast, OutboundRoutingType.Unicast);
@@ -83,6 +105,34 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
+            IPushMessages delayedDeliveryPump = null;
+
+            string timeoutsQueue = null;
+            string timeoutsErrorQueue = null;
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                timeoutsQueue = ToTransportAddress(localAddress().CreateQualifiedAddress(TimeoutQueueSuffix));
+                timeoutsErrorQueue = this.timeoutsErrorQueue;
+
+                var dispatcher = new MsmqMessageDispatcher(msmqSettings, timeoutsQueue);
+
+                var staticFaultMetadata = new Dictionary<string, string>
+                {
+                    {FaultsHeaderKeys.FailedQ, timeoutsQueue},
+                    {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
+                    {Headers.ProcessingEndpoint, localAddress().EndpointInstance.Endpoint},
+                };
+
+                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, timeoutsErrorQueue, staticFaultMetadata,
+                    msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerFetchCircuitBreaker,
+                    msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerDispatchCircuitBreaker,
+                    msmqSettings.NativeDelayedDeliverySettings.MaximumRecoveryFailuresPerSecond);
+
+                var delayedDeliveryMessagePump = new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, false);
+
+                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, msmqSettings.NativeDelayedDeliverySettings.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsQueue, timeoutsErrorQueue, msmqSettings.NativeDelayedDeliverySettings.NumberOfRetries, msmqSettings.NativeDelayedDeliverySettings.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata);
+            }
+
             // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
             foreach (var queue in queueBindings.ReceivingAddresses)
             {
@@ -90,12 +140,18 @@ namespace NServiceBus.Transport.Msmq
             }
 
             return new TransportReceiveInfrastructure(
-                () => new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, !msmqSettings.IgnoreIncomingTimeToBeReceivedHeaders),
+                () => new CompositePump(new MessagePump(guarantee => SelectReceiveStrategy(guarantee, msmqSettings.ScopeOptions.TransactionOptions), msmqSettings.MessageEnumeratorTimeout, !msmqSettings.IgnoreIncomingTimeToBeReceivedHeaders), delayedDeliveryPump),
                 () =>
                 {
                     if (msmqSettings.ExecuteInstaller)
                     {
-                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues);
+                        string endpointName = null;
+                        if (msmqSettings.NativeDelayedDeliverySettings != null)
+                        {
+                            endpointName = localAddress().EndpointInstance.Endpoint;
+                        }
+
+                        return new MsmqQueueCreator(msmqSettings.UseTransactionalQueues, msmqSettings.NativeDelayedDeliverySettings?.DelayedMessageStore, endpointName, timeoutsQueue, timeoutsErrorQueue);
                     }
                     return new NullQueueCreator();
                 },
@@ -113,8 +169,14 @@ namespace NServiceBus.Transport.Msmq
         {
             CheckMachineNameForCompliance.Check();
 
+            string timeoutsQueue = null;
+            if (msmqSettings.UseNativeDelayedDelivery)
+            {
+                timeoutsQueue = ToTransportAddress(localAddress().CreateQualifiedAddress(TimeoutQueueSuffix));
+            }
+
             return new TransportSendInfrastructure(
-                () => new MsmqMessageDispatcher(msmqSettings),
+                () => new MsmqMessageDispatcher(msmqSettings, timeoutsQueue),
                 () =>
                 {
                     foreach (var address in queueBindings.SendingAddresses)
@@ -163,5 +225,8 @@ namespace NServiceBus.Transport.Msmq
         bool isTransactional;
         bool outBoxRunning;
         TimeSpan auditMessageExpiration;
+        Func<LogicalAddress> localAddress;
+        string timeoutsErrorQueue;
+        Type[] constraints;
     }
 }

@@ -235,7 +235,9 @@ namespace NServiceBus.Transport.Msmq
             ResponseQueue = true,
             CorrelationId = true,
             Extension = true,
-            AppSpecific = true
+            AppSpecific = true,
+            UseJournalQueue = true,
+            UseDeadLetterQueue = true
         };
     }
 }

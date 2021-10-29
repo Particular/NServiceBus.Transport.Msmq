@@ -1,15 +1,50 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute(@"NServiceBus.Transport.Msmq.Tests, PublicKey=0024000004800000940000000602000000240000525341310004000001000100dde965e6172e019ac82c2639ffe494dd2e7dd16347c34762a05732b492e110f2e4e2e1b5ef2d85c848ccfb671ee20a47c8d1376276708dc30a90ff1121b647ba3b7259a6bc383b2034938ef0e275b58b920375ac605076178123693c6c4f1331661a62eba28c249386855637780e3ff5f23a6d854700eaa6803ef48907513b92")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.6.1", FrameworkDisplayName=".NET Framework 4.6.1")]
 namespace NServiceBus
 {
+    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = null);
+    public class static DateTimeOffsetHelper
+    {
+        public static System.DateTimeOffset ToDateTimeOffset(string wireFormattedString) { }
+        public static string ToWireFormattedString(System.DateTimeOffset dateTime) { }
+    }
     public class static DeadLetterQueueOptionExtensions
     {
         public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = True) { }
     }
+    public class DelayedDeliverySettings
+    {
+        public DelayedDeliverySettings() { }
+        public NServiceBus.IDelayedMessageStore DelayedMessageStore { get; }
+        public int MaximumRecoveryFailuresPerSecond { get; set; }
+        public int NumberOfRetries { get; set; }
+        public System.TimeSpan TimeToTriggerDispatchCircuitBreaker { get; set; }
+        public System.TimeSpan TimeToTriggerFetchCircuitBreaker { get; set; }
+        public System.TimeSpan TimeToTriggerStoreCircuitBreaker { get; set; }
+    }
+    public class DelayedMessage
+    {
+        public DelayedMessage() { }
+        public byte[] Body { get; set; }
+        public string Destination { get; set; }
+        public byte[] Headers { get; set; }
+        public string MessageId { get; set; }
+        public int NumberOfRetries { get; set; }
+        public System.DateTime Time { get; set; }
+    }
     public class static EndpointInstanceExtensions
     {
         public static NServiceBus.Routing.EndpointInstance AtMachine(this NServiceBus.Routing.EndpointInstance instance, string machineName) { }
+    }
+    public interface IDelayedMessageStore
+    {
+        System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<System.Nullable<System.DateTimeOffset>> Next(System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = null);
+        System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = null);
     }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
@@ -33,6 +68,7 @@ namespace NServiceBus
         public static void EnableJournaling(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static void IgnoreIncomingTimeToBeReceivedHeaders(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
+        public static NServiceBus.DelayedDeliverySettings NativeDelayedDelivery(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config, NServiceBus.IDelayedMessageStore delayedMessageStore) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
         public static void TimeToReachQueue(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config, System.TimeSpan timeToReachQueue) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TransactionScopeOptions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transportExtensions, System.Nullable<System.TimeSpan> timeout = null, System.Nullable<System.Transactions.IsolationLevel> isolationLevel = null) { }
@@ -50,6 +86,17 @@ namespace NServiceBus
         public override string ExampleConnectionStringForErrorMessage { get; }
         public override bool RequiresConnectionString { get; }
         public override NServiceBus.Transport.TransportInfrastructure Initialize(NServiceBus.Settings.SettingsHolder settings, string connectionString) { }
+    }
+    public class SqlServerDelayedMessageStore : NServiceBus.IDelayedMessageStore
+    {
+        public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
+        public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
+        public System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task<System.Nullable<System.DateTimeOffset>> Next(System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = null) { }
     }
 }
 namespace NServiceBus.Transport.Msmq

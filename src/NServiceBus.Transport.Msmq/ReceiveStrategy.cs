@@ -100,7 +100,7 @@ namespace NServiceBus.Transport.Msmq
             errorQueue.Send(message, transactionType);
         }
 
-        protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction)
+        protected async Task<bool> TryProcessMessage(string messageId, Dictionary<string, string> headers, Stream bodyStream, TransportTransaction transaction, ContextBag context)
         {
             if (discardExpiredTtbrMessages && TimeToBeReceived.HasElapsed(headers))
             {
@@ -111,7 +111,7 @@ namespace NServiceBus.Transport.Msmq
             using (var tokenSource = new CancellationTokenSource())
             {
                 var body = await ReadStream(bodyStream).ConfigureAwait(false);
-                var messageContext = new MessageContext(messageId, headers, body, transaction, tokenSource, new ContextBag());
+                var messageContext = new MessageContext(messageId, headers, body, transaction, tokenSource, context);
 
                 await onMessage(messageContext).ConfigureAwait(false);
 

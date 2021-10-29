@@ -74,5 +74,16 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         return Task.FromResult(0);
     }
 
+    public static string GetStorageConnectionString()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            connectionString = @"Server=localhost\sqlexpress;Database=nservicebus;Trusted_Connection=True;";
+        }
+
+        return connectionString;
+    }
+
     QueueBindings queueBindings;
 }

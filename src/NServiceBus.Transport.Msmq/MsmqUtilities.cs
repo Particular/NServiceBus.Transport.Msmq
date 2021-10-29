@@ -82,16 +82,21 @@ namespace NServiceBus.Transport.Msmq
 
         static Dictionary<string, string> DeserializeMessageHeaders(Message m)
         {
+            return DeserializeMessageHeaders(m.Extension);
+        }
+
+        internal static Dictionary<string, string> DeserializeMessageHeaders(byte[] bytes)
+        {
             var result = new Dictionary<string, string>();
 
-            if (m.Extension.Length == 0)
+            if (bytes.Length == 0)
             {
                 return result;
             }
 
             //This is to make us compatible with v3 messages that are affected by this bug:
             //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
-            var data = m.Extension;
+            var data = bytes;
             var xmlLength = data.LastIndexOf(EndTag) + EndTag.Length; // Ignore any data after last </ArrayOfHeaderInfo>
             object o;
             using (var stream = new MemoryStream(buffer: data, index: 0, count: xmlLength, writable: false, publiclyVisible: true))
@@ -210,6 +215,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        public const string PropertyHeaderPrefix = "NServiceBus.Timeouts.Properties.";
         const string DIRECTPREFIX = "DIRECT=OS:";
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
