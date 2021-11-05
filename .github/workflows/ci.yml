@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+      - release-*
+  pull_request:
+  workflow_dispatch:
+env:
+  DOTNET_NOLOGO: true
+jobs:
+  build:
+    name: Windows
+    runs-on: windows-2019
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 0
+      - name: Install SQL Server
+        shell: pwsh 
+        run: |
+          choco install sql-server-express
+          # Set necessary SQLCMD environment variable for the setup step
+          echo "SQLCMDSERVER=.\SQLEXPRESS" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf-8 -Append
+          # Set connection string as environment variable for the tests
+          echo "SQLServerConnectionString=Data Source=.\SQLEXPRESS;Initial Catalog=nservicebus;Integrated Security=True" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf-8 -Append
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 5.0.x
+      - name: Build
+        run: dotnet build src --configuration Release
+      - name: Upload packages
+        uses: actions/upload-artifact@v2.2.2
+        with:
+          name: NuGet packages
+          path: nugets/
+          retention-days: 7
+      - name: Prepare SQL Server
+        shell: pwsh       
+        run: |
+          # run this part later in the job to ensure the DB is up and running         
+          echo "create databases"
+          sqlcmd -Q "CREATE DATABASE nservicebus"
+      - name: Run tests
+        uses: Particular/run-tests-action@v1.0.0
