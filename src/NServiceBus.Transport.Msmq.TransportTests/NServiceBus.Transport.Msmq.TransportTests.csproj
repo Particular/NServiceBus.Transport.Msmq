@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="\**\NServiceBusTransportTest.cs" />
+    <Compile Remove="$(PkgNServiceBus_TransportTests_Sources)\**\NServiceBusTransportTest.cs" />
   </ItemGroup>
 
 </Project>
