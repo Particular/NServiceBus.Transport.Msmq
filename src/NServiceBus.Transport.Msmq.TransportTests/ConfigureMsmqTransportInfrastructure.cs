@@ -22,14 +22,14 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
         return msmqSettings;
     }
 
-    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, string inputQueueName, string errorQueueName, CancellationToken cancellationToken = default)
+    public async Task<TransportInfrastructure> Configure(TransportDefinition transportDefinition, HostSettings hostSettings, QueueAddress inputQueueName, string errorQueueName, CancellationToken cancellationToken = default)
     {
         var msmqSettings = (MsmqTransport)transportDefinition;
-        receiveQueue = inputQueueName;
         var infrastructure = await msmqSettings.Initialize(hostSettings,
             new[] { new ReceiveSettings("TestReceiver", inputQueueName, false, true, errorQueueName) },
             new[] { errorQueueName },
             cancellationToken);
+        receiveQueue = infrastructure.ToTransportAddress(inputQueueName);
 
         return infrastructure;
     }

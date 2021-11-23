@@ -5,6 +5,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Faults;
     using Logging;
     using Routing;
 
@@ -41,11 +42,13 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         {
             await pump.Initialize(PushRuntimeSettings.Default, TimeoutReceived, OnError, cancellationToken).ConfigureAwait(false);
             await pump.StartReceive(cancellationToken).ConfigureAwait(false);
+            poller.Start();
         }
 
-        public Task Stop(CancellationToken cancellationToken = default)
+        public async Task Stop(CancellationToken cancellationToken = default)
         {
-            return pump.StopReceive(cancellationToken);
+            await pump.StopReceive(cancellationToken).ConfigureAwait(false);
+            await poller.Stop(cancellationToken).ConfigureAwait(false);
         }
 
         async Task TimeoutReceived(MessageContext context, CancellationToken cancellationToken)
@@ -103,7 +106,9 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     throw new Exception("Error while storing delayed message", e);
                 }
 
+#pragma warning disable PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
                 poller.Signal(timeout.Time);
+#pragma warning restore PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
             }
         }
 
@@ -119,7 +124,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             var message = errorContext.Message;
 
             ExceptionHeaderHelper.SetExceptionHeaders(message.Headers, errorContext.Exception);
-
+            message.Headers[FaultsHeaderKeys.FailedQ] = errorContext.ReceiveAddress;
             foreach (var pair in faultMetadata)
             {
                 message.Headers[pair.Key] = pair.Value;

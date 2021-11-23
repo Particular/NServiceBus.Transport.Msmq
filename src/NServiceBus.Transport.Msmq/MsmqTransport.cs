@@ -4,11 +4,9 @@ namespace NServiceBus
     using System.Collections.Generic;
     using System.Linq;
     using System.Messaging;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
-    using Faults;
     using Features;
     using Routing;
     using Support;
@@ -21,7 +19,7 @@ namespace NServiceBus
     /// </summary>
     public partial class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
-        const string TimeoutQueueSuffix = ".timeouts";
+        const string TimeoutsQueueQualifier = "timeouts";
 
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
@@ -40,22 +38,21 @@ namespace NServiceBus
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
 
-            var queuesToCreate = receivers
-                .Select(r => r.ReceiveAddress)
-                .Concat(sendingAddresses)
-                .ToHashSet();
+            var queuesToCreate = new HashSet<string>(sendingAddresses);
 
-            string timeoutsQueue = null;
-            string timeoutsErrorQueue = null;
             var requiresDelayedDelivery = DelayedDelivery != null;
+
+            string timeoutsErrorQueue = null;
+            MessagePump delayedDeliveryMessagePump = null;
+
 
             if (requiresDelayedDelivery)
             {
+                QueueAddress timeoutsQueue;
                 if (receivers.Length > 0)
                 {
                     var mainReceiver = receivers[0];
-                    var mainQueueAddress = MsmqAddress.Parse(mainReceiver.ReceiveAddress);
-                    timeoutsQueue = new MsmqAddress($"{mainQueueAddress.Queue}{TimeoutQueueSuffix}", mainQueueAddress.Machine).ToString();
+                    timeoutsQueue = new QueueAddress(mainReceiver.ReceiveAddress.BaseAddress, qualifier: TimeoutsQueueQualifier);
                     timeoutsErrorQueue = mainReceiver.ErrorQueue;
                 }
                 else
@@ -68,16 +65,25 @@ namespace NServiceBus
                         }
 
                         timeoutsErrorQueue = coreErrorQueue;
-                        timeoutsQueue = MsmqAddress.Parse($"{hostSettings.Name}{TimeoutQueueSuffix}").ToString(); //Use name of the endpoint as the timeouts queue name. Use local machine
+                        timeoutsQueue = new QueueAddress(hostSettings.Name, qualifier: TimeoutsQueueQualifier); //Use name of the endpoint as the timeouts queue name. 
                     }
                     else
                     {
                         throw new Exception("Timeouts are not supported for send-only configurations outside of an NServiceBus endpoint.");
                     }
                 }
-                queuesToCreate.Add(timeoutsQueue);
+
+                delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
+                    MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
+                    new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
+
+                queuesToCreate.Add(delayedDeliveryMessagePump.ReceiveAddress);
                 queuesToCreate.Add(timeoutsErrorQueue);
             }
+
+            var messageReceivers = CreateReceivers(receivers, hostSettings.CriticalErrorAction, queuesToCreate);
+
+            var dispatcher = new MsmqMessageDispatcher(this, delayedDeliveryMessagePump?.ReceiveAddress, OnSendCallbackForTesting);
 
             if (hostSettings.CoreSettings != null)
             {
@@ -116,36 +122,29 @@ namespace NServiceBus
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
-            foreach (var address in sendingAddresses)
+            foreach (var address in sendingAddresses.Concat(messageReceivers.Select(r => r.Value.ReceiveAddress)))
             {
                 QueuePermissions.CheckQueue(address);
             }
 
-            var dispatcher = new MsmqMessageDispatcher(this, timeoutsQueue, OnSendCallbackForTesting);
-
             DelayedDeliveryPump delayedDeliveryPump = null;
-            DueDelayedMessagePoller dueDelayedMessagePoller = null;
             if (requiresDelayedDelivery)
             {
-                QueuePermissions.CheckQueue(timeoutsQueue);
+                QueuePermissions.CheckQueue(delayedDeliveryMessagePump.ReceiveAddress);
                 QueuePermissions.CheckQueue(timeoutsErrorQueue);
 
                 var staticFaultMetadata = new Dictionary<string, string>
                 {
-                    {FaultsHeaderKeys.FailedQ, timeoutsQueue},
                     {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
                     {Headers.ProcessingEndpoint, hostSettings.Name},
                     {Headers.HostDisplayName, hostSettings.HostDisplayName}
                 };
 
-                dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
+                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
                     DelayedDelivery.TimeToTriggerFetchCircuitBreaker,
                     DelayedDelivery.TimeToTriggerDispatchCircuitBreaker,
-                    DelayedDelivery.MaximumRecoveryFailuresPerSecond);
-
-                var delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
-                    MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
-                    new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
+                    DelayedDelivery.MaximumRecoveryFailuresPerSecond,
+                    delayedDeliveryMessagePump.ReceiveAddress);
 
                 delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
@@ -159,17 +158,17 @@ namespace NServiceBus
                 UseJournalQueue,
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
-                TimeoutQueue = timeoutsQueue,
+                TimeoutQueue = delayedDeliveryMessagePump?.ReceiveAddress,
                 TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType(),
             });
 
-            var infrastructure = new MsmqTransportInfrastructure(CreateReceivers(receivers, hostSettings.CriticalErrorAction), dispatcher, delayedDeliveryPump, dueDelayedMessagePoller);
+            var infrastructure = new MsmqTransportInfrastructure(messageReceivers, dispatcher, delayedDeliveryPump);
             await infrastructure.Start(cancellationToken).ConfigureAwait(false);
 
             return infrastructure;
         }
 
-        Dictionary<string, IMessageReceiver> CreateReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction)
+        Dictionary<string, IMessageReceiver> CreateReceivers(ReceiveSettings[] receivers, Action<string, Exception, CancellationToken> criticalErrorAction, HashSet<string> queuesToCreate)
         {
             var messagePumps = new Dictionary<string, IMessageReceiver>(receivers.Length);
 
@@ -179,10 +178,6 @@ namespace NServiceBus
                 {
                     throw new NotImplementedException("MSMQ does not support native pub/sub.");
                 }
-
-                // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
-                CheckEndpointNameComplianceForMsmq.Check(receiver.ReceiveAddress);
-                QueuePermissions.CheckQueue(receiver.ReceiveAddress);
 
                 var pump = new MessagePump(
                     transactionMode =>
@@ -194,6 +189,10 @@ namespace NServiceBus
                     receiver
                 );
 
+                // The following check avoids creating some sub-queues, if the endpoint sub queue has the capability to exceed the max length limitation for queue format name.
+                CheckEndpointNameComplianceForMsmq.Check(pump.ReceiveAddress);
+
+                queuesToCreate.Add(pump.ReceiveAddress);
                 messagePumps.Add(pump.Id, pump);
             }
 
@@ -237,28 +236,12 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public override string ToTransportAddress(QueueAddress address)
-        {
-            if (!address.Properties.TryGetValue("machine", out var machine))
-            {
-                machine = RuntimeEnvironment.MachineName;
-            }
-            if (!address.Properties.TryGetValue("queue", out var queueName))
-            {
-                queueName = address.BaseAddress;
-            }
-
-            var queue = new StringBuilder(queueName);
-            if (address.Discriminator != null)
-            {
-                queue.Append("-" + address.Discriminator);
-            }
-            if (address.Qualifier != null)
-            {
-                queue.Append("." + address.Qualifier);
-            }
-            return $"{queue}@{machine}";
-        }
+        [ObsoleteEx(Message = "Inject the ITransportAddressResolver type to access the address translation mechanism at runtime. See the NServiceBus version 8 upgrade guide for further details.",
+            TreatAsErrorFromVersion = "3",
+            RemoveInVersion = "4")]
+#pragma warning disable CS0672 // Member overrides obsolete member
+        public override string ToTransportAddress(QueueAddress address) => MsmqTransportInfrastructure.TranslateAddress(address);
+#pragma warning restore CS0672 // Member overrides obsolete member
 
         /// <inheritdoc />
         public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() =>

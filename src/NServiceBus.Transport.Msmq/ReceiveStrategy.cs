@@ -13,8 +13,9 @@ namespace NServiceBus.Transport.Msmq
     {
         public abstract Task ReceiveMessage(CancellationToken cancellationToken = default);
 
-        public void Init(MessageQueue inputQueue, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
+        public void Init(MessageQueue inputQueue, string receiveQueueAddress, MessageQueue errorQueue, OnMessage onMessage, OnError onError, Action<string, Exception, CancellationToken> criticalError, bool ignoreIncomingTimeToBeReceivedHeaders)
         {
+            this.receiveQueueAddress = receiveQueueAddress;
             this.inputQueue = inputQueue;
             this.errorQueue = errorQueue;
             this.onMessage = onMessage;
@@ -107,7 +108,7 @@ namespace NServiceBus.Transport.Msmq
                 return;
             }
 
-            var messageContext = new MessageContext(messageId, headers, body, transaction, context);
+            var messageContext = new MessageContext(messageId, headers, body, transaction, receiveQueueAddress, context);
             await onMessage(messageContext, cancellationToken).ConfigureAwait(false);
         }
 
@@ -116,7 +117,7 @@ namespace NServiceBus.Transport.Msmq
             try
             {
                 var headers = MsmqUtilities.ExtractHeaders(message);
-                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts, context);
+                var errorContext = new ErrorContext(exception, headers, message.Id, body, transportTransaction, processingAttempts, receiveQueueAddress, context);
                 return await onError(errorContext, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))
@@ -138,5 +139,6 @@ namespace NServiceBus.Transport.Msmq
         bool ignoreIncomingTimeToBeReceivedHeaders;
 
         static readonly ILog Logger = LogManager.GetLogger<ReceiveStrategy>();
+        string receiveQueueAddress;
     }
 }
