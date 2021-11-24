@@ -11,4 +11,5 @@ Documentation can be found at <https://docs.particular.net/transports/msmq/>.
 * MSMQ needs to be installed and enabled on the current machine.See the [MSMQ configuration documentation](https://docs.particular.net/transports/msmq/?version=msmqtransport_2#msmq-configuration) on how to install MSMQ.
 * A MSSQL Server needs to be accessible either via:
   * A local SQL Express installation containing a `nservicebus` database.
-  * A custom SQL Server connection string in provided via the `SqlServerConnectionString` environment variable
+  * A custom SQL Server connection string in provided via the `SqlServerConnectionString` environment variable.
+    * The SQL Server used must support DTC (e.g. container-hosted SQL Server instances are not working)
