@@ -13,7 +13,6 @@
     {
         string QueuePath(string endpointName) => $".\\private$\\{endpointName}";
 
-
         [Test]
         public async Task Uses_native_ttbr_outside_of_transaction()
         {
@@ -40,7 +39,7 @@
             {
                 queue.MessageReadPropertyFilter.TimeToBeReceived = true;
                 var message = queue.Receive();
-                Assert.AreEqual(TimeSpan.Parse("00:00:30"), message.TimeToBeReceived, "Native TTBR should be set");
+                Assert.That(message.TimeToBeReceived, Is.EqualTo(TimeSpan.FromSeconds(30)).Within(1).Seconds, "Native TTBR should be set");
             }
         }
 

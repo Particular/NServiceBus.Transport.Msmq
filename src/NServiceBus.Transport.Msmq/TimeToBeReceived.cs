@@ -38,7 +38,7 @@
                 return true;
             }
 
-            timeSent = DateTime.MinValue;
+            timeSent = DateTimeOffset.MinValue;
             return false;
         }
     }

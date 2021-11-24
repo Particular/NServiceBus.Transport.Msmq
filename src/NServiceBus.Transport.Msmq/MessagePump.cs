@@ -19,18 +19,19 @@ namespace NServiceBus.Transport.Msmq
             Action<string, Exception, CancellationToken> criticalErrorAction,
             ReceiveSettings receiveSettings)
         {
-            Id = receiveSettings.Id;
             this.receiveStrategyFactory = receiveStrategyFactory;
             this.messageEnumeratorTimeout = messageEnumeratorTimeout;
             this.transactionMode = transactionMode;
             this.ignoreIncomingTimeToBeReceivedHeaders = ignoreIncomingTimeToBeReceivedHeaders;
             this.criticalErrorAction = criticalErrorAction;
             this.receiveSettings = receiveSettings;
+
+            ReceiveAddress = MsmqTransportInfrastructure.TranslateAddress(receiveSettings.ReceiveAddress);
         }
 
         public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
         {
-            var inputAddress = MsmqAddress.Parse(receiveSettings.ReceiveAddress);
+            var inputAddress = MsmqAddress.Parse(ReceiveAddress);
             var errorAddress = MsmqAddress.Parse(receiveSettings.ErrorQueue);
 
             if (!string.Equals(inputAddress.Machine, RuntimeEnvironment.MachineName,
@@ -57,7 +58,7 @@ namespace NServiceBus.Transport.Msmq
             }
 
             receiveStrategy = receiveStrategyFactory(transactionMode);
-            receiveStrategy.Init(inputQueue, errorQueue, onMessage, onError, criticalErrorAction, ignoreIncomingTimeToBeReceivedHeaders);
+            receiveStrategy.Init(inputQueue, ReceiveAddress, errorQueue, onMessage, onError, criticalErrorAction, ignoreIncomingTimeToBeReceivedHeaders);
 
             maxConcurrency = limitations.MaxConcurrency;
             concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
@@ -190,7 +191,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
-        // This is static to prevent the method from accessing feilds in the pump since that causes variable capturing and cause extra allocations
+        // This is static to prevent the method from accessing fields in the pump since that causes variable capturing and cause extra allocations
         static async Task ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(MessagePump messagePump, CancellationToken messagePumpCancellationToken)
         {
 #pragma warning disable PS0021 // Highlight when a try block passes multiple cancellation tokens - justification:
@@ -265,7 +266,9 @@ namespace NServiceBus.Transport.Msmq
 
         public ISubscriptionManager Subscriptions => null;
 
-        public string Id { get; }
+        public string Id => receiveSettings.Id;
+
+        public string ReceiveAddress { get; }
 
         CancellationTokenSource messagePumpCancellationTokenSource;
         CancellationTokenSource messageProcessingCancellationTokenSource;
@@ -287,9 +290,9 @@ namespace NServiceBus.Transport.Msmq
         readonly Action<string, Exception, CancellationToken> criticalErrorAction;
         readonly ReceiveSettings receiveSettings;
 
-        static ILog Logger = LogManager.GetLogger<MessagePump>();
+        static readonly ILog Logger = LogManager.GetLogger<MessagePump>();
 
-        static MessagePropertyFilter DefaultReadPropertyFilter = new MessagePropertyFilter
+        static readonly MessagePropertyFilter DefaultReadPropertyFilter = new MessagePropertyFilter
         {
             Body = true,
             TimeToBeReceived = true,

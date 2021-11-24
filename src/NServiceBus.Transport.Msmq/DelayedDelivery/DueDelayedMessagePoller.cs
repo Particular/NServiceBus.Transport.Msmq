@@ -6,14 +6,14 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using System.Threading.Channels;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Faults;
     using Logging;
     using Routing;
     using Unicast.Queuing;
 
     class DueDelayedMessagePoller
     {
-        public DueDelayedMessagePoller(
-            MsmqMessageDispatcher dispatcher,
+        public DueDelayedMessagePoller(MsmqMessageDispatcher dispatcher,
             IDelayedMessageStore delayedMessageStore,
             int numberOfRetries,
             Action<string, Exception, CancellationToken> criticalErrorAction,
@@ -22,8 +22,8 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             TransportTransactionMode transportTransactionMode,
             TimeSpan timeToTriggerFetchCircuitBreaker,
             TimeSpan timeToTriggerDispatchCircuitBreaker,
-            int maximumRecoveryFailuresPerSecond
-        )
+            int maximumRecoveryFailuresPerSecond,
+            string timeoutsQueueTransportAddress)
         {
             txOption = transportTransactionMode == TransportTransactionMode.TransactionScope
                 ? TransactionScopeOption.Required
@@ -31,6 +31,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             this.delayedMessageStore = delayedMessageStore;
             errorQueue = timeoutsErrorQueue;
             this.faultMetadata = faultMetadata;
+            this.timeoutsQueueTransportAddress = timeoutsQueueTransportAddress;
             this.numberOfRetries = numberOfRetries;
             this.dispatcher = dispatcher;
             fetchCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqDelayedMessageFetch", timeToTriggerFetchCircuitBreaker,
@@ -298,7 +299,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                 Dictionary<string, string> headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(timeout.Headers);
 
                 ExceptionHeaderHelper.SetExceptionHeaders(headersAndProperties, exception);
-
+                headersAndProperties[FaultsHeaderKeys.FailedQ] = timeoutsQueueTransportAddress;
                 foreach (KeyValuePair<string, string> pair in faultMetadata)
                 {
                     headersAndProperties[pair.Key] = pair.Value;
@@ -333,6 +334,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
         static readonly TimeSpan MaxSleepDuration = TimeSpan.FromMinutes(1);
 
         readonly Dictionary<string, string> faultMetadata;
+        readonly string timeoutsQueueTransportAddress;
 
         IDelayedMessageStore delayedMessageStore;
         MsmqMessageDispatcher dispatcher;
