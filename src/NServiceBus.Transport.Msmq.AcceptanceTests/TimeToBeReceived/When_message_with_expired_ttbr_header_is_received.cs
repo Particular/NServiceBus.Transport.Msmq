@@ -6,6 +6,7 @@
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
 
     class When_message_with_expired_ttbr_header_is_received : NServiceBusAcceptanceTest
@@ -13,6 +14,7 @@
         [Test]
         public async Task Message_should_not_be_processed()
         {
+            var tcs = new Lazy<CancellationTokenSource>(() => new CancellationTokenSource(TimeSpan.FromSeconds(5)));
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SomeEndpoint>(endpoint => endpoint
                     .CustomConfig(e =>
@@ -31,7 +33,8 @@
                         ctx.WasSent = true;
                     })
                 )
-                .Run(TimeSpan.FromSeconds(5));
+                .Done(c => tcs.Value.IsCancellationRequested) // wait at least 5 seconds to give the endpoint time to process any message
+                .Run();
 
             Assert.IsTrue(context.WasSent, "Message was sent");
             Assert.IsFalse(context.WasReceived, "Message was processed");
@@ -58,7 +61,8 @@
                         ctx.WasSent = true;
                     })
                 )
-                .Run(TimeSpan.FromSeconds(5));
+                .Done(c => c.WasReceived)
+                .Run(TimeSpan.FromSeconds(30));
 
             Assert.IsTrue(context.WasSent, "Message was sent");
             Assert.IsTrue(context.WasReceived, "Message was not processed");
