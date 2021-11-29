@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Scripts\*.*" Pack="true" PackagePath="build\%(Filename)%(Extension)" />
+    <None Update="Scripts\*.*" Pack="true" PackagePath="build\$(TargetFramework)\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
