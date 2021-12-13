@@ -297,7 +297,7 @@ namespace NServiceBus.Transport.Msmq
         CancellationTokenSource messagePumpCancellationTokenSource;
         CancellationTokenSource messageProcessingCancellationTokenSource;
         int maxConcurrency;
-        SemaphoreSlim concurrencyLimiter;
+        volatile SemaphoreSlim concurrencyLimiter;
         MessageQueue errorQueue;
         MessageQueue inputQueue;
 
