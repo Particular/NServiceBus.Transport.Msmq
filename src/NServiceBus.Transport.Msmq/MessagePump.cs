@@ -203,10 +203,10 @@ namespace NServiceBus.Transport.Msmq
 
                     _ = Task.Factory.StartNew(state =>
                         {
-                            var (messagePump, cancellationToken) = ((MessagePump, CancellationToken))state;
-                            return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, localLimiter, cancellationToken);
+                            var (messagePump, limiter, cancellationToken) = ((MessagePump, SemaphoreSlim, CancellationToken))state;
+                            return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, limiter, cancellationToken);
                         },
-                        (this, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+                        (this, localLimiter, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
                         CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
                         TaskCreationOptions.DenyChildAttach,
                         TaskScheduler.Default)
