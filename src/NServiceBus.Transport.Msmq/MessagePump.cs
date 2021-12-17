@@ -85,6 +85,28 @@ namespace NServiceBus.Transport.Msmq
             return Task.CompletedTask;
         }
 
+        public async Task ChangeConcurrency(PushRuntimeSettings newLimitations, CancellationToken cancellationToken = default)
+        {
+            var oldLimiter = concurrencyLimiter;
+            var oldMaxConcurrency = maxConcurrency;
+            concurrencyLimiter = new SemaphoreSlim(newLimitations.MaxConcurrency, newLimitations.MaxConcurrency);
+            maxConcurrency = newLimitations.MaxConcurrency;
+
+            try
+            {
+                //Drain and dispose of the old semaphore
+                while (oldLimiter.CurrentCount != oldMaxConcurrency)
+                {
+                    await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+                }
+                oldLimiter.Dispose();
+            }
+            catch (Exception ex) when (ex.IsCausedBy(cancellationToken))
+            {
+                //Ignore, we are stopping anyway
+            }
+        }
+
         public async Task StopReceive(CancellationToken cancellationToken = default)
         {
             messagePumpCancellationTokenSource?.Cancel();
@@ -175,14 +197,16 @@ namespace NServiceBus.Transport.Msmq
 
                     messagePumpCancellationToken.ThrowIfCancellationRequested();
 
-                    await concurrencyLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
+                    var localLimiter = concurrencyLimiter;
+
+                    await localLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
 
                     _ = Task.Factory.StartNew(state =>
                         {
-                            var (messagePump, cancellationToken) = ((MessagePump, CancellationToken))state;
-                            return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, cancellationToken);
+                            var (messagePump, limiter, cancellationToken) = ((MessagePump, SemaphoreSlim, CancellationToken))state;
+                            return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, limiter, cancellationToken);
                         },
-                        (this, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
+                        (this, localLimiter, messagePumpCancellationToken),  // We pass a state to make sure we benefit from lamda delegate caching. See https://github.com/Particular/NServiceBus/issues/3884
                         CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
                         TaskCreationOptions.DenyChildAttach,
                         TaskScheduler.Default)
@@ -192,7 +216,7 @@ namespace NServiceBus.Transport.Msmq
         }
 
         // This is static to prevent the method from accessing fields in the pump since that causes variable capturing and cause extra allocations
-        static async Task ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(MessagePump messagePump, CancellationToken messagePumpCancellationToken)
+        static async Task ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(MessagePump messagePump, SemaphoreSlim localConcurrencyLimiter, CancellationToken messagePumpCancellationToken)
         {
 #pragma warning disable PS0021 // Highlight when a try block passes multiple cancellation tokens - justification:
             // The message processing cancellation token is being used for the receive strategies,
@@ -228,7 +252,7 @@ namespace NServiceBus.Transport.Msmq
             }
             finally
             {
-                messagePump.concurrencyLimiter.Release();
+                localConcurrencyLimiter.Release();
             }
         }
 
@@ -273,7 +297,7 @@ namespace NServiceBus.Transport.Msmq
         CancellationTokenSource messagePumpCancellationTokenSource;
         CancellationTokenSource messageProcessingCancellationTokenSource;
         int maxConcurrency;
-        SemaphoreSlim concurrencyLimiter;
+        volatile SemaphoreSlim concurrencyLimiter;
         MessageQueue errorQueue;
         MessageQueue inputQueue;
 
