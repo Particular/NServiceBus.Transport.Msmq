@@ -6,7 +6,6 @@
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
     using Routing;
-    using Transport;
     using Transport.Msmq;
 
     /// <summary>
