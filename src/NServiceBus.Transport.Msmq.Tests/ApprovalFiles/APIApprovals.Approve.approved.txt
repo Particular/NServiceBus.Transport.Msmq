@@ -71,6 +71,7 @@ namespace NServiceBus
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> EnableJournaling(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> IgnoreIncomingTimeToBeReceivedHeaders(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
+        public static NServiceBus.DelayedDeliverySettings NativeDelayedDelivery(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config, NServiceBus.IDelayedMessageStore delayedMessageStore) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TimeToReachQueue(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.TimeSpan timeToReachQueue) { }
         public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TransactionScopeOptions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
