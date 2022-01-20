@@ -6,6 +6,7 @@
     using System.Transactions;
     using Configuration.AdvancedExtensibility;
     using Routing;
+    using Transport;
     using Transport.Msmq;
 
     /// <summary>
@@ -239,6 +240,19 @@
         {
             transport.Transport.UseNonNativeTimeToBeReceivedInTransactions = true;
             return transport;
+        }
+
+        /// <summary>
+        /// Configures native delayed delivery.
+        /// </summary>
+        [PreObsolete(
+            ReplacementTypeOrMember = "Transport.DelayedDelivery",
+            RemoveInVersion = "4",
+            TreatAsErrorFromVersion = "3")]
+        public static DelayedDeliverySettings NativeDelayedDelivery(this TransportExtensions<MsmqTransport> config, IDelayedMessageStore delayedMessageStore)
+        {
+            config.Transport.DelayedDelivery = new DelayedDeliverySettings(delayedMessageStore);
+            return config.Transport.DelayedDelivery;
         }
 
         /// <summary>
