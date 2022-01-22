@@ -250,6 +250,7 @@
             TreatAsErrorFromVersion = "3")]
         public static DelayedDeliverySettings NativeDelayedDelivery(this TransportExtensions<MsmqTransport> config, IDelayedMessageStore delayedMessageStore)
         {
+            Guard.AgainstNull(nameof(delayedMessageStore), delayedMessageStore);
             config.Transport.DelayedDelivery = new DelayedDeliverySettings(delayedMessageStore);
             return config.Transport.DelayedDelivery;
         }
