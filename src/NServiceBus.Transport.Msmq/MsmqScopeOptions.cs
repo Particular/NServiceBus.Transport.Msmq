@@ -14,8 +14,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 if (requestedTimeout.Value > TransactionManager.MaximumTimeout)
                 {
-                    throw new ConfigurationErrorsException(
-                        "Timeout requested is longer than the maximum value for this machine. Override using the maxTimeout setting of the system.transactions section in machine.config");
+                    throw new ArgumentOutOfRangeException(nameof(requestedTimeout), requestedTimeout.Value, "Timeout requested is longer than the maximum value for this machine. Override using the maxTimeout setting of the system.transactions section in machine.config");
                 }
 
                 timeout = requestedTimeout.Value;
