@@ -1,7 +1,6 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Configuration;
     using System.Transactions;
 
     class MsmqScopeOptions
