@@ -12,7 +12,7 @@
         [Test]
         public void Should_blow_up()
         {
-            var exception = Assert.ThrowsAsync<ConfigurationErrorsException>(async () =>
+            var exception = Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
             {
                 await Scenario.Define<ScenarioContext>()
                         .WithEndpoint<ScopeEndpoint>()
