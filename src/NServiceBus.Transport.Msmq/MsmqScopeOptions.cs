@@ -1,9 +1,7 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Configuration;
     using System.Transactions;
-    using System.Transactions.Configuration;
 
     class MsmqScopeOptions
     {
@@ -13,12 +11,9 @@ namespace NServiceBus.Transport.Msmq
             var isolationLevel = IsolationLevel.ReadCommitted;
             if (requestedTimeout.HasValue)
             {
-                var maxTimeout = GetMaxTimeout();
-
-                if (requestedTimeout.Value > maxTimeout)
+                if (requestedTimeout.Value > TransactionManager.MaximumTimeout)
                 {
-                    throw new ConfigurationErrorsException(
-                        "Timeout requested is longer than the maximum value for this machine. Override using the maxTimeout setting of the system.transactions section in machine.config");
+                    throw new ArgumentOutOfRangeException(nameof(requestedTimeout), requestedTimeout.Value, "Timeout requested is longer than the maximum value for this machine. Override using the maxTimeout setting of the system.transactions section in machine.config");
                 }
 
                 timeout = requestedTimeout.Value;
@@ -37,19 +32,5 @@ namespace NServiceBus.Transport.Msmq
         }
 
         public TransactionOptions TransactionOptions { get; }
-
-        static TimeSpan GetMaxTimeout()
-        {
-            var systemTransactionsGroup = ConfigurationManager.OpenMachineConfiguration()
-                .GetSectionGroup("system.transactions");
-
-            if (systemTransactionsGroup?.Sections.Get("machineSettings") is MachineSettingsSection machineSettings)
-            {
-                return machineSettings.MaxTimeout;
-            }
-
-            //default is always 10 minutes
-            return TimeSpan.FromMinutes(10);
-        }
     }
 }
