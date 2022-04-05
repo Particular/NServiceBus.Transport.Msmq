@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NServiceBus.Transport.Msmq", "NServiceBus.Transport.Msmq\NServiceBus.Transport.Msmq.csproj", "{A4E3F5C2-399E-4BB4-9048-842859A19DCD}"
 EndProject
@@ -14,7 +14,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4FB7F8F2-1C6F-48E7-B29A-B5BA5880BFA3}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
-		..\GitVersion.yml = ..\GitVersion.yml
 		nuget.config = nuget.config
 	EndProjectSection
 EndProject
