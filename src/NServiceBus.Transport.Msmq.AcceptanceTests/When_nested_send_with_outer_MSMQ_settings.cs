@@ -6,6 +6,7 @@
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
     using EndpointTemplates;
+    using Extensibility;
     using NServiceBus.Pipeline;
     using NUnit.Framework;
 
@@ -29,8 +30,8 @@
 
             Assert.IsTrue(context.OuterDeadLetterSetting);
             Assert.IsTrue(context.OuterJournalingSetting);
-            Assert.IsFalse(context.InnerJournalingSetting);
-            Assert.IsFalse(context.InnerDeadLetterSetting);
+            Assert.IsNull(context.InnerJournalingSetting);
+            Assert.IsNull(context.InnerDeadLetterSetting);
         }
 
         class Context : ScenarioContext
@@ -76,17 +77,31 @@
 
                 public override Task Invoke(IOutgoingPhysicalMessageContext context, Func<Task> next)
                 {
-                    Type messageType = context.Extensions.Get<OutgoingLogicalMessage>().MessageType;
+                    var messageType = context.Extensions.Get<OutgoingLogicalMessage>().MessageType;
                     if (messageType == typeof(OuterMessage))
                     {
-                        testContext.OuterJournalingSetting = context.Extensions.Get<bool>("MSMQ.UseJournalQueue");
-                        testContext.OuterDeadLetterSetting = context.Extensions.Get<bool>("MSMQ.UseDeadLetterQueue");
+                        if (context.GetOperationProperties().TryGet("MSMQ.UseJournalQueue", out bool useJournalQueue))
+                        {
+                            testContext.OuterJournalingSetting = useJournalQueue;
+                        }
+
+                        if (context.GetOperationProperties().TryGet("MSMQ.UseDeadLetterQueue", out bool useDeadletterQueue))
+                        {
+                            testContext.OuterDeadLetterSetting = useDeadletterQueue;
+                        }
                     }
 
                     if (messageType == typeof(InnerMessage))
                     {
-                        testContext.InnerJournalingSetting = context.Extensions.Get<bool>("MSMQ.UseJournalQueue");
-                        testContext.InnerDeadLetterSetting = context.Extensions.Get<bool>("MSMQ.UseDeadLetterQueue");
+                        if (context.GetOperationProperties().TryGet("MSMQ.UseJournalQueue", out bool useJournalQueue))
+                        {
+                            testContext.InnerJournalingSetting = useJournalQueue;
+                        }
+
+                        if (context.GetOperationProperties().TryGet("MSMQ.UseDeadLetterQueue", out bool useDeadletterQueue))
+                        {
+                            testContext.InnerDeadLetterSetting = useDeadletterQueue;
+                        }
                     }
 
                     return next();
