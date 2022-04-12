@@ -6,12 +6,12 @@
     {
         public static ReadOnlyContextBag GetOperationProperties(this ContextBag contextBag)
         {
-            if (!contextBag.TryGet("NServiceBus.OperationProperties", out ContextBag context))
+            if (contextBag.TryGet("NServiceBus.OperationProperties", out ContextBag operationProperties))
             {
-                return contextBag; // fallback behavior, e.g. when invoking the outgoing pipeline without using MessageOperation API.
+                return operationProperties;
             }
 
-            return context;
+            return contextBag; // fallback behavior, e.g. when invoking the outgoing pipeline without using MessageOperation API.
         }
     }
 }
