@@ -94,11 +94,12 @@ namespace NServiceBus.Transport.Msmq
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
 
-            if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+            var operationProperties = context.GetOperationProperties();
+            if (operationProperties.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
             }
-            if (context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
+            if (operationProperties.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
             }
