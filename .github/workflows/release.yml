@@ -95,4 +95,3 @@ jobs:
           release_number: ${{env.MinVerVersion}}
           package_version: ${{env.MinVerVersion}}
           package: "GitReleaseManager:0.11.0"
-          
