@@ -94,11 +94,12 @@ namespace NServiceBus.Transport.Msmq
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
 
-            if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+            var operationProperties = context.GetOperationProperties();
+            if (operationProperties.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
             }
-            if (context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
+            if (operationProperties.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
             }
@@ -172,8 +173,9 @@ namespace NServiceBus.Transport.Msmq
                 {
                     using (var toSend = MsmqUtilities.Convert(message, deliveryConstraints))
                     {
+                        var operationProperties = context.GetOperationProperties();
                         // or check headers for NServiceBus.Timeouts.Properties.DeadLetterQueueOptionExtensions.KeyDeadLetterQueue
-                        if (context.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
+                        if (operationProperties.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
                         {
                             toSend.UseDeadLetterQueue = useDeadLetterQueue;
                         }
@@ -186,7 +188,7 @@ namespace NServiceBus.Transport.Msmq
                         }
 
                         // or check headers for NServiceBus.Timeouts.Properties.JournalOptionExtensions.KeyJournaling
-                        toSend.UseJournalQueue = context.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue)
+                        toSend.UseJournalQueue = operationProperties.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue)
                             ? useJournalQueue
                             : settings.UseJournalQueue;
 
