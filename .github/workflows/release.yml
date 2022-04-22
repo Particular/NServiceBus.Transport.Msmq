@@ -63,7 +63,7 @@ jobs:
           
           # Octopus Deploy scripts need an executable file to recreate this metadata
           @"
-          `$Branch = "${{github.ref_name}"
+          `$Branch = "${{github.ref_name}}"
           `$Version = "${{env.MinVerVersion}}"
           `$Product = "${{env.PARTICULAR_REPO_NAME}}"
           `$Major = "${{env.MinVerMajor}}"
@@ -95,4 +95,3 @@ jobs:
           release_number: ${{env.MinVerVersion}}
           package_version: ${{env.MinVerVersion}}
           package: "GitReleaseManager:0.11.0"
-          
