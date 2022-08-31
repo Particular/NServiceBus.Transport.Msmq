@@ -6,7 +6,6 @@
     using AcceptanceTesting.Customization;
     using AcceptanceTesting.Support;
     using Configuration.AdvancedExtensibility;
-    using Microsoft.Extensions.DependencyInjection;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
 
     class ServerWithNoErrorQueueConfigured : IEndpointSetupTemplate
@@ -42,30 +41,12 @@
 
             await configuration.DefineTransport(runDescriptor, endpointConfiguration).ConfigureAwait(false);
 
-            RegisterComponentsAndInheritanceHierarchy(configuration, runDescriptor);
-
             await configuration.DefinePersistence(runDescriptor, endpointConfiguration).ConfigureAwait(false);
 
             configuration.GetSettings().SetDefault("ScaleOut.UseSingleBrokerQueue", true);
             await configurationBuilderCustomization(configuration);
 
             return configuration;
-        }
-
-        // Copied from https://github.com/Particular/NServiceBus/blob/8.0.0-beta.5/src/NServiceBus.AcceptanceTests/EndpointTemplates/ConfigureExtensions.cs#L49-L62
-        static void RegisterComponentsAndInheritanceHierarchy(EndpointConfiguration builder, RunDescriptor runDescriptor)
-        {
-            builder.RegisterComponents(r => { RegisterInheritanceHierarchyOfContextOnContainer(runDescriptor, r); });
-        }
-
-        static void RegisterInheritanceHierarchyOfContextOnContainer(RunDescriptor runDescriptor, IServiceCollection r)
-        {
-            var type = runDescriptor.ScenarioContext.GetType();
-            while (type != typeof(object))
-            {
-                r.AddSingleton(type, runDescriptor.ScenarioContext);
-                type = type.BaseType;
-            }
         }
 
         List<Type> typesToInclude;
