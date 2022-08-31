@@ -32,22 +32,26 @@
         [Test]
         public async Task Should_send_messages_to_logical_endpoint_address()
         {
+            const int MessageCount = 10;
+
             var context = await Scenario.Define<Context>()
                 .WithEndpoint<SenderWithEmptyMappingFile>(e => e.When(async c =>
                 {
-                    for (var i = 0; i < 10; i++)
+                    Thread.Sleep(1000);
+
+                    for (var i = 0; i < MessageCount; i++)
                     {
                         await c.Send(new Message());
                     }
                 }))
                 .WithEndpoint<ScaledOutReceiver>(e => e.CustomConfig(c => c.MakeInstanceUniquelyAddressable("1")))
                 .WithEndpoint<ScaledOutReceiver>(e => e.CustomConfig(c => c.MakeInstanceUniquelyAddressable("2")))
-                .Done(c => c.MessagesForInstance1 + c.MessagesForInstance2 >= 10)
+                .Done(c => c.MessagesForInstance1 + c.MessagesForInstance2 >= MessageCount)
                 .Run();
 
             // it should send messages to the shared queue
-            Assert.That(context.MessagesForInstance1, Is.GreaterThanOrEqualTo(1));
-            Assert.That(context.MessagesForInstance2, Is.GreaterThanOrEqualTo(1));
+            Assert.That(context.MessagesForInstance1, Is.GreaterThanOrEqualTo(1), "MessagesForInstance1 should have atleast 1 message");
+            Assert.That(context.MessagesForInstance2, Is.GreaterThanOrEqualTo(1), "MessagesForInstance2 should have atleast 1 message");
         }
 
         static string mappingFilePath = Path.Combine(TestContext.CurrentContext.TestDirectory, nameof(When_using_empty_instance_mapping_file) + ".xml");
