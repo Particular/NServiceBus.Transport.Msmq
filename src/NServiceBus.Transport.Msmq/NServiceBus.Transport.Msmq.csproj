@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NServiceBus" Version="[8.0.0-rc.3, 9.0.0)" />
+    <PackageReference Include="NServiceBus" Version="[8.0.0, 9.0.0)" />
     <PackageReference Include="System.Threading.Channels" Version="7.0.0" />
     <PackageReference Include="Particular.Packaging" Version="2.2.0" PrivateAssets="All" />
     <PackageReference Include="Fody" Version="6.6.4" PrivateAssets="All" />
