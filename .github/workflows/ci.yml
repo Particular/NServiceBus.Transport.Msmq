@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3.0.2
+        uses: actions/setup-dotnet@v3.0.3
         with:
           dotnet-version: 6.0.x
       - name: Build
@@ -35,4 +35,4 @@ jobs:
           connection-string-env-var: SQLServerConnectionString
           catalog: nservicebus
       - name: Run tests
-        uses: Particular/run-tests-action@v1.3.0
+        uses: Particular/run-tests-action@v1.4.0
