@@ -126,33 +126,38 @@ namespace NServiceBus.Transport.Msmq
 
             result.Recoverable = true;
 
-            var addCorrIdHeader = !message.Headers.ContainsKey("CorrId");
+            var headers = message.Headers;
 
-            using (var stream = new MemoryStream())
+            var addCorrIdHeader = headers != null && !headers.ContainsKey("CorrId");
+
+            if (headers != null)
             {
-                var headers = message.Headers.Select(pair => new HeaderInfo
+                using (var stream = new MemoryStream())
                 {
-                    Key = pair.Key,
-                    Value = pair.Value
-                }).ToList();
-
-                if (addCorrIdHeader)
-                {
-                    headers.Add(new HeaderInfo
+                    var headerInfos = message.Headers.Select(pair => new HeaderInfo
                     {
-                        Key = "CorrId",
-                        Value = result.CorrelationId
-                    });
+                        Key = pair.Key,
+                        Value = pair.Value
+                    }).ToList();
+
+                    if (addCorrIdHeader)
+                    {
+                        headerInfos.Add(new HeaderInfo
+                        {
+                            Key = "CorrId",
+                            Value = result.CorrelationId
+                        });
+                    }
+
+                    headerSerializer.Serialize(stream, headers);
+
+                    result.Extension = stream.ToArray();
                 }
-
-                headerSerializer.Serialize(stream, headers);
-
-                result.Extension = stream.ToArray();
             }
 
             var messageIntent = default(MessageIntent);
 
-            if (message.Headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
+            if (headers != null && headers.TryGetValue(Headers.MessageIntent, out var messageIntentString))
             {
                 Enum.TryParse(messageIntentString, true, out messageIntent);
             }
@@ -166,7 +171,14 @@ namespace NServiceBus.Transport.Msmq
 
         static void AssignMsmqNativeCorrelationId(OutgoingMessage message, Message result)
         {
-            if (!message.Headers.TryGetValue(Headers.CorrelationId, out var correlationIdHeader))
+            var headers = message.Headers;
+
+            if (headers == null)
+            {
+                return;
+            }
+
+            if (!headers.TryGetValue(Headers.CorrelationId, out var correlationIdHeader))
             {
                 return;
             }
