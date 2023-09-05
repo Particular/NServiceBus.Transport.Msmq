@@ -174,6 +174,11 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             var waitTime = nextPoll - DateTimeOffset.UtcNow;
             if (waitTime > TimeSpan.Zero)
             {
+                if (waitTime > MaxSleepDuration)
+                {
+                    // Task.Delay() throws for times > int.MaxValue ms, which is ~24.85 days
+                    waitTime = MaxSleepDuration;
+                }
                 return Task.Delay(waitTime, cancellationToken);
             }
 
