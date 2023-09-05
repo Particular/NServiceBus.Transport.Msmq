@@ -159,7 +159,7 @@ namespace NServiceBus
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
                 TimeoutQueue = delayedDeliveryMessagePump?.ReceiveAddress,
-                TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType(),
+                TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType()?.FullName,
             });
 
             var infrastructure = new MsmqTransportInfrastructure(messageReceivers, dispatcher, delayedDeliveryPump);
