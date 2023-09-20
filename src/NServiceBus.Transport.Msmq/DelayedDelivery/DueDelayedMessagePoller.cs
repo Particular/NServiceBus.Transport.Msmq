@@ -126,9 +126,8 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                             //After waiting we cancel the token so that the task waiting for the signal is cancelled and does not "eat" the next
                             //signal when it is raised in the next iteration of this loop
                             using (var waitCancelled = new CancellationTokenSource())
+                            using (var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token))
                             {
-                                var combinedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, waitCancelled.Token);
-
                                 var waitTask = WaitIfNeeded(nextPoll.Value, combinedSource.Token);
                                 var signalTask = WaitForSignal(combinedSource.Token);
 
