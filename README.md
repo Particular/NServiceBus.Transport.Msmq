@@ -6,6 +6,10 @@ NOTE: As Microsoft is not making MSMQ available for .NET Core, building new syst
 
 Documentation can be found at <https://docs.particular.net/transports/msmq/>.
 
+## Prerequisites
+
+NServiceBus.Transport.Msmq requires the .NET Framework and can only be used with NServiceBus 8 and below.
+
 ## How to test locally
 
 * MSMQ needs to be installed and enabled on the current machine.See the [MSMQ configuration documentation](https://docs.particular.net/transports/msmq/?version=msmqtransport_2#msmq-configuration) on how to install MSMQ.
