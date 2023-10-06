@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Data.SqlClient;
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
@@ -10,6 +9,7 @@
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
     using Logging;
+    using Microsoft.Data.SqlClient;
     using NServiceBus.AcceptanceTests;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;

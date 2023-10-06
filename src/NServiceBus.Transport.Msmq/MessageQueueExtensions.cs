@@ -2,9 +2,9 @@
 {
     using System;
     using System.ComponentModel;
-    using System.Messaging;
     using System.Runtime.InteropServices;
     using System.Security.Principal;
+    using Messaging.Msmq;
 
     /// <summary>
     /// Reads the Access Control Entries (ACE) from an MSMQ queue.
@@ -34,7 +34,6 @@
         [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         static extern bool ConvertSidToStringSid([MarshalAs(UnmanagedType.LPArray)] byte[] pSID, out IntPtr ptrSid);
 
-        const string PREFIX_FORMAT_NAME = "FORMATNAME:";
         const int DACL_SECURITY_INFORMATION = 4;
         const int MQ_ERROR_SECURITY_DESCRIPTOR_TOO_SMALL = unchecked((int)0xc00e0023);
         const int MQ_OK = 0;
@@ -77,9 +76,6 @@
         {
             if (!administerGranted)
             {
-                var permission = new MessageQueuePermission(MessageQueuePermissionAccess.Administer, PREFIX_FORMAT_NAME + queue.FormatName);
-                permission.Demand();
-
                 administerGranted = true;
             }
 
@@ -145,18 +141,12 @@
                 // If the value is 0, then it equates to Allow. If the value is 1, then it equates to Deny.
                 // However, you can't cast it directly to the AccessControlEntryType enumeration, as a value of 1 in the enumeration is
                 // defined to be Allow!! Hence a translation is required.
-                switch (allowedAce.Header.AceType)
+                aceType = allowedAce.Header.AceType switch
                 {
-                    case 0:
-                        aceType = AccessControlEntryType.Allow;
-                        break;
-                    case 1:
-                        aceType = AccessControlEntryType.Deny;
-                        break;
-                    default:
-                        aceType = null;
-                        break;
-                }
+                    0 => (AccessControlEntryType?)AccessControlEntryType.Allow,
+                    1 => (AccessControlEntryType?)AccessControlEntryType.Deny,
+                    _ => null,
+                };
                 return (MessageQueueAccessRights)allowedAce.Mask;
             }
             finally
@@ -185,7 +175,7 @@
             {
                 GetAce(pDacl, i, out var pAce);
                 var ace = (ACCESS_ALLOWED_ACE)Marshal.PtrToStructure(pAce, typeof(ACCESS_ALLOWED_ACE));
-                var iter = (IntPtr)((long)pAce + (long)Marshal.OffsetOf(typeof(ACCESS_ALLOWED_ACE), "SidStart"));
+                var iter = (IntPtr)(pAce + (long)Marshal.OffsetOf(typeof(ACCESS_ALLOWED_ACE), "SidStart"));
                 var size = GetLengthSid(iter);
                 var bSID = new byte[size];
                 Marshal.Copy(iter, bSID, 0, size);

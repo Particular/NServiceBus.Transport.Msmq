@@ -2,9 +2,9 @@ namespace NServiceBus
 {
     using System;
     using System.Data;
-    using System.Data.SqlClient;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Data.SqlClient;
     using Transport.Msmq.DelayedDelivery.Sql;
 
     //TODO: Either we should expect that the connection created by the factory is open of we should make it non-async
@@ -98,10 +98,7 @@ namespace NServiceBus
         /// <inheritdoc />
         public async Task Initialize(string queueName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
         {
-            if (tableName == null)
-            {
-                tableName = $"{queueName}.timeouts";
-            }
+            tableName ??= $"{queueName}.timeouts";
 
             var quotedFullName = $"{SqlNameHelper.Quote(schema)}.{SqlNameHelper.Quote(tableName)}";
 
@@ -123,7 +120,7 @@ namespace NServiceBus
             {
                 await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var result = (DateTime?)await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-                return result.HasValue ? (DateTimeOffset?)new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
+                return result.HasValue ? new DateTimeOffset(result.Value, TimeSpan.Zero) : null;
             }
         }
 

@@ -4,7 +4,7 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
-    using System.Messaging;
+    using Messaging.Msmq;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;

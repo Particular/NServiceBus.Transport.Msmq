@@ -66,7 +66,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             var id = context.NativeMessageId; //Use native message ID as a key in the delayed delivery table
             var at = DateTimeOffsetHelper.ToDateTimeOffset(atString);
 
-            var message = context.Extensions.Get<System.Messaging.Message>();
+            var message = context.Extensions.Get<Messaging.Msmq.Message>();
 
             var diff = DateTime.UtcNow - at;
 
@@ -106,9 +106,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     throw new Exception("Error while storing delayed message", e);
                 }
 
-#pragma warning disable PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
                 poller.Signal(timeout.Time);
-#pragma warning restore PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
             }
         }
 

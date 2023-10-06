@@ -123,7 +123,7 @@ namespace NServiceBus.Persistence.Msmq
         static Subscriber Deserialize(string serializedForm)
         {
             var parts = serializedForm.Split(EntrySeparator, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 0 || parts.Length > 2)
+            if (parts.Length is 0 or > 2)
             {
                 log.Error($"Invalid format of subscription entry: {serializedForm}.");
                 return null;
@@ -144,7 +144,7 @@ namespace NServiceBus.Persistence.Msmq
 
                 if (!lookup.Value.TryGetValue(subscriber, out var dictionary))
                 {
-                    dictionary = new Dictionary<MessageType, string>();
+                    dictionary = [];
                 }
                 else
                 {

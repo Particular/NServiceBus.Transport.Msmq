@@ -1,8 +1,8 @@
 namespace NServiceBus.Transport.Msmq.DelayedDelivery.Sql
 {
-    using System.Data.SqlClient;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Data.SqlClient;
 
     class TimeoutTableCreator
     {
@@ -35,7 +35,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery.Sql
                     transaction.Commit();
                 }
             }
-            catch (SqlException e) when (e.Number == 2714 || e.Number == 1913) //Object already exists
+            catch (SqlException e) when (e.Number is 2714 or 1913) //Object already exists
             {
                 //Table creation scripts are based on sys.objects metadata views.
                 //It looks that these views are not fully transactional and might
