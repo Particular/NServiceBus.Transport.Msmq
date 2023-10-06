@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Particular.Msmq" Version="1.0.0-alpha.0.84" />
+    <PackageReference Include="Particular.Msmq" Version="1.0.0-alpha.1" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0-preview3.23201.1" />
     <PackageReference Include="NServiceBus" Version="9.0.0-alpha.8" />
     <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
