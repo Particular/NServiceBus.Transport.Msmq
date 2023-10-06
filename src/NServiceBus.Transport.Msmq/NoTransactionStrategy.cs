@@ -2,7 +2,7 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Buffers;
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus.Extensibility;

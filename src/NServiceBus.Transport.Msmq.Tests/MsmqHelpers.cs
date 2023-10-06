@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using Messaging.Msmq;
+    using Particular.Msmq;
 
     static class MsmqHelpers
     {

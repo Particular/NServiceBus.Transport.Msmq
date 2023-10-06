@@ -2,7 +2,7 @@
 {
     using System;
     using System.Linq;
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using System.Text;
     using System.Threading.Tasks;
     using AcceptanceTesting;

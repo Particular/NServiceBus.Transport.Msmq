@@ -66,7 +66,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             var id = context.NativeMessageId; //Use native message ID as a key in the delayed delivery table
             var at = DateTimeOffsetHelper.ToDateTimeOffset(atString);
 
-            var message = context.Extensions.Get<Messaging.Msmq.Message>();
+            var message = context.Extensions.Get<Particular.Msmq.Message>();
 
             var diff = DateTime.UtcNow - at;
 

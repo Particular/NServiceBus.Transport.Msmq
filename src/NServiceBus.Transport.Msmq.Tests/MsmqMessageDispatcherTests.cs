@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using NServiceBus.Performance.TimeToBeReceived;
     using NUnit.Framework;
     using Routing;

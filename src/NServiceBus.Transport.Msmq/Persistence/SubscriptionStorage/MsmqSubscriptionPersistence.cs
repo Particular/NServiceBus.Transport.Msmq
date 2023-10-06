@@ -1,7 +1,7 @@
 ﻿namespace NServiceBus.Persistence.Msmq
 {
     using System;
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using Features;
     using Logging;
     using Microsoft.Extensions.DependencyInjection;

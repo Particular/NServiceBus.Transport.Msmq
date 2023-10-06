@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests.SubscriptionStorage
 {
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;

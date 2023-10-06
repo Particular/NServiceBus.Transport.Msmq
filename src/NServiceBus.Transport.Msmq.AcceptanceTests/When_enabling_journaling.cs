@@ -1,7 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
     using System;
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;

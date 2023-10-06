@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests.Persistence
 {
-    using Messaging.Msmq;
+    using Particular.Msmq;
     using System.Threading.Tasks;
     using Extensibility;
     using NServiceBus.Persistence.Msmq;

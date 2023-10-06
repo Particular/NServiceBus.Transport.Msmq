@@ -1,15 +1,15 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.IO;
-    using Messaging.Msmq;
     using System.Security.Principal;
     using System.Text;
     using Logging;
     using NUnit.Framework;
+    using Particular.Msmq;
     using Testing;
 
     [TestFixture]
-    public class QueuePermissionsTests
+    class QueuePermissionsTests
     {
         StringBuilder logOutput;
         const string testQueueName = "NServiceBus.Core.Tests.QueuePermissionsTests";
