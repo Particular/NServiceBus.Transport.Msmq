@@ -2,10 +2,694 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.TransportTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.7.2", FrameworkDisplayName=".NET Framework 4.7.2")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows7.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v8.0", FrameworkDisplayName=".NET 8.0")]
+[assembly: System.Runtime.Versioning.TargetPlatform("Windows7.0")]
+namespace Messaging.Msmq
+{
+    public class AccessControlEntry
+    {
+        public AccessControlEntry() { }
+        public AccessControlEntry(Messaging.Msmq.Trustee trustee) { }
+        public AccessControlEntry(Messaging.Msmq.Trustee trustee, Messaging.Msmq.GenericAccessRights genericAccessRights, Messaging.Msmq.StandardAccessRights standardAccessRights, Messaging.Msmq.AccessControlEntryType entryType) { }
+        protected int CustomAccessRights { get; set; }
+        public Messaging.Msmq.AccessControlEntryType EntryType { get; set; }
+        public Messaging.Msmq.GenericAccessRights GenericAccessRights { get; set; }
+        public Messaging.Msmq.StandardAccessRights StandardAccessRights { get; set; }
+        public Messaging.Msmq.Trustee Trustee { get; set; }
+    }
+    public enum AccessControlEntryType
+    {
+        Allow = 1,
+        Set = 2,
+        Deny = 3,
+        Revoke = 4,
+    }
+    public class AccessControlList : System.Collections.CollectionBase
+    {
+        public AccessControlList() { }
+        public int Add(Messaging.Msmq.AccessControlEntry entry) { }
+        public bool Contains(Messaging.Msmq.AccessControlEntry entry) { }
+        public void CopyTo(Messaging.Msmq.AccessControlEntry[] array, int index) { }
+        public int IndexOf(Messaging.Msmq.AccessControlEntry entry) { }
+        public void Insert(int index, Messaging.Msmq.AccessControlEntry entry) { }
+        public void Remove(Messaging.Msmq.AccessControlEntry entry) { }
+    }
+    [System.Flags]
+    public enum AcknowledgeTypes
+    {
+        PositiveArrival = 1,
+        PositiveReceive = 2,
+        NegativeReceive = 8,
+        None = 0,
+        NotAcknowledgeReachQueue = 4,
+        NotAcknowledgeReceive = 12,
+        FullReachQueue = 5,
+        FullReceive = 14,
+    }
+    public enum Acknowledgment
+    {
+        None = 0,
+        AccessDenied = 32772,
+        BadDestinationQueue = 32768,
+        BadEncryption = 32775,
+        BadSignature = 32774,
+        CouldNotEncrypt = 32776,
+        HopCountExceeded = 32773,
+        NotTransactionalQueue = 32777,
+        NotTransactionalMessage = 32778,
+        Purged = 32769,
+        QueueDeleted = 49152,
+        QueueExceedMaximumSize = 32771,
+        QueuePurged = 49153,
+        ReachQueue = 2,
+        ReachQueueTimeout = 32770,
+        ReceiveTimeout = 49154,
+        Receive = 16384,
+    }
+    public enum CryptographicProviderType
+    {
+        None = 0,
+        RsaFull = 1,
+        RsqSig = 2,
+        Dss = 3,
+        Fortezza = 4,
+        MicrosoftExchange = 5,
+        Ssl = 6,
+        SttMer = 7,
+        SttAcq = 8,
+        SttBrnd = 9,
+        SttRoot = 10,
+        SttIss = 11,
+    }
+    public sealed class Cursor : System.IDisposable
+    {
+        public void Close() { }
+        public void Dispose() { }
+    }
+    public class DefaultPropertiesToSend
+    {
+        public DefaultPropertiesToSend() { }
+        public Messaging.Msmq.AcknowledgeTypes AcknowledgeType { get; set; }
+        public Messaging.Msmq.MessageQueue AdministrationQueue { get; set; }
+        public int AppSpecific { get; set; }
+        public bool AttachSenderId { get; set; }
+        public Messaging.Msmq.EncryptionAlgorithm EncryptionAlgorithm { get; set; }
+        public byte[] Extension { get; set; }
+        public Messaging.Msmq.HashAlgorithm HashAlgorithm { get; set; }
+        public string Label { get; set; }
+        public Messaging.Msmq.MessagePriority Priority { get; set; }
+        public bool Recoverable { get; set; }
+        public Messaging.Msmq.MessageQueue ResponseQueue { get; set; }
+        public System.TimeSpan TimeToBeReceived { get; set; }
+        public System.TimeSpan TimeToReachQueue { get; set; }
+        public Messaging.Msmq.MessageQueue TransactionStatusQueue { get; set; }
+        public bool UseAuthentication { get; set; }
+        public bool UseDeadLetterQueue { get; set; }
+        public bool UseEncryption { get; set; }
+        public bool UseJournalQueue { get; set; }
+        public bool UseTracing { get; set; }
+    }
+    public enum EncryptionAlgorithm
+    {
+        None = 0,
+        Rc2 = 26114,
+        Rc4 = 26625,
+    }
+    public enum EncryptionRequired
+    {
+        None = 0,
+        Optional = 1,
+        Body = 2,
+    }
+    [System.Flags]
+    public enum GenericAccessRights
+    {
+        All = 268435456,
+        Execute = 536870912,
+        Write = 1073741824,
+        Read = -2147483648,
+        None = 0,
+    }
+    public enum HashAlgorithm
+    {
+        None = 0,
+        Md2 = 32769,
+        Md4 = 32770,
+        Md5 = 32771,
+        Sha = 32772,
+        Mac = 32773,
+        Sha256 = 32780,
+        Sha384 = 32781,
+        Sha512 = 32782,
+    }
+    public interface IMessageFormatter : System.ICloneable
+    {
+        bool CanRead(Messaging.Msmq.Message message);
+        object Read(Messaging.Msmq.Message message);
+        void Write(Messaging.Msmq.Message message, object obj);
+    }
+    public class Message : System.ComponentModel.Component
+    {
+        public static readonly System.TimeSpan InfiniteTimeout;
+        public Message() { }
+        public Message(object body) { }
+        public Message(object body, Messaging.Msmq.IMessageFormatter formatter) { }
+        public Messaging.Msmq.AcknowledgeTypes AcknowledgeType { get; set; }
+        public Messaging.Msmq.Acknowledgment Acknowledgment { get; }
+        public Messaging.Msmq.MessageQueue AdministrationQueue { get; set; }
+        public int AppSpecific { get; set; }
+        public System.DateTime ArrivedTime { get; }
+        public bool AttachSenderId { get; set; }
+        public bool Authenticated { get; }
+        public string AuthenticationProviderName { get; set; }
+        public Messaging.Msmq.CryptographicProviderType AuthenticationProviderType { get; set; }
+        public object Body { get; set; }
+        public System.IO.Stream BodyStream { get; set; }
+        public int BodyType { get; set; }
+        public System.Guid ConnectorType { get; set; }
+        public string CorrelationId { get; set; }
+        public Messaging.Msmq.MessageQueue DestinationQueue { get; }
+        public byte[] DestinationSymmetricKey { get; set; }
+        public byte[] DigitalSignature { get; set; }
+        public Messaging.Msmq.EncryptionAlgorithm EncryptionAlgorithm { get; set; }
+        public byte[] Extension { get; set; }
+        public Messaging.Msmq.IMessageFormatter Formatter { get; set; }
+        public Messaging.Msmq.HashAlgorithm HashAlgorithm { get; set; }
+        public string Id { get; }
+        public bool IsFirstInTransaction { get; }
+        public bool IsLastInTransaction { get; }
+        public string Label { get; set; }
+        public long LookupId { get; }
+        public Messaging.Msmq.MessageType MessageType { get; }
+        public Messaging.Msmq.MessagePriority Priority { get; set; }
+        public bool Recoverable { get; set; }
+        public Messaging.Msmq.MessageQueue ResponseQueue { get; set; }
+        public Messaging.Msmq.SecurityContext SecurityContext { get; set; }
+        public byte[] SenderCertificate { get; set; }
+        public byte[] SenderId { get; }
+        public long SenderVersion { get; }
+        public System.DateTime SentTime { get; }
+        public string SourceMachine { get; }
+        public System.TimeSpan TimeToBeReceived { get; set; }
+        public System.TimeSpan TimeToReachQueue { get; set; }
+        public string TransactionId { get; }
+        public Messaging.Msmq.MessageQueue TransactionStatusQueue { get; set; }
+        public bool UseAuthentication { get; set; }
+        public bool UseDeadLetterQueue { get; set; }
+        public bool UseEncryption { get; set; }
+        public bool UseJournalQueue { get; set; }
+        public bool UseTracing { get; set; }
+    }
+    public class MessageEnumerator : System.MarshalByRefObject, System.Collections.IEnumerator, System.IDisposable
+    {
+        public Messaging.Msmq.Message Current { get; }
+        public System.IntPtr CursorHandle { get; }
+        public void Close() { }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        public bool MoveNext() { }
+        public bool MoveNext(System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message RemoveCurrent() { }
+        public Messaging.Msmq.Message RemoveCurrent(Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message RemoveCurrent(Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message RemoveCurrent(System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message RemoveCurrent(System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message RemoveCurrent(System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public void Reset() { }
+    }
+    public enum MessageLookupAction
+    {
+        Current = 0,
+        Next = 1,
+        Previous = 2,
+        First = 4,
+        Last = 8,
+    }
+    public enum MessagePriority
+    {
+        Lowest = 0,
+        VeryLow = 1,
+        Low = 2,
+        Normal = 3,
+        AboveNormal = 4,
+        High = 5,
+        VeryHigh = 6,
+        Highest = 7,
+    }
+    public class MessagePropertyFilter : System.ICloneable
+    {
+        public MessagePropertyFilter() { }
+        public bool AcknowledgeType { get; set; }
+        public bool Acknowledgment { get; set; }
+        public bool AdministrationQueue { get; set; }
+        public bool AppSpecific { get; set; }
+        public bool ArrivedTime { get; set; }
+        public bool AttachSenderId { get; set; }
+        public bool Authenticated { get; set; }
+        public bool AuthenticationProviderName { get; set; }
+        public bool AuthenticationProviderType { get; set; }
+        public bool Body { get; set; }
+        public bool ConnectorType { get; set; }
+        public bool CorrelationId { get; set; }
+        public int DefaultBodySize { get; set; }
+        public int DefaultExtensionSize { get; set; }
+        public int DefaultLabelSize { get; set; }
+        public bool DestinationQueue { get; set; }
+        public bool DestinationSymmetricKey { get; set; }
+        public bool DigitalSignature { get; set; }
+        public bool EncryptionAlgorithm { get; set; }
+        public bool Extension { get; set; }
+        public bool HashAlgorithm { get; set; }
+        public bool Id { get; set; }
+        public bool IsFirstInTransaction { get; set; }
+        public bool IsLastInTransaction { get; set; }
+        public bool Label { get; set; }
+        public bool LookupId { get; set; }
+        public bool MessageType { get; set; }
+        public bool Priority { get; set; }
+        public bool Recoverable { get; set; }
+        public bool ResponseQueue { get; set; }
+        public bool SenderCertificate { get; set; }
+        public bool SenderId { get; set; }
+        public bool SenderVersion { get; set; }
+        public bool SentTime { get; set; }
+        public bool SourceMachine { get; set; }
+        public bool TimeToBeReceived { get; set; }
+        public bool TimeToReachQueue { get; set; }
+        public bool TransactionId { get; set; }
+        public bool TransactionStatusQueue { get; set; }
+        public bool UseAuthentication { get; set; }
+        public bool UseDeadLetterQueue { get; set; }
+        public bool UseEncryption { get; set; }
+        public bool UseJournalQueue { get; set; }
+        public bool UseTracing { get; set; }
+        public void ClearAll() { }
+        public virtual object Clone() { }
+        public void SetAll() { }
+        public void SetDefaults() { }
+    }
+    public class MessageQueue : System.ComponentModel.Component, System.Collections.IEnumerable
+    {
+        public static readonly long InfiniteQueueSize;
+        public static readonly System.TimeSpan InfiniteTimeout;
+        public MessageQueue() { }
+        public MessageQueue(string path) { }
+        public MessageQueue(string path, Messaging.Msmq.QueueAccessMode accessMode) { }
+        public MessageQueue(string path, bool sharedModeDenyReceive) { }
+        public MessageQueue(string path, bool sharedModeDenyReceive, bool enableCache) { }
+        public MessageQueue(string path, bool sharedModeDenyReceive, bool enableCache, Messaging.Msmq.QueueAccessMode accessMode) { }
+        public Messaging.Msmq.QueueAccessMode AccessMode { get; }
+        public bool Authenticate { get; set; }
+        public short BasePriority { get; set; }
+        public bool CanRead { get; }
+        public bool CanWrite { get; }
+        public System.Guid Category { get; set; }
+        public System.DateTime CreateTime { get; }
+        public Messaging.Msmq.DefaultPropertiesToSend DefaultPropertiesToSend { get; set; }
+        public bool DenySharedReceive { get; set; }
+        public Messaging.Msmq.EncryptionRequired EncryptionRequired { get; set; }
+        public string FormatName { get; }
+        public Messaging.Msmq.IMessageFormatter Formatter { get; set; }
+        public System.Guid Id { get; }
+        public string Label { get; set; }
+        public System.DateTime LastModifyTime { get; }
+        public string MachineName { get; set; }
+        public long MaximumJournalSize { get; set; }
+        public long MaximumQueueSize { get; set; }
+        public Messaging.Msmq.MessagePropertyFilter MessageReadPropertyFilter { get; set; }
+        public string MulticastAddress { get; set; }
+        public string Path { get; set; }
+        public string QueueName { get; set; }
+        public System.IntPtr ReadHandle { get; }
+        public System.ComponentModel.ISynchronizeInvoke SynchronizingObject { get; set; }
+        public bool Transactional { get; }
+        public bool UseJournalQueue { get; set; }
+        public System.IntPtr WriteHandle { get; }
+        [System.ComponentModel.Browsable(false)]
+        public static bool EnableConnectionCache { get; set; }
+        public event Messaging.Msmq.PeekCompletedEventHandler PeekCompleted;
+        public event Messaging.Msmq.ReceiveCompletedEventHandler ReceiveCompleted;
+        public System.IAsyncResult BeginPeek() { }
+        public System.IAsyncResult BeginPeek(System.TimeSpan timeout) { }
+        public System.IAsyncResult BeginPeek(System.TimeSpan timeout, object stateObject) { }
+        public System.IAsyncResult BeginPeek(System.TimeSpan timeout, object stateObject, System.AsyncCallback callback) { }
+        public System.IAsyncResult BeginPeek(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor, Messaging.Msmq.PeekAction action, object state, System.AsyncCallback callback) { }
+        public System.IAsyncResult BeginReceive() { }
+        public System.IAsyncResult BeginReceive(System.TimeSpan timeout) { }
+        public System.IAsyncResult BeginReceive(System.TimeSpan timeout, object stateObject) { }
+        public System.IAsyncResult BeginReceive(System.TimeSpan timeout, object stateObject, System.AsyncCallback callback) { }
+        public System.IAsyncResult BeginReceive(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor, object state, System.AsyncCallback callback) { }
+        public void Close() { }
+        public Messaging.Msmq.Cursor CreateCursor() { }
+        protected override void Dispose(bool disposing) { }
+        public Messaging.Msmq.Message EndPeek(System.IAsyncResult asyncResult) { }
+        public Messaging.Msmq.Message EndReceive(System.IAsyncResult asyncResult) { }
+        public Messaging.Msmq.Message[] GetAllMessages() { }
+        [System.Obsolete("This method returns a MessageEnumerator that implements RemoveCurrent family of m" +
+            "ethods incorrectly. Please use GetMessageEnumerator2 instead.")]
+        public System.Collections.IEnumerator GetEnumerator() { }
+        [System.Obsolete("This method returns a MessageEnumerator that implements RemoveCurrent family of m" +
+            "ethods incorrectly. Please use GetMessageEnumerator2 instead.")]
+        public Messaging.Msmq.MessageEnumerator GetMessageEnumerator() { }
+        public Messaging.Msmq.MessageEnumerator GetMessageEnumerator2() { }
+        public Messaging.Msmq.Message Peek() { }
+        public Messaging.Msmq.Message Peek(System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message Peek(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor, Messaging.Msmq.PeekAction action) { }
+        public Messaging.Msmq.Message PeekByCorrelationId(string correlationId) { }
+        public Messaging.Msmq.Message PeekByCorrelationId(string correlationId, System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message PeekById(string id) { }
+        public Messaging.Msmq.Message PeekById(string id, System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message PeekByLookupId(long lookupId) { }
+        public Messaging.Msmq.Message PeekByLookupId(Messaging.Msmq.MessageLookupAction action, long lookupId) { }
+        public void Purge() { }
+        public Messaging.Msmq.Message Receive() { }
+        public Messaging.Msmq.Message Receive(Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message Receive(Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message Receive(System.TimeSpan timeout, Messaging.Msmq.Cursor cursor, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId, System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId, System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message ReceiveByCorrelationId(string correlationId, System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message ReceiveById(string id) { }
+        public Messaging.Msmq.Message ReceiveById(string id, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message ReceiveById(string id, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message ReceiveById(string id, System.TimeSpan timeout) { }
+        public Messaging.Msmq.Message ReceiveById(string id, System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message ReceiveById(string id, System.TimeSpan timeout, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public Messaging.Msmq.Message ReceiveByLookupId(long lookupId) { }
+        public Messaging.Msmq.Message ReceiveByLookupId(Messaging.Msmq.MessageLookupAction action, long lookupId, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public Messaging.Msmq.Message ReceiveByLookupId(Messaging.Msmq.MessageLookupAction action, long lookupId, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public void Refresh() { }
+        public void ResetPermissions() { }
+        public void Send(object obj) { }
+        public void Send(object obj, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public void Send(object obj, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public void Send(object obj, string label) { }
+        public void Send(object obj, string label, Messaging.Msmq.MessageQueueTransaction transaction) { }
+        public void Send(object obj, string label, Messaging.Msmq.MessageQueueTransactionType transactionType) { }
+        public void SetPermissions(Messaging.Msmq.AccessControlList dacl) { }
+        public void SetPermissions(Messaging.Msmq.MessageQueueAccessControlEntry ace) { }
+        public void SetPermissions(string user, Messaging.Msmq.MessageQueueAccessRights rights) { }
+        public void SetPermissions(string user, Messaging.Msmq.MessageQueueAccessRights rights, Messaging.Msmq.AccessControlEntryType entryType) { }
+        public static void ClearConnectionCache() { }
+        public static Messaging.Msmq.MessageQueue Create(string path) { }
+        public static Messaging.Msmq.MessageQueue Create(string path, bool transactional) { }
+        public static void Delete(string path) { }
+        public static bool Exists(string path) { }
+        public static System.Guid GetMachineId(string machineName) { }
+        public static Messaging.Msmq.MessageQueueEnumerator GetMessageQueueEnumerator() { }
+        public static Messaging.Msmq.MessageQueueEnumerator GetMessageQueueEnumerator(Messaging.Msmq.MessageQueueCriteria criteria) { }
+        public static Messaging.Msmq.MessageQueue[] GetPrivateQueuesByMachine(string machineName) { }
+        public static Messaging.Msmq.MessageQueue[] GetPublicQueues() { }
+        public static Messaging.Msmq.MessageQueue[] GetPublicQueues(Messaging.Msmq.MessageQueueCriteria criteria) { }
+        public static Messaging.Msmq.MessageQueue[] GetPublicQueuesByCategory(System.Guid category) { }
+        public static Messaging.Msmq.MessageQueue[] GetPublicQueuesByLabel(string label) { }
+        public static Messaging.Msmq.MessageQueue[] GetPublicQueuesByMachine(string machineName) { }
+        public static Messaging.Msmq.SecurityContext GetSecurityContext() { }
+    }
+    public class MessageQueueAccessControlEntry : Messaging.Msmq.AccessControlEntry
+    {
+        public MessageQueueAccessControlEntry(Messaging.Msmq.Trustee trustee, Messaging.Msmq.MessageQueueAccessRights rights) { }
+        public MessageQueueAccessControlEntry(Messaging.Msmq.Trustee trustee, Messaging.Msmq.MessageQueueAccessRights rights, Messaging.Msmq.AccessControlEntryType entryType) { }
+        public Messaging.Msmq.MessageQueueAccessRights MessageQueueAccessRights { get; set; }
+    }
+    [System.Flags]
+    public enum MessageQueueAccessRights
+    {
+        DeleteMessage = 1,
+        PeekMessage = 2,
+        WriteMessage = 4,
+        DeleteJournalMessage = 8,
+        SetQueueProperties = 16,
+        GetQueueProperties = 32,
+        DeleteQueue = 65536,
+        GetQueuePermissions = 131072,
+        ChangeQueuePermissions = 262144,
+        TakeQueueOwnership = 524288,
+        ReceiveMessage = 3,
+        ReceiveJournalMessage = 10,
+        GenericRead = 131115,
+        GenericWrite = 131108,
+        FullControl = 983103,
+    }
+    public class MessageQueueCriteria
+    {
+        public MessageQueueCriteria() { }
+        public System.Guid Category { get; set; }
+        public System.DateTime CreatedAfter { get; set; }
+        public System.DateTime CreatedBefore { get; set; }
+        public string Label { get; set; }
+        public string MachineName { get; set; }
+        public System.DateTime ModifiedAfter { get; set; }
+        public System.DateTime ModifiedBefore { get; set; }
+        public void ClearAll() { }
+    }
+    public class MessageQueueEnumerator : System.MarshalByRefObject, System.Collections.IEnumerator, System.IDisposable
+    {
+        public Messaging.Msmq.MessageQueue Current { get; }
+        public System.IntPtr LocatorHandle { get; }
+        public void Close() { }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        public bool MoveNext() { }
+        public void Reset() { }
+    }
+    public enum MessageQueueErrorCode
+    {
+        Base = -1072824320,
+        Generic = -1072824319,
+        Property = -1072824318,
+        QueueNotFound = -1072824317,
+        QueueExists = -1072824315,
+        InvalidParameter = -1072824314,
+        InvalidHandle = -1072824313,
+        OperationCanceled = -1072824312,
+        SharingViolation = -1072824311,
+        ServiceNotAvailable = -1072824309,
+        MachineNotFound = -1072824307,
+        IllegalSort = -1072824304,
+        IllegalUser = -1072824303,
+        NoDs = -1072824301,
+        IllegalQueuePathName = -1072824300,
+        IllegalPropertyValue = -1072824296,
+        IllegalPropertyVt = -1072824295,
+        BufferOverflow = -1072824294,
+        IOTimeout = -1072824293,
+        IllegalCursorAction = -1072824292,
+        MessageAlreadyReceived = -1072824291,
+        IllegalFormatName = -1072824290,
+        FormatNameBufferTooSmall = -1072824289,
+        UnsupportedFormatNameOperation = -1072824288,
+        IllegalSecurityDescriptor = -1072824287,
+        SenderIdBufferTooSmall = -1072824286,
+        SecurityDescriptorBufferTooSmall = -1072824285,
+        CannotImpersonateClient = -1072824284,
+        AccessDenied = -1072824283,
+        PrivilegeNotHeld = -1072824282,
+        InsufficientResources = -1072824281,
+        UserBufferTooSmall = -1072824280,
+        MessageStorageFailed = -1072824278,
+        SenderCertificateBufferTooSmall = -1072824277,
+        InvalidCertificate = -1072824276,
+        CorruptedInternalCertificate = -1072824275,
+        NoInternalUserCertificate = -1072824273,
+        CorruptedSecurityData = -1072824272,
+        CorruptedPersonalCertStore = -1072824271,
+        ComputerDoesNotSupportEncryption = -1072824269,
+        BadSecurityContext = -1072824267,
+        CouldNotGetUserSid = -1072824266,
+        CouldNotGetAccountInfo = -1072824265,
+        IllegalCriteriaColumns = -1072824264,
+        IllegalPropertyId = -1072824263,
+        IllegalRelation = -1072824262,
+        IllegalPropertySize = -1072824261,
+        IllegalRestrictionPropertyId = -1072824260,
+        IllegalQueueProperties = -1072824259,
+        PropertyNotAllowed = -1072824258,
+        InsufficientProperties = -1072824257,
+        MachineExists = -1072824256,
+        IllegalMessageProperties = -1072824255,
+        DsIsFull = -1072824254,
+        DsError = -1072824253,
+        InvalidOwner = -1072824252,
+        UnsupportedAccessMode = -1072824251,
+        ResultBufferTooSmall = -1072824250,
+        DeleteConnectedNetworkInUse = -1072824248,
+        NoResponseFromObjectServer = -1072824247,
+        ObjectServerNotAvailable = -1072824246,
+        QueueNotAvailable = -1072824245,
+        DtcConnect = -1072824244,
+        TransactionImport = -1072824242,
+        TransactionUsage = -1072824240,
+        TransactionSequence = -1072824239,
+        MissingConnectorType = -1072824235,
+        StaleHandle = -1072824234,
+        TransactionEnlist = -1072824232,
+        QueueDeleted = -1072824230,
+        IllegalContext = -1072824229,
+        IllegalSortPropertyId = -1072824228,
+        LabelBufferTooSmall = -1072824226,
+        MqisServerEmpty = -1072824225,
+        MqisReadOnlyMode = -1072824224,
+        SymmetricKeyBufferTooSmall = -1072824223,
+        SignatureBufferTooSmall = -1072824222,
+        ProviderNameBufferTooSmall = -1072824221,
+        IllegalOperation = -1072824220,
+        WriteNotAllowed = -1072824219,
+        WksCantServeClient = -1072824218,
+        DependentClientLicenseOverflow = -1072824217,
+        CorruptedQueueWasDeleted = -1072824216,
+        RemoteMachineNotAvailable = -1072824215,
+        UnsupportedOperation = -1072824214,
+        EncryptionProviderNotSupported = -1072824213,
+        CannotSetCryptographicSecurityDescriptor = -1072824212,
+        CertificateNotProvided = -1072824211,
+        QDnsPropertyNotSupported = -1072824210,
+        CannotCreateCertificateStore = -1072824209,
+        CannotOpenCertificateStore = -1072824208,
+        IllegalEnterpriseOperation = -1072824207,
+        CannotGrantAddGuid = -1072824206,
+        CannotLoadMsmqOcm = -1072824205,
+        NoEntryPointMsmqOcm = -1072824204,
+        NoMsmqServersOnDc = -1072824203,
+        CannotJoinDomain = -1072824202,
+        CannotCreateOnGlobalCatalog = -1072824201,
+        GuidNotMatching = -1072824200,
+        PublicKeyNotFound = -1072824199,
+        PublicKeyDoesNotExist = -1072824198,
+        IllegalPrivateProperties = -1072824197,
+        NoGlobalCatalogInDomain = -1072824196,
+        NoMsmqServersOnGlobalCatalog = -1072824195,
+        CannotGetDistinguishedName = -1072824194,
+        CannotHashDataEx = -1072824193,
+        CannotSignDataEx = -1072824192,
+        CannotCreateHashEx = -1072824191,
+        FailVerifySignatureEx = -1072824190,
+        MessageNotFound = -1072824184,
+    }
+    public class MessageQueueException : System.Runtime.InteropServices.ExternalException
+    {
+        public override string Message { get; }
+        public Messaging.Msmq.MessageQueueErrorCode MessageQueueErrorCode { get; }
+    }
+    public class MessageQueueTransaction : System.IDisposable
+    {
+        public MessageQueueTransaction() { }
+        public Messaging.Msmq.MessageQueueTransactionStatus Status { get; }
+        public void Abort() { }
+        public void Begin() { }
+        public void Commit() { }
+        public void Dispose() { }
+        protected virtual void Dispose(bool disposing) { }
+        protected override void Finalize() { }
+    }
+    public enum MessageQueueTransactionStatus
+    {
+        Aborted = 0,
+        Committed = 1,
+        Initialized = 2,
+        Pending = 3,
+    }
+    public enum MessageQueueTransactionType
+    {
+        None = 0,
+        Automatic = 1,
+        Single = 3,
+    }
+    public enum MessageType
+    {
+        Acknowledgment = 1,
+        Normal = 2,
+        Report = 3,
+    }
+    public enum PeekAction
+    {
+        Current = -2147483648,
+        Next = -2147483647,
+    }
+    public class PeekCompletedEventArgs : System.EventArgs
+    {
+        public System.IAsyncResult AsyncResult { get; set; }
+        public Messaging.Msmq.Message Message { get; }
+    }
+    public delegate void PeekCompletedEventHandler(object sender, Messaging.Msmq.PeekCompletedEventArgs e);
+    public enum QueueAccessMode
+    {
+        Send = 2,
+        Peek = 32,
+        Receive = 1,
+        PeekAndAdmin = 160,
+        ReceiveAndAdmin = 129,
+        SendAndReceive = 3,
+    }
+    public class ReceiveCompletedEventArgs : System.EventArgs
+    {
+        public System.IAsyncResult AsyncResult { get; set; }
+        public Messaging.Msmq.Message Message { get; }
+    }
+    public delegate void ReceiveCompletedEventHandler(object sender, Messaging.Msmq.ReceiveCompletedEventArgs e);
+    public sealed class SecurityContext : System.IDisposable
+    {
+        public void Dispose() { }
+    }
+    [System.Flags]
+    public enum StandardAccessRights
+    {
+        Delete = 65536,
+        ReadSecurity = 131072,
+        WriteSecurity = 262144,
+        Synchronize = 1048576,
+        ModifyOwner = 524288,
+        Read = 131072,
+        Write = 131072,
+        Execute = 131072,
+        Required = 851968,
+        All = 2031616,
+        None = 0,
+    }
+    public class Trustee
+    {
+        public Trustee() { }
+        public Trustee(string name) { }
+        public Trustee(string name, string systemName) { }
+        public Trustee(string name, string systemName, Messaging.Msmq.TrusteeType trusteeType) { }
+        public string Name { get; set; }
+        public string SystemName { get; set; }
+        public Messaging.Msmq.TrusteeType TrusteeType { get; set; }
+    }
+    public enum TrusteeType
+    {
+        Unknown = 0,
+        User = 1,
+        Group = 2,
+        Domain = 3,
+        Alias = 4,
+        Computer = 5,
+    }
+    public class XmlMessageFormatter : Messaging.Msmq.IMessageFormatter, System.ICloneable
+    {
+        public XmlMessageFormatter() { }
+        public XmlMessageFormatter(string[] targetTypeNames) { }
+        public XmlMessageFormatter(System.Type[] targetTypes) { }
+        public string[] TargetTypeNames { get; set; }
+        public System.Type[] TargetTypes { get; set; }
+        public bool CanRead(Messaging.Msmq.Message message) { }
+        public object Clone() { }
+        public object Read(Messaging.Msmq.Message message) { }
+        public void Write(Messaging.Msmq.Message message, object obj) { }
+    }
+}
 namespace NServiceBus
 {
-    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = default);
+    public delegate System.Threading.Tasks.Task<Microsoft.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = default);
     public static class DeadLetterQueueOptionExtensions
     {
         public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = true) { }
