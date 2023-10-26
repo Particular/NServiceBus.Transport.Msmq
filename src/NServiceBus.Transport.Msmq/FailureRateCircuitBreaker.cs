@@ -27,8 +27,8 @@ namespace NServiceBus.Transport.Msmq
 
         public void Failure(Exception lastException)
         {
-            var result = Interlocked.Increment(ref failureCount);
-            if (result > maximumFailuresPerThirtySeconds)
+            var failures = Interlocked.Increment(ref failureCount);
+            if (failures > maximumFailuresPerThirtySeconds)
             {
                 _ = Task.Run(() =>
                 {
@@ -36,7 +36,7 @@ namespace NServiceBus.Transport.Msmq
                     triggerAction(lastException);
                 });
             }
-            else if (result == 1)
+            else if (failures == 1)
             {
                 Logger.WarnFormat("The circuit breaker for {0} is now in the armed state", name);
             }
