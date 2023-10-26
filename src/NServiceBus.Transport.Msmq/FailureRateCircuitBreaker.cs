@@ -15,10 +15,7 @@ namespace NServiceBus.Transport.Msmq
             timer = new Timer(_ => FlushHistory(), null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(30));
         }
 
-        public void Dispose()
-        {
-            timer?.Dispose();
-        }
+        public void Dispose() => timer.Dispose();
 
         void FlushHistory()
         {
