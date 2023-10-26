@@ -22,8 +22,10 @@ namespace NServiceBus.Transport.Msmq
 
         void FlushHistory()
         {
-            Interlocked.Exchange(ref failureCount, 0);
-            Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
+            if (Interlocked.Exchange(ref failureCount, 0) > 0)
+            {
+                Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
+            }
         }
 
         public void Failure(Exception lastException)
