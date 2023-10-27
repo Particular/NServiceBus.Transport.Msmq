@@ -15,21 +15,20 @@ namespace NServiceBus.Transport.Msmq
             timer = new Timer(_ => FlushHistory(), null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(30));
         }
 
-        public void Dispose()
-        {
-            timer?.Dispose();
-        }
+        public void Dispose() => timer.Dispose();
 
         void FlushHistory()
         {
-            Interlocked.Exchange(ref failureCount, 0);
-            Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
+            if (Interlocked.Exchange(ref failureCount, 0) > 0)
+            {
+                Logger.InfoFormat("The circuit breaker for {0} is now disarmed", name);
+            }
         }
 
         public void Failure(Exception lastException)
         {
-            var result = Interlocked.Increment(ref failureCount);
-            if (result > maximumFailuresPerThirtySeconds)
+            var failures = Interlocked.Increment(ref failureCount);
+            if (failures > maximumFailuresPerThirtySeconds)
             {
                 _ = Task.Run(() =>
                 {
@@ -37,7 +36,7 @@ namespace NServiceBus.Transport.Msmq
                     triggerAction(lastException);
                 });
             }
-            else if (result == 1)
+            else if (failures == 1)
             {
                 Logger.WarnFormat("The circuit breaker for {0} is now in the armed state", name);
             }
