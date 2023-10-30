@@ -11,7 +11,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using Routing;
     using Unicast.Queuing;
 
-    class DueDelayedMessagePoller
+    class DueDelayedMessagePoller : IDisposable
     {
         public DueDelayedMessagePoller(MsmqMessageDispatcher dispatcher,
             IDelayedMessageStore delayedMessageStore,
@@ -332,6 +332,14 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             {
                 Log.Error($"Failed to move delayed message {timeout.MessageId} to the error queue {errorQueue} after {timeout.NumberOfRetries} failed attempts at dispatching it to the destination", ex);
             }
+        }
+
+        public void Dispose()
+        {
+            fetchCircuitBreaker.Dispose();
+            dispatchCircuitBreaker.Dispose();
+            failureHandlingCircuitBreaker.Dispose();
+            tokenSource?.Dispose();
         }
 
         static readonly ILog Log = LogManager.GetLogger<DueDelayedMessagePoller>();

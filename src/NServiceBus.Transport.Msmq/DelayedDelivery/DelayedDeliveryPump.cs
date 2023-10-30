@@ -9,7 +9,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
     using Logging;
     using Routing;
 
-    class DelayedDeliveryPump
+    class DelayedDeliveryPump : IDisposable
     {
         public DelayedDeliveryPump(MsmqMessageDispatcher dispatcher,
                                    DueDelayedMessagePoller poller,
@@ -135,6 +135,12 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
             await dispatcher.Dispatch(new TransportOperations(transportOperation), errorContext.TransportTransaction, cancellationToken).ConfigureAwait(false);
 
             return ErrorHandleResult.Handled;
+        }
+
+        public void Dispose()
+        {
+            poller.Dispose();
+            storeCircuitBreaker.Dispose();
         }
 
         readonly MsmqMessageDispatcher dispatcher;
