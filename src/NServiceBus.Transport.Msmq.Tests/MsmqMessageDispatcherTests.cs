@@ -82,7 +82,7 @@
                 var headers = new Dictionary<string, string>();
                 var outgoingMessage = new OutgoingMessage("1", headers, bytes);
 
-                dispatchProperties = dispatchProperties ?? new DispatchProperties();
+                dispatchProperties = dispatchProperties ?? [];
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), dispatchProperties);
 
                 await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), cancellationToken);

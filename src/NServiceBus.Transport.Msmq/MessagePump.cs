@@ -172,7 +172,7 @@ namespace NServiceBus.Transport.Msmq
 
         async Task PumpMessages(CancellationToken messagePumpCancellationToken)
         {
-            using (var enumerator = inputQueue.GetMessageEnumerator2())
+            using (var enumerator = inputQueue.GetMessageEnumerator())
             {
                 while (true)
                 {

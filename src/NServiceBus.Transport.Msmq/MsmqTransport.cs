@@ -57,11 +57,8 @@ namespace NServiceBus
                         auditMessageExpiration > TimeSpan.Zero);
                 }
 
-                if (CreateQueuesForUser == null)
-                {
-                    // try to use the configured installer user in Core:
-                    CreateQueuesForUser = hostSettings.CoreSettings.GetOrDefault<string>("Installers.UserName");
-                }
+                // try to use the configured installer user in Core:
+                CreateQueuesForUser ??= hostSettings.CoreSettings.GetOrDefault<string>("Installers.UserName");
             }
 
             if (hostSettings.SetupInfrastructure && CreateQueues)
@@ -127,19 +124,14 @@ namespace NServiceBus
 
         static ReceiveStrategy SelectReceiveStrategy(TransportTransactionMode minimumConsistencyGuarantee, TransactionOptions transactionOptions)
         {
-            switch (minimumConsistencyGuarantee)
+            return minimumConsistencyGuarantee switch
             {
-                case TransportTransactionMode.TransactionScope:
-                    return new TransactionScopeStrategy(transactionOptions, new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.SendsAtomicWithReceive:
-                    return new SendsAtomicWithReceiveNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.ReceiveOnly:
-                    return new ReceiveOnlyNativeTransactionStrategy(new MsmqFailureInfoStorage(1000));
-                case TransportTransactionMode.None:
-                    return new NoTransactionStrategy();
-                default:
-                    throw new NotSupportedException($"TransportTransactionMode {minimumConsistencyGuarantee} is not supported by the MSMQ transport");
-            }
+                TransportTransactionMode.TransactionScope => new TransactionScopeStrategy(transactionOptions, new MsmqFailureInfoStorage(1000)),
+                TransportTransactionMode.SendsAtomicWithReceive => new SendsAtomicWithReceiveNativeTransactionStrategy(new MsmqFailureInfoStorage(1000)),
+                TransportTransactionMode.ReceiveOnly => new ReceiveOnlyNativeTransactionStrategy(new MsmqFailureInfoStorage(1000)),
+                TransportTransactionMode.None => new NoTransactionStrategy(),
+                _ => throw new NotSupportedException($"TransportTransactionMode {minimumConsistencyGuarantee} is not supported by the MSMQ transport"),
+            };
         }
 
         void ValidateIfDtcIsAvailable()

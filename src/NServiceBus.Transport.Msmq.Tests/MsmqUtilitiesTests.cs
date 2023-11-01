@@ -48,7 +48,7 @@
         public void Should_fetch_the_replyToAddress_from_responsequeue_for_backwards_compatibility()
         {
             Message message = MsmqUtilities.Convert(
-                new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]));
+                new OutgoingMessage("message id", [], new byte[0]));
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -87,8 +87,7 @@
         public void Should_set_messageIntent_if_header_not_present()
         {
             Message message = MsmqUtilities.Convert(
-                new OutgoingMessage("message id", new Dictionary<string, string>
-                    (), new byte[0]));
+                new OutgoingMessage("message id", [], new byte[0]));
 
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
