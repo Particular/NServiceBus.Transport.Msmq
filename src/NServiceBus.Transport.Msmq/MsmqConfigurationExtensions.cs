@@ -52,30 +52,6 @@
         }
 
         /// <summary>
-        /// Configures the transport to use the given func as the connection string.
-        /// </summary>
-        [ObsoleteEx(
-            Message = "The MSMQ transport does not support a connection string.",
-            TreatAsErrorFromVersion = "2",
-            RemoveInVersion = "3")]
-        public static TransportExtensions<MsmqTransport> ConnectionString(this TransportExtensions<MsmqTransport> transport, string connectionString)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Configures the transport to use the given func as the connection string.
-        /// </summary>
-        [ObsoleteEx(
-            Message = "The MSMQ transport does not support a connection string.",
-            TreatAsErrorFromVersion = "2",
-            RemoveInVersion = "3")]
-        public static TransportExtensions<MsmqTransport> ConnectionString(this TransportExtensions<MsmqTransport> transport, Func<string> connectionString)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Set a delegate to use for applying the <see cref="Label" /> property when sending a message.
         /// </summary>
         /// <remarks>
