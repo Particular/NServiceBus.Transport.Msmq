@@ -4,10 +4,10 @@ namespace NServiceBus.Transport.Msmq
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
-    using Particular.Msmq;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
+    using Particular.Msmq;
     using Performance.TimeToBeReceived;
     using Transport;
     using Unicast.Queuing;
@@ -15,13 +15,11 @@ namespace NServiceBus.Transport.Msmq
     class MsmqMessageDispatcher : IMessageDispatcher
     {
         readonly MsmqTransport transportSettings;
-        readonly string timeoutsQueue;
         readonly Action<TransportTransaction, UnicastTransportOperation> onSendCallback;
 
-        public MsmqMessageDispatcher(MsmqTransport transportSettings, string timeoutsQueue, Action<TransportTransaction, UnicastTransportOperation> onSendCallback = null)
+        public MsmqMessageDispatcher(MsmqTransport transportSettings, Action<TransportTransaction, UnicastTransportOperation> onSendCallback = null)
         {
             this.transportSettings = transportSettings;
-            this.timeoutsQueue = timeoutsQueue;
             this.onSendCallback = onSendCallback;
         }
 
@@ -37,7 +35,7 @@ namespace NServiceBus.Transport.Msmq
 
             foreach (var unicastTransportOperation in outgoingMessages.UnicastTransportOperations)
             {
-                ExecuteTransportOperation(transaction, unicastTransportOperation);
+                SendToDestination(transaction, unicastTransportOperation);
             }
 
             return Task.CompletedTask;
@@ -68,88 +66,6 @@ namespace NServiceBus.Transport.Msmq
 
         public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
         public const string TimeoutAt = "NServiceBus.Timeout.Expire";
-
-        void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation)
-        {
-            bool isDelayedMessage = transportOperation.Properties.DelayDeliveryWith != null || transportOperation.Properties.DoNotDeliverBefore != null;
-
-            if (isDelayedMessage)
-            {
-                SendToDelayedDeliveryQueue(transaction, transportOperation);
-            }
-            else
-            {
-                SendToDestination(transaction, transportOperation);
-            }
-        }
-
-        void SendToDelayedDeliveryQueue(TransportTransaction transaction, UnicastTransportOperation transportOperation)
-        {
-            onSendCallback?.Invoke(transaction, transportOperation);
-            var message = transportOperation.Message;
-
-            transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
-            DateTimeOffset deliverAt;
-
-            if (transportOperation.Properties.DelayDeliveryWith != null)
-            {
-                deliverAt = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
-            }
-            else // transportOperation.Properties.DoNotDeliverBefore != null
-            {
-                deliverAt = transportOperation.Properties.DoNotDeliverBefore.At;
-            }
-
-            transportOperation.Properties[TimeoutDestination] = transportOperation.Destination;
-            transportOperation.Properties[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
-
-            var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
-
-            foreach (var kvp in transportOperation.Properties)
-            {
-                //Use add to force exception if user adds a custom header that has the same name as the prefix + property name
-                transportOperation.Message.Headers.Add($"{MsmqUtilities.PropertyHeaderPrefix}{kvp.Key}", kvp.Value);
-            }
-
-            try
-            {
-                using (var q = new MessageQueue(destinationAddress.FullPath, false, transportSettings.UseConnectionCache, QueueAccessMode.Send))
-                {
-                    using (var toSend = MsmqUtilities.Convert(message))
-                    {
-                        toSend.UseDeadLetterQueue = true; //Always used DLQ for delayed messages
-                        toSend.UseJournalQueue = transportSettings.UseJournalQueue;
-
-                        if (transportOperation.RequiredDispatchConsistency == DispatchConsistency.Isolated)
-                        {
-                            q.Send(toSend, string.Empty, GetIsolatedTransactionType());
-                            return;
-                        }
-
-                        if (TryGetNativeTransaction(transaction, out var activeTransaction))
-                        {
-                            q.Send(toSend, string.Empty, activeTransaction);
-                            return;
-                        }
-
-                        q.Send(toSend, string.Empty, GetTransactionTypeForSend());
-                    }
-                }
-            }
-            catch (MessageQueueException ex)
-            {
-                if (ex.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
-                {
-                    throw new QueueNotFoundException(timeoutsQueue, $"Failed to send the message to the local delayed delivery queue [{timeoutsQueue}]: queue does not exist.", ex);
-                }
-
-                ThrowFailedToSendException(timeoutsQueue, ex);
-            }
-            catch (Exception ex)
-            {
-                ThrowFailedToSendException(timeoutsQueue, ex);
-            }
-        }
 
         void SendToDestination(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {

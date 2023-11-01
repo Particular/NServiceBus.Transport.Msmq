@@ -3,28 +3,24 @@ namespace NServiceBus
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Particular.Msmq;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
+    using Particular.Msmq;
     using Routing;
-    using Support;
     using Transport;
     using Transport.Msmq;
-    using Transport.Msmq.DelayedDelivery;
 
     /// <summary>
     /// Transport definition for MSMQ.
     /// </summary>
     public partial class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
-        const string TimeoutsQueueQualifier = "timeouts";
-
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
         /// </summary>
-        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, true, false, true)
+        public MsmqTransport() : base(TransportTransactionMode.TransactionScope, false, false, true)
         {
         }
 
@@ -40,50 +36,9 @@ namespace NServiceBus
 
             var queuesToCreate = new HashSet<string>(sendingAddresses);
 
-            var requiresDelayedDelivery = DelayedDelivery != null;
-
-            string timeoutsErrorQueue = null;
-            MessagePump delayedDeliveryMessagePump = null;
-
-
-            if (requiresDelayedDelivery)
-            {
-                QueueAddress timeoutsQueue;
-                if (receivers.Length > 0)
-                {
-                    var mainReceiver = receivers[0];
-                    timeoutsQueue = new QueueAddress(mainReceiver.ReceiveAddress.BaseAddress, qualifier: TimeoutsQueueQualifier);
-                    timeoutsErrorQueue = mainReceiver.ErrorQueue;
-                }
-                else
-                {
-                    if (hostSettings.CoreSettings != null)
-                    {
-                        if (!hostSettings.CoreSettings.TryGetExplicitlyConfiguredErrorQueueAddress(out var coreErrorQueue))
-                        {
-                            throw new Exception("Delayed delivery requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
-                        }
-
-                        timeoutsErrorQueue = coreErrorQueue;
-                        timeoutsQueue = new QueueAddress(hostSettings.Name, qualifier: TimeoutsQueueQualifier); //Use name of the endpoint as the timeouts queue name. 
-                    }
-                    else
-                    {
-                        throw new Exception("Timeouts are not supported for send-only configurations outside of an NServiceBus endpoint.");
-                    }
-                }
-
-                delayedDeliveryMessagePump = new MessagePump(mode => SelectReceiveStrategy(mode, TransactionScopeOptions.TransactionOptions),
-                    MessageEnumeratorTimeout, TransportTransactionMode, false, hostSettings.CriticalErrorAction,
-                    new ReceiveSettings("DelayedDelivery", timeoutsQueue, false, false, timeoutsErrorQueue));
-
-                queuesToCreate.Add(delayedDeliveryMessagePump.ReceiveAddress);
-                queuesToCreate.Add(timeoutsErrorQueue);
-            }
-
             var messageReceivers = CreateReceivers(receivers, hostSettings.CriticalErrorAction, queuesToCreate);
 
-            var dispatcher = new MsmqMessageDispatcher(this, delayedDeliveryMessagePump?.ReceiveAddress, OnSendCallbackForTesting);
+            var dispatcher = new MsmqMessageDispatcher(this, OnSendCallbackForTesting);
 
             if (hostSettings.CoreSettings != null)
             {
@@ -114,39 +69,12 @@ namespace NServiceBus
                 var installerUser = GetInstallationUserName();
                 var queueCreator = new MsmqQueueCreator(UseTransactionalQueues, installerUser);
 
-                if (requiresDelayedDelivery)
-                {
-                    await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
-                }
-
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
             foreach (var address in sendingAddresses.Concat(messageReceivers.Select(r => r.Value.ReceiveAddress)))
             {
                 QueuePermissions.CheckQueue(address);
-            }
-
-            DelayedDeliveryPump delayedDeliveryPump = null;
-            if (requiresDelayedDelivery)
-            {
-                QueuePermissions.CheckQueue(delayedDeliveryMessagePump.ReceiveAddress);
-                QueuePermissions.CheckQueue(timeoutsErrorQueue);
-
-                var staticFaultMetadata = new Dictionary<string, string>
-                {
-                    {Headers.ProcessingMachine, RuntimeEnvironment.MachineName},
-                    {Headers.ProcessingEndpoint, hostSettings.Name},
-                    {Headers.HostDisplayName, hostSettings.HostDisplayName}
-                };
-
-                var dueDelayedMessagePoller = new DueDelayedMessagePoller(dispatcher, DelayedDelivery.DelayedMessageStore, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, timeoutsErrorQueue, staticFaultMetadata, TransportTransactionMode,
-                    DelayedDelivery.TimeToTriggerFetchCircuitBreaker,
-                    DelayedDelivery.TimeToTriggerDispatchCircuitBreaker,
-                    DelayedDelivery.MaximumRecoveryFailuresPerSecond,
-                    delayedDeliveryMessagePump.ReceiveAddress);
-
-                delayedDeliveryPump = new DelayedDeliveryPump(dispatcher, dueDelayedMessagePoller, DelayedDelivery.DelayedMessageStore, delayedDeliveryMessagePump, timeoutsErrorQueue, DelayedDelivery.NumberOfRetries, hostSettings.CriticalErrorAction, DelayedDelivery.TimeToTriggerStoreCircuitBreaker, staticFaultMetadata, TransportTransactionMode);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new
@@ -158,11 +86,9 @@ namespace NServiceBus
                 UseJournalQueue,
                 UseDeadLetterQueueForMessagesWithTimeToBeReceived,
                 TimeToReachQueue = GetFormattedTimeToReachQueue(TimeToReachQueue),
-                TimeoutQueue = delayedDeliveryMessagePump?.ReceiveAddress,
-                TimeoutStorageType = DelayedDelivery?.DelayedMessageStore?.GetType()?.FullName,
             });
 
-            var infrastructure = new MsmqTransportInfrastructure(messageReceivers, dispatcher, delayedDeliveryPump);
+            var infrastructure = new MsmqTransportInfrastructure(messageReceivers, dispatcher);
             await infrastructure.Start(cancellationToken).ConfigureAwait(false);
 
             return infrastructure;
@@ -327,11 +253,6 @@ namespace NServiceBus
         /// This setting is not relevant, if queue creation has been disabled.
         /// </summary>
         public string CreateQueuesForUser { get; set; }
-
-        /// <summary>
-        /// Enable delayed delivery of messages. Required for delayed retries and Saga timeouts.
-        /// </summary>
-        public DelayedDeliverySettings DelayedDelivery { get; set; }
 
         /// <summary>
         /// The callback that can be used to inject failures to the dispatcher for testing.
