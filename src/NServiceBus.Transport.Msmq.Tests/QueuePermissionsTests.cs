@@ -1,7 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System.IO;
-    using System.Messaging;
+    using Particular.Msmq;
     using System.Security.Principal;
     using System.Text;
     using Logging;

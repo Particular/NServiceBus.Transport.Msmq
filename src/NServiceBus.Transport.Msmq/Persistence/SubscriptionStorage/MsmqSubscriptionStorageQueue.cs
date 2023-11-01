@@ -3,7 +3,7 @@ namespace NServiceBus.Persistence.Msmq
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Messaging;
+    using Particular.Msmq;
     using Transport.Msmq;
 
     class MsmqSubscriptionStorageQueue : IMsmqSubscriptionStorageQueue

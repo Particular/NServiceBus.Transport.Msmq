@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System.Messaging;
+    using Particular.Msmq;
     using System.Security.Principal;
     using NUnit.Framework;
     using Support;

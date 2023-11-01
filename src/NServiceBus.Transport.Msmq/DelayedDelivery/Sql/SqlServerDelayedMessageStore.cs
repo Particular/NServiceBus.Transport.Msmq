@@ -2,7 +2,6 @@ namespace NServiceBus
 {
     using System;
     using System.Data;
-    using System.Data.SqlClient;
     using System.Threading;
     using System.Threading.Tasks;
     using Transport.Msmq.DelayedDelivery.Sql;

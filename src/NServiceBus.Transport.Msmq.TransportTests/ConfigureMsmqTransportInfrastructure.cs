@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Messaging;
+using Particular.Msmq;
 using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus;

@@ -2,7 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Messaging;
+    using Particular.Msmq;
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;

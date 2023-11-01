@@ -1,7 +1,7 @@
 namespace NServiceBus.Persistence.Msmq
 {
     using System;
-    using System.Messaging;
+    using Particular.Msmq;
 
     class MsmqSubscriptionMessage
     {
