@@ -8,7 +8,7 @@ env:
   DOTNET_NOLOGO: true
 jobs:
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -17,7 +17,8 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v3.2.0
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: 8.0.x
+          dotnet-quality: 'preview'
       - name: Build
         run: dotnet build src --configuration Release
       - name: Sign NuGet packages
@@ -33,7 +34,6 @@ jobs:
           name: nugets
           path: nugets/*
           retention-days: 1
-      - name: Deploy
-        uses: Particular/push-octopus-package-action@v1.1.0
-        with:
-          octopus-deploy-api-key: ${{ secrets.OCTOPUS_DEPLOY_API_KEY }}
+      - name: Push packages
+        run: dotnet nuget push nugets\*.nupkg --api-key ${{ secrets.FEEDZIO_PUBLISH_API_KEY }} --source "${{ vars.PARTICULAR_PACKAGES_FEED_URL }}"
+        shell: pwsh
