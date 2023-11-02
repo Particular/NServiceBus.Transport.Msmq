@@ -1,47 +1,18 @@
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.AcceptanceTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.TransportTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001009d477212ce22d8de3e35d07db04c5bd59182d3dd9eda0bb21bdc60642cf1b3742d32e55577faa17a9fb98cb2920d86bdb9cd13eff719c739fa5dcdea00e5757db257f2b90d6847e674750e751bba622e170c07d4aefac85663b43eed4b9c7914f28d9a896f765f180ada815baaaa7a46134d975d2880f9331ee3b441f58623cf")]
-[assembly: System.Runtime.InteropServices.ComVisible(false)]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.7.2", FrameworkDisplayName=".NET Framework 4.7.2")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.AcceptanceTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.Tests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo(@"NServiceBus.Transport.Msmq.TransportTests, PublicKey=00240000048000009400000006020000002400005253413100040000010001007f16e21368ff041183fab592d9e8ed37e7be355e93323147a1d29983d6e591b04282e4da0c9e18bd901e112c0033925eb7d7872c2f1706655891c5c9d57297994f707d16ee9a8f40d978f064ee1ffc73c0db3f4712691b23bf596f75130f4ec978cf78757ec034625a5f27e6bb50c618931ea49f6f628fd74271c32959efb1c5")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows7.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v8.0", FrameworkDisplayName=".NET 8.0")]
+[assembly: System.Runtime.Versioning.TargetPlatform("Windows7.0")]
 namespace NServiceBus
 {
-    public delegate System.Threading.Tasks.Task<System.Data.SqlClient.SqlConnection> CreateSqlConnection(System.Threading.CancellationToken cancellationToken = default);
     public static class DeadLetterQueueOptionExtensions
     {
         public static void UseDeadLetterQueue(this NServiceBus.Extensibility.ExtendableOptions options, bool enable = true) { }
     }
-    public class DelayedDeliverySettings
-    {
-        public DelayedDeliverySettings(NServiceBus.IDelayedMessageStore delayedMessageStore) { }
-        public NServiceBus.IDelayedMessageStore DelayedMessageStore { get; }
-        public int MaximumRecoveryFailuresPerSecond { get; set; }
-        public int NumberOfRetries { get; set; }
-        public System.TimeSpan TimeToTriggerDispatchCircuitBreaker { get; set; }
-        public System.TimeSpan TimeToTriggerFetchCircuitBreaker { get; set; }
-        public System.TimeSpan TimeToTriggerStoreCircuitBreaker { get; set; }
-    }
-    public class DelayedMessage
-    {
-        public DelayedMessage() { }
-        public byte[] Body { get; set; }
-        public string Destination { get; set; }
-        public byte[] Headers { get; set; }
-        public string MessageId { get; set; }
-        public int NumberOfRetries { get; set; }
-        public System.DateTime Time { get; set; }
-    }
     public static class EndpointInstanceExtensions
     {
         public static NServiceBus.Routing.EndpointInstance AtMachine(this NServiceBus.Routing.EndpointInstance instance, string machineName) { }
-    }
-    public interface IDelayedMessageStore
-    {
-        System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task Initialize(string endpointName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
     }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
@@ -57,33 +28,8 @@ namespace NServiceBus
     }
     public static class MsmqConfigurationExtensions
     {
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ApplyLabelToMessages(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> labelGenerator) { }
-        [System.Obsolete("The MSMQ transport does not support a connection string. The member currently thr" +
-            "ows a NotImplementedException. Will be removed in version 3.0.0.", true)]
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ConnectionString(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.Func<string> connectionString) { }
-        [System.Obsolete("The MSMQ transport does not support a connection string. The member currently thr" +
-            "ows a NotImplementedException. Will be removed in version 3.0.0.", true)]
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> ConnectionString(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, string connectionString) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableConnectionCachingForSends(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableDeadLetterQueueing(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableInstaller(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> DisableNativeTimeToBeReceivedInTransactions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> EnableJournaling(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> IgnoreIncomingTimeToBeReceivedHeaders(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
-        public static NServiceBus.DelayedDeliverySettings NativeDelayedDelivery(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> config, NServiceBus.IDelayedMessageStore delayedMessageStore) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TimeToReachQueue(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.TimeSpan timeToReachQueue) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> TransactionScopeOptions(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport, System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> UseDeadLetterQueueForMessagesWithTimeToBeReceived(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> UseNonTransactionalQueues(this NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> transport) { }
-        public static NServiceBus.TransportExtensions<NServiceBus.MsmqTransport> UseTransport<TTransport>(this NServiceBus.EndpointConfiguration endpointConfiguration)
-            where TTransport : NServiceBus.MsmqTransport { }
-    }
-    public class MsmqPersistence : NServiceBus.Persistence.PersistenceDefinition { }
-    public static class MsmqSubscriptionStorageConfigurationExtensions
-    {
-        public static void SubscriptionQueue(this NServiceBus.PersistenceExtensions<NServiceBus.MsmqPersistence> persistenceExtensions, string queue) { }
     }
     public class MsmqTransport : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport
     {
@@ -91,7 +37,6 @@ namespace NServiceBus
         public System.Func<System.Collections.Generic.IReadOnlyDictionary<string, string>, string> ApplyCustomLabelToOutgoingMessages { get; set; }
         public bool CreateQueues { get; set; }
         public string CreateQueuesForUser { get; set; }
-        public NServiceBus.DelayedDeliverySettings DelayedDelivery { get; set; }
         public bool IgnoreIncomingTimeToBeReceivedHeaders { get; set; }
         protected System.TimeSpan MessageEnumeratorTimeout { get; set; }
         public System.TimeSpan TimeToReachQueue { get; set; }
@@ -104,27 +49,10 @@ namespace NServiceBus
         public void ConfigureTransactionScope(System.TimeSpan? timeout = default, System.Transactions.IsolationLevel? isolationLevel = default) { }
         public override System.Collections.Generic.IReadOnlyCollection<NServiceBus.TransportTransactionMode> GetSupportedTransactionModes() { }
         public override System.Threading.Tasks.Task<NServiceBus.Transport.TransportInfrastructure> Initialize(NServiceBus.Transport.HostSettings hostSettings, NServiceBus.Transport.ReceiveSettings[] receivers, string[] sendingAddresses, System.Threading.CancellationToken cancellationToken = default) { }
-        [System.Obsolete("Inject the ITransportAddressResolver type to access the address translation mecha" +
-            "nism at runtime. See the NServiceBus version 8 upgrade guide for further details" +
-            ". Will be treated as an error from version 3.0.0. Will be removed in version 4.0" +
-            ".0.", false)]
-        public override string ToTransportAddress(NServiceBus.Transport.QueueAddress address) { }
-    }
-    public class SqlServerDelayedMessageStore : NServiceBus.IDelayedMessageStore
-    {
-        public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
-        public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
-        public System.Threading.Tasks.Task<NServiceBus.DelayedMessage> FetchNextDueTimeout(System.DateTimeOffset at, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> IncrementFailureCount(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
 namespace NServiceBus.Transport.Msmq
 {
-    [System.Serializable]
     public class HeaderInfo
     {
         public HeaderInfo() { }
