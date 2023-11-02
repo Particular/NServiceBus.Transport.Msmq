@@ -3,7 +3,7 @@
     using System;
 
     /// <summary>
-    /// Meant for staging future obsoletes. Mimics the structure of <see cref="ObsoleteExAttribute"/>.
+    /// Meant for staging future obsoletes. Mimics the structure of <see cref="ObsoleteAttribute"/>.
     /// </summary>
     sealed class PreObsoleteAttribute : Attribute
     {

@@ -154,14 +154,6 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        [ObsoleteEx(Message = "Inject the ITransportAddressResolver type to access the address translation mechanism at runtime. See the NServiceBus version 8 upgrade guide for further details.",
-            TreatAsErrorFromVersion = "3",
-            RemoveInVersion = "4")]
-#pragma warning disable CS0672 // Member overrides obsolete member
-        public override string ToTransportAddress(QueueAddress address) => MsmqTransportInfrastructure.TranslateAddress(address);
-#pragma warning restore CS0672 // Member overrides obsolete member
-
-        /// <inheritdoc />
         public override IReadOnlyCollection<TransportTransactionMode> GetSupportedTransactionModes() =>
             new[]
             {
