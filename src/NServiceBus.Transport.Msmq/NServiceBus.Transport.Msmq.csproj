@@ -8,6 +8,7 @@
     <Description>MSMQ Transport source package</Description>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSourceFilesInPackage>true</IncludeSourceFilesInPackage>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);AddFilesToPackage</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,9 +20,18 @@
   <ItemGroup>
     <None Remove="InstanceMapping\endpoints.xsd" />
     <None Remove="InstanceMapping\endpointsV2.xsd" />
-    <EmbeddedResource Include="InstanceMapping\Validators\endpointsV2.xsd" />
-    <EmbeddedResource Include="InstanceMapping\Validators\endpoints.xsd" />
+    <EmbeddedResource Include="InstanceMapping\Validators\endpoints.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpoints.xsd" />
+    <EmbeddedResource Include="InstanceMapping\Validators\endpointsV2.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpointsV2.xsd" />
   </ItemGroup>
+
+  <Target Name="AddFilesToPackage">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="NServiceBus.Transport.Msmq.Sources.props" PackagePath="build/$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="InstanceMapping\Validators\endpoints.xsd" PackagePath="build/$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="InstanceMapping\Validators\endpointsV2.xsd" PackagePath="build/$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="_._" PackagePath="lib/$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
 
 <ItemGroup>
   <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.AcceptanceTests" Key="$(NServiceBusTestsKey)" />
