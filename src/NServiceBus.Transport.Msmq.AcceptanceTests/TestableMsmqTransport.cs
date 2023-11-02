@@ -10,7 +10,7 @@ using NServiceBus.Transport;
 /// </summary>
 class TestableMsmqTransport : MsmqTransport
 {
-    public string[] ReceiveQueues = new string[0];
+    public string[] ReceiveQueues = [];
 
     public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
     {
