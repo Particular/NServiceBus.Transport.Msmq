@@ -20,4 +20,10 @@
     <EmbeddedResource Include="InstanceMapping\Validators\endpoints.xsd" />
   </ItemGroup>
 
+<ItemGroup>
+  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.AcceptanceTests" Key="$(NServiceBusTestsKey)" />
+  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.Tests" Key="$(NServiceBusTestsKey)" />
+  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.TransportTests" Key="$(NServiceBusTestsKey)" />
+</ItemGroup>
+
 </Project>
