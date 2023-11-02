@@ -1,10 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows7.0</TargetFramework>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\NServiceBus.snk</AssemblyOriginatorKeyFile>
-    <Description>MSMQ support for NServiceBus</Description>
+    <PackageId>NServiceBus.Transport.Msmq.Sources</PackageId>
+    <Description>MSMQ Transport source package</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSourceFilesInPackage>true</IncludeSourceFilesInPackage>
   </PropertyGroup>
 
   <ItemGroup>
