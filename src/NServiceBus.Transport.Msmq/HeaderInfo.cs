@@ -1,11 +1,8 @@
 namespace NServiceBus.Transport.Msmq
 {
-    using System;
-
     /// <summary>
     /// Represents the structure of header information passed in a TransportMessage.
     /// </summary>
-    [Serializable]
     public class HeaderInfo
     {
         /// <summary>
