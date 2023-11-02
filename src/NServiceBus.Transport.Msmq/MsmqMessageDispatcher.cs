@@ -1,7 +1,6 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System;
-    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
     using System.Threading;
@@ -40,32 +39,6 @@ namespace NServiceBus.Transport.Msmq
 
             return Task.CompletedTask;
         }
-
-        public void DispatchDelayedMessage(string id, byte[] extension, ReadOnlyMemory<byte> body, string destination, TransportTransaction transportTransaction)
-        {
-            var headersAndProperties = MsmqUtilities.DeserializeMessageHeaders(extension);
-            var headers = new Dictionary<string, string>();
-            var properties = new DispatchProperties();
-
-            foreach (var kvp in headersAndProperties)
-            {
-                if (kvp.Key.StartsWith(MsmqUtilities.PropertyHeaderPrefix))
-                {
-                    properties[kvp.Key] = kvp.Value;
-                }
-                else
-                {
-                    headers[kvp.Key] = kvp.Value;
-                }
-            }
-
-            var request = new OutgoingMessage(id, headers, body);
-
-            SendToDestination(transportTransaction, new UnicastTransportOperation(request, destination, properties));
-        }
-
-        public const string TimeoutDestination = "NServiceBus.Timeout.Destination";
-        public const string TimeoutAt = "NServiceBus.Timeout.Expire";
 
         void SendToDestination(TransportTransaction transaction, UnicastTransportOperation transportOperation)
         {
