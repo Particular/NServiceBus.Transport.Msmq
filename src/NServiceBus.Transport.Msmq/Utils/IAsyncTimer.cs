@@ -7,6 +7,7 @@ namespace NServiceBus.Transport.Msmq
     interface IAsyncTimer
     {
         void Start(Func<CancellationToken, Task> callback, TimeSpan interval, Action<Exception> errorCallback);
+
         Task Stop(CancellationToken cancellationToken = default);
     }
 }

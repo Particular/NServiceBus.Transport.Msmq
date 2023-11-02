@@ -2,10 +2,10 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Buffers;
-    using Particular.Msmq;
     using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus.Extensibility;
+    using Particular.Msmq;
     using Transport;
 
     class NoTransactionStrategy : ReceiveStrategy
