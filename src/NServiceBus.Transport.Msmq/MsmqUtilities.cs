@@ -91,15 +91,12 @@ namespace NServiceBus.Transport.Msmq
             //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
             var xmlLength = data.LastIndexOf(EndTag) + EndTag.Length; // Ignore any data after last </ArrayOfHeaderInfo>
             object o;
+
             using (var stream = new MemoryStream(buffer: data, index: 0, count: xmlLength, writable: false, publiclyVisible: true))
             {
-                using (var reader = XmlReader.Create(stream, new XmlReaderSettings
-                {
-                    CheckCharacters = false
-                }))
-                {
-                    o = headerSerializer.Deserialize(reader);
-                }
+                using var reader = XmlReader.Create(stream, new XmlReaderSettings { CheckCharacters = false });
+
+                o = headerSerializer.Deserialize(reader);
             }
 
             foreach (var pair in (List<HeaderInfo>)o)
@@ -130,6 +127,8 @@ namespace NServiceBus.Transport.Msmq
 
             using (var stream = new MemoryStream())
             {
+                using var writer = XmlWriter.Create(stream, new XmlWriterSettings { CheckCharacters = false });
+
                 var headers = message.Headers.Select(pair => new HeaderInfo
                 {
                     Key = pair.Key,
@@ -145,7 +144,7 @@ namespace NServiceBus.Transport.Msmq
                     });
                 }
 
-                headerSerializer.Serialize(stream, headers);
+                headerSerializer.Serialize(writer, headers);
 
                 result.Extension = stream.ToArray();
             }
@@ -175,7 +174,6 @@ namespace NServiceBus.Transport.Msmq
             {
                 return;
             }
-
 
             if (Guid.TryParse(correlationIdHeader, out _))
             {

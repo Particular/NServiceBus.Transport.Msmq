@@ -2,8 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
-    using Particular.Msmq;
     using NUnit.Framework;
+    using Particular.Msmq;
     using Support;
 
     [TestFixture]
@@ -77,7 +77,7 @@
                     new Dictionary<string, string> { { Headers.MessageIntent, MessageIntent.Send.ToString() } },
                     new byte[0]));
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Send", headers[Headers.MessageIntent]);
@@ -89,7 +89,7 @@
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id", [], new byte[0]));
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
