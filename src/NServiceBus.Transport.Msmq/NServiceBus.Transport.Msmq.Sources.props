@@ -1,8 +1,8 @@
 <Project>
 
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)endpoints.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpoints.xsd" />
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)endpointsV2.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpointsV2.xsd" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)endpoints.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpoints.xsd" Visible="false" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)endpointsV2.xsd" LogicalName="Msmq.InstanceMapping.Validators.endpointsV2.xsd" Visible="false" />
   </ItemGroup>
 
 </Project>
