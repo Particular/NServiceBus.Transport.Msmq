@@ -1,13 +1,13 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests.TimeToBeReceived
 {
-    using NServiceBus;
-    using AcceptanceTesting;
-    using NServiceBus.AcceptanceTests;
-    using NServiceBus.AcceptanceTests.EndpointTemplates;
-    using NUnit.Framework;
     using System;
     using System.Threading;
     using System.Threading.Tasks;
+    using AcceptanceTesting;
+    using NServiceBus;
+    using NServiceBus.AcceptanceTests;
+    using NServiceBus.AcceptanceTests.EndpointTemplates;
+    using NUnit.Framework;
 
     class When_message_with_expired_ttbr_header_is_received : NServiceBusAcceptanceTest
     {
@@ -26,7 +26,7 @@
                     {
                         var sendOptions = new SendOptions();
                         sendOptions.RouteToThisEndpoint();
-                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
+                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTimeOffset.UtcNow.AddSeconds(-10)));
                         sendOptions.SetHeader(Headers.TimeToBeReceived, TimeSpan.FromSeconds(5).ToString());
 
                         await session.Send(new SomeMessage(), sendOptions);
@@ -54,7 +54,7 @@
                     {
                         var sendOptions = new SendOptions();
                         sendOptions.RouteToThisEndpoint();
-                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTime.UtcNow.AddSeconds(-10)));
+                        sendOptions.SetHeader(Headers.TimeSent, DateTimeOffsetHelper.ToWireFormattedString(DateTimeOffset.UtcNow.AddSeconds(-10)));
                         sendOptions.SetHeader(Headers.TimeToBeReceived, TimeSpan.FromSeconds(5).ToString());
 
                         await session.Send(new SomeMessage(), sendOptions);

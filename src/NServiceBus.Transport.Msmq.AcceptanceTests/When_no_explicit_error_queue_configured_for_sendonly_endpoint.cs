@@ -2,7 +2,6 @@
 {
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
-    using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NUnit.Framework;
 
     public class When_no_explicit_error_queue_configured_for_sendonly_endpoint : NServiceBusAcceptanceTest
@@ -25,7 +24,6 @@
                 EndpointSetup<ServerWithNoErrorQueueConfigured>(endpointConfiguration =>
                 {
                     endpointConfiguration.SendOnly();
-                    ((MsmqTransport)endpointConfiguration.ConfigureTransport()).DelayedDelivery = null;
                 });
             }
         }

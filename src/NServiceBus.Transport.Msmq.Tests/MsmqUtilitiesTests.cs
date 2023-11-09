@@ -2,8 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Messaging;
     using NUnit.Framework;
+    using Particular.Msmq;
     using Support;
 
     [TestFixture]
@@ -17,7 +17,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, Array.Empty<byte>()));
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
@@ -32,7 +32,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, Array.Empty<byte>()));
             byte[] bufferWithNulls = new byte[message.Extension.Length + (10 * sizeof(char))];
 
             Buffer.BlockCopy(message.Extension, 0, bufferWithNulls, 0, bufferWithNulls.Length - (10 * sizeof(char)));
@@ -48,7 +48,7 @@
         public void Should_fetch_the_replyToAddress_from_responsequeue_for_backwards_compatibility()
         {
             Message message = MsmqUtilities.Convert(
-                new OutgoingMessage("message id", new Dictionary<string, string>(), new byte[0]));
+                new OutgoingMessage("message id", [], Array.Empty<byte>()));
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -61,7 +61,7 @@
         {
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id",
-                    new Dictionary<string, string> { { Headers.ReplyToAddress, "SomeAddress" } }, new byte[0]));
+                    new Dictionary<string, string> { { Headers.ReplyToAddress, "SomeAddress" } }, Array.Empty<byte>()));
 
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
@@ -75,9 +75,9 @@
             Message message = MsmqUtilities.Convert(
                 new OutgoingMessage("message id",
                     new Dictionary<string, string> { { Headers.MessageIntent, MessageIntent.Send.ToString() } },
-                    new byte[0]));
+                    Array.Empty<byte>()));
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Send", headers[Headers.MessageIntent]);
@@ -87,10 +87,9 @@
         public void Should_set_messageIntent_if_header_not_present()
         {
             Message message = MsmqUtilities.Convert(
-                new OutgoingMessage("message id", new Dictionary<string, string>
-                    (), new byte[0]));
+                new OutgoingMessage("message id", [], Array.Empty<byte>()));
 
-            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5 
+            message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
@@ -104,7 +103,7 @@
             Message message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
-                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, new byte[0]));
+                        new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, Array.Empty<byte>()));
 
             var r = new Random();
 

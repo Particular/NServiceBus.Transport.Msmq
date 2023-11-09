@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Messaging;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
+using Particular.Msmq;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
@@ -16,8 +16,6 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
     {
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
-        var timeoutStorage = new SqlServerDelayedMessageStore(GetStorageConnectionString());
-        TransportDefinition.DelayedDelivery = new DelayedDeliverySettings(timeoutStorage);
 
         var routingConfig = configuration.UseTransport(TransportDefinition);
 

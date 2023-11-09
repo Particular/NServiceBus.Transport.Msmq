@@ -1,12 +1,12 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System.Messaging;
     using System.Security.Principal;
     using NUnit.Framework;
+    using Particular.Msmq;
     using Support;
 
     [TestFixture]
-    public class MsmqExtensionsTests
+    class MsmqExtensionsTests
     {
         static readonly string LocalEveryoneGroupName = new SecurityIdentifier(WellKnownSidType.WorldSid, null).Translate(typeof(NTAccount)).ToString();
 

@@ -1,9 +1,9 @@
 ﻿namespace NServiceBus.Transport.Msmq
 {
-    using System.Messaging;
     using System.Security;
     using System.Security.Principal;
     using Logging;
+    using Particular.Msmq;
 
     static class QueuePermissions
     {

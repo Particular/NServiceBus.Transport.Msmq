@@ -1,9 +1,9 @@
 namespace NServiceBus.Transport.Msmq
 {
     using System.Collections.Generic;
-    using System.Messaging;
     using System.Security.Principal;
     using Logging;
+    using Particular.Msmq;
 
     class MsmqQueueCreator
     {

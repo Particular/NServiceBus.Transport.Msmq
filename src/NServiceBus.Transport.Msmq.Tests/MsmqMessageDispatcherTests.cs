@@ -1,14 +1,14 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System.Threading.Tasks;
     using System;
     using System.Collections.Generic;
-    using System.Messaging;
     using System.Threading;
+    using System.Threading.Tasks;
     using NServiceBus.Performance.TimeToBeReceived;
+    using NUnit.Framework;
+    using Particular.Msmq;
     using Routing;
     using Transport;
-    using NUnit.Framework;
 
     [TestFixture]
     public class MsmqMessageDispatcherTests
@@ -61,10 +61,7 @@
 
         static async Task<Message> DispatchMessage(string queueName, MsmqTransport settings = null, DispatchProperties dispatchProperties = null, CancellationToken cancellationToken = default)
         {
-            if (settings == null)
-            {
-                settings = new MsmqTransport();
-            }
+            settings ??= new MsmqTransport();
 
             var path = $@".\private$\{queueName}";
 
@@ -73,7 +70,7 @@
                 MsmqHelpers.DeleteQueue(path);
                 MsmqHelpers.CreateQueue(path);
 
-                var messageSender = new MsmqMessageDispatcher(settings, "timeouts");
+                var messageSender = new MsmqMessageDispatcher(settings);
 
                 var bytes = new byte[]
                 {
@@ -82,7 +79,7 @@
                 var headers = new Dictionary<string, string>();
                 var outgoingMessage = new OutgoingMessage("1", headers, bytes);
 
-                dispatchProperties = dispatchProperties ?? new DispatchProperties();
+                dispatchProperties ??= [];
                 var transportOperation = new TransportOperation(outgoingMessage, new UnicastAddressTag(queueName), dispatchProperties);
 
                 await messageSender.Dispatch(new TransportOperations(transportOperation), new TransportTransaction(), cancellationToken);

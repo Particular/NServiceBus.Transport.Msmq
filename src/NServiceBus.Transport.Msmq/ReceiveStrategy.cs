@@ -2,11 +2,11 @@ namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.Collections.Generic;
-    using System.Messaging;
     using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
+    using Particular.Msmq;
     using Transport;
 
     abstract class ReceiveStrategy
