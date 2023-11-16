@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows7.0</TargetFramework>
@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="NServiceBus" Version="9.0.0-alpha.9" />
     <PackageReference Include="Particular.Msmq" Version="1.0.0-alpha.1" PrivateAssets="None" />
-    <PackageReference Include="Particular.Packaging" Version="3.0.0" PrivateAssets="All" />
+    <PackageReference Include="Particular.Packaging" Version="4.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
