@@ -18,6 +18,7 @@
             var configuration = new EndpointConfiguration(endpointConfiguration.EndpointName);
 
             configuration.EnableInstallers();
+            configuration.UseSerialization<SystemJsonSerializer>();
 
             var recoverability = configuration.Recoverability();
             recoverability.Delayed(delayed => delayed.NumberOfRetries(0));
