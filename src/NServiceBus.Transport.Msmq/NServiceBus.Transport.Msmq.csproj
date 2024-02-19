@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows7.0</TargetFramework>
@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="NServiceBus" Version="[9.0.0, 10.0.0)" />
-    <PackageReference Include="Particular.Msmq" Version="1.0.0-alpha.1" PrivateAssets="None" />
+    <PackageReference Include="Particular.Msmq" Version="[1.0.0, 2.0.0)" PrivateAssets="None" />
     <PackageReference Include="Particular.Packaging" Version="4.0.0" PrivateAssets="All" />
   </ItemGroup>
 
@@ -33,10 +33,10 @@
     </ItemGroup>
   </Target>
 
-<ItemGroup>
-  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.AcceptanceTests" Key="$(NServiceBusTestsKey)" />
-  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.Tests" Key="$(NServiceBusTestsKey)" />
-  <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.TransportTests" Key="$(NServiceBusTestsKey)" />
-</ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.AcceptanceTests" Key="$(NServiceBusTestsKey)" />
+    <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.Tests" Key="$(NServiceBusTestsKey)" />
+    <InternalsVisibleTo Include="NServiceBus.Transport.Msmq.TransportTests" Key="$(NServiceBusTestsKey)" />
+  </ItemGroup>
 
 </Project>
