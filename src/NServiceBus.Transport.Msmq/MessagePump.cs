@@ -61,7 +61,6 @@ namespace NServiceBus.Transport.Msmq
             receiveStrategy.Init(inputQueue, ReceiveAddress, errorQueue, onMessage, onError, criticalErrorAction, ignoreIncomingTimeToBeReceivedHeaders);
 
             maxConcurrency = limitations.MaxConcurrency;
-            concurrencyLimiter = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
             return Task.CompletedTask;
         }
 
@@ -77,6 +76,8 @@ namespace NServiceBus.Transport.Msmq
 
             receiveCircuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("MsmqReceive", TimeSpan.FromSeconds(30),
                 ex => criticalErrorAction("Failed to receive from " + receiveSettings.ReceiveAddress, ex, messageProcessingCancellationTokenSource.Token));
+
+            concurrencyLimiter = new SemaphoreSlim(maxConcurrency, maxConcurrency);
 
             // Task.Run() so the call returns immediately instead of waiting for the first await or return down the call stack
             // LongRunning is useless combined with async/await
