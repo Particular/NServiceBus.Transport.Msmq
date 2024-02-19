@@ -16,7 +16,8 @@ namespace NServiceBus
         public static EndpointInstance AtMachine(this EndpointInstance instance, string machineName)
         {
             ArgumentNullException.ThrowIfNull(instance);
-            ArgumentException.ThrowIfNullOrEmpty(machineName);
+            ArgumentException.ThrowIfNullOrWhiteSpace(machineName);
+
             return instance.SetProperty("machine", machineName);
         }
     }

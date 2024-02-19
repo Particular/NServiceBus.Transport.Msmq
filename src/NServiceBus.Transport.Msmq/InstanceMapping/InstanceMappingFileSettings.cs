@@ -44,7 +44,8 @@ namespace NServiceBus
         /// <param name="filePath">The relative or absolute file path to the instance mapping XML file.</param>
         public InstanceMappingFileSettings FilePath(string filePath)
         {
-            ArgumentException.ThrowIfNullOrEmpty(filePath);
+            ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
             var result = Uri.TryCreate(filePath, UriKind.RelativeOrAbsolute, out var uriPath);
             if (!result)
             {

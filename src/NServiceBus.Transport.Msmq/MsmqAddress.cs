@@ -13,7 +13,7 @@ namespace NServiceBus.Transport.Msmq
 
         public static MsmqAddress Parse(string address)
         {
-            ArgumentException.ThrowIfNullOrEmpty(address);
+            ArgumentException.ThrowIfNullOrWhiteSpace(address);
 
             var split = address.Split('@');
 
