@@ -27,9 +27,9 @@ namespace NServiceBus
         /// <inheritdoc />
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)
         {
-            Guard.AgainstNull(nameof(hostSettings), hostSettings);
-            Guard.AgainstNull(nameof(receivers), receivers);
-            Guard.AgainstNull(nameof(sendingAddresses), sendingAddresses);
+            ArgumentNullException.ThrowIfNull(hostSettings);
+            ArgumentNullException.ThrowIfNull(receivers);
+            ArgumentNullException.ThrowIfNull(sendingAddresses);
 
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
@@ -254,7 +254,10 @@ namespace NServiceBus
         /// <param name="isolationLevel">Transaction isolation level.</param>
         public void ConfigureTransactionScope(TimeSpan? timeout = null, IsolationLevel? isolationLevel = null)
         {
-            Guard.AgainstNegativeAndZero(nameof(timeout), timeout);
+            if (timeout.HasValue)
+            {
+                ArgumentOutOfRangeException.ThrowIfLessThan(timeout.Value, TimeSpan.Zero);
+            }
 
             if (isolationLevel == IsolationLevel.Snapshot)
             {

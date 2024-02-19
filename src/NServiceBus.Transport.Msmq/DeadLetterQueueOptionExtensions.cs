@@ -1,8 +1,8 @@
 ﻿namespace NServiceBus
 {
+    using System;
     using Extensibility;
     using Transport;
-    using Transport.Msmq;
 
     /// <summary>
     /// Gives users fine grained control over routing via extension methods.
@@ -18,7 +18,7 @@
         /// <param name="enable">Either enable or disabling message dead letter queueing.</param>
         public static void UseDeadLetterQueue(this ExtendableOptions options, bool enable = true)
         {
-            Guard.AgainstNull(nameof(options), options);
+            ArgumentNullException.ThrowIfNull(options);
             options.GetDispatchProperties()[KeyDeadLetterQueue] = enable.ToString();
         }
 
