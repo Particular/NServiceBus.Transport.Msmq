@@ -1,9 +1,9 @@
 ﻿namespace NServiceBus
 {
+    using System;
     using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
     using Routing;
-    using Transport.Msmq;
 
     /// <summary>
     /// Adds extensions methods to <see cref="TransportExtensions{T}" /> for configuration purposes.
@@ -17,8 +17,8 @@
         /// <param name="distributionStrategy">The instance of a distribution strategy.</param>
         public static void SetMessageDistributionStrategy(this RoutingSettings<MsmqTransport> config, DistributionStrategy distributionStrategy)
         {
-            Guard.AgainstNull(nameof(config), config);
-            Guard.AgainstNull(nameof(distributionStrategy), distributionStrategy);
+            ArgumentNullException.ThrowIfNull(config);
+            ArgumentNullException.ThrowIfNull(distributionStrategy);
 
             config.GetSettings().GetOrCreate<List<DistributionStrategy>>().Add(distributionStrategy);
         }
@@ -29,7 +29,7 @@
         /// <param name="config">MSMQ Transport configuration object.</param>
         public static InstanceMappingFileSettings InstanceMappingFile(this RoutingSettings<MsmqTransport> config)
         {
-            Guard.AgainstNull(nameof(config), config);
+            ArgumentNullException.ThrowIfNull(config);
             return new InstanceMappingFileSettings(config.GetSettings());
         }
     }

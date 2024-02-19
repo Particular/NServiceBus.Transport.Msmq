@@ -25,7 +25,7 @@ namespace NServiceBus.Transport.Msmq
         public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction,
             CancellationToken cancellationToken = default)
         {
-            Guard.AgainstNull(nameof(outgoingMessages), outgoingMessages);
+            ArgumentNullException.ThrowIfNull(outgoingMessages);
 
             if (outgoingMessages.MulticastTransportOperations.Any())
             {

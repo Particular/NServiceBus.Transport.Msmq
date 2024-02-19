@@ -1,7 +1,7 @@
 namespace NServiceBus
 {
+    using System;
     using Routing;
-    using Transport.Msmq;
 
     /// <summary>
     /// Provides MSMQ-specific extensions to routing.
@@ -15,8 +15,9 @@ namespace NServiceBus
         /// <param name="machineName">Machine name.</param>
         public static EndpointInstance AtMachine(this EndpointInstance instance, string machineName)
         {
-            Guard.AgainstNull(nameof(instance), instance);
-            Guard.AgainstNullAndEmpty(nameof(machineName), machineName);
+            ArgumentNullException.ThrowIfNull(instance);
+            ArgumentException.ThrowIfNullOrWhiteSpace(machineName);
+
             return instance.SetProperty("machine", machineName);
         }
     }
