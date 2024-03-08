@@ -65,11 +65,11 @@ namespace NServiceBus.Transport.Msmq
         void ExecuteTransportOperation(TransportTransaction transaction, UnicastTransportOperation transportOperation, ContextBag context)
         {
             DateTimeOffset? deliverAt = null;
-            if (timeoutsQueue != null && context.TryGetDeliveryConstraint<DoNotDeliverBefore>(out var doNotDeliverBefore))
+            if (timeoutsQueue != null && transportOperation.DeliveryConstraints.TryGet(out DoNotDeliverBefore doNotDeliverBefore))
             {
                 deliverAt = doNotDeliverBefore.At;
             }
-            else if (timeoutsQueue != null && context.TryGetDeliveryConstraint<DelayDeliveryWith>(out var delayDeliveryWith))
+            else if (timeoutsQueue != null && transportOperation.DeliveryConstraints.TryGet(out DelayDeliveryWith delayDeliveryWith))
             {
                 deliverAt = DateTimeOffset.UtcNow + delayDeliveryWith.Delay;
             }
