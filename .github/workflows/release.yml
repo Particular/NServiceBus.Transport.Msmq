@@ -6,6 +6,9 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+-*'
 env:
   DOTNET_NOLOGO: true
+defaults:
+  run:
+    shell: pwsh
 jobs:
   release:
     runs-on: ubuntu-22.04
@@ -35,4 +38,3 @@ jobs:
           retention-days: 1
       - name: Push packages
         run: dotnet nuget push nugets\*.nupkg --api-key ${{ secrets.FEEDZIO_PUBLISH_API_KEY }} --source "${{ vars.PARTICULAR_PACKAGES_FEED_URL }}"
-        shell: pwsh
