@@ -25,7 +25,9 @@ namespace NServiceBus.Persistence.Msmq
             // Filled in by Janitor.fody
         }
 
+#pragma warning disable PS0025 // Dictionary keys should implement IEquatable<T> - The value returned uses a SubscriberComparer
         Dictionary<Subscriber, Dictionary<MessageType, string>> CreateLookup()
+#pragma warning restore PS0025
         {
             var output = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
 
@@ -62,7 +64,7 @@ namespace NServiceBus.Persistence.Msmq
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context, CancellationToken cancellationToken = default)
         {
             var messagelist = messageTypes.ToArray();
-            var result = new HashSet<Subscriber>();
+            var result = new HashSet<Subscriber>(SubscriberComparer);
 
             try
             {
