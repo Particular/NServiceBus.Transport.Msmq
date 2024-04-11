@@ -63,7 +63,7 @@ namespace NServiceBus.Persistence.Msmq
         public Task<IEnumerable<Subscriber>> GetSubscriberAddressesForMessage(IEnumerable<MessageType> messageTypes, ContextBag context)
         {
             var messagelist = messageTypes.ToArray();
-            var result = new HashSet<Subscriber>();
+            var result = new HashSet<Subscriber>(SubscriberComparer);
 
             try
             {
