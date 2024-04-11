@@ -25,7 +25,9 @@ namespace NServiceBus.Persistence.Msmq
             // Filled in by Janitor.fody
         }
 
+#pragma warning disable PS0025 // Dictionary keys should implement IEquatable<T> - The value returned uses a SubscriberComparer
         Dictionary<Subscriber, Dictionary<MessageType, string>> CreateLookup()
+#pragma warning restore PS0025
         {
             var output = new Dictionary<Subscriber, Dictionary<MessageType, string>>(SubscriberComparer);
 
