@@ -127,7 +127,7 @@ namespace NServiceBus.Transport.Msmq
 
             using (var stream = new MemoryStream())
             {
-                using var writer = XmlWriter.Create(stream, new XmlWriterSettings { CheckCharacters = false });
+                //using var writer = XmlWriter.Create(stream, new XmlWriterSettings { CheckCharacters = false });
 
                 var headers = message.Headers.Select(pair => new HeaderInfo
                 {
@@ -144,7 +144,8 @@ namespace NServiceBus.Transport.Msmq
                     });
                 }
 
-                headerSerializer.Serialize(writer, headers);
+                headerSerializer.Serialize(stream, headers);
+                //headerSerializer.Serialize(writer, headers);
 
                 result.Extension = stream.ToArray();
             }
