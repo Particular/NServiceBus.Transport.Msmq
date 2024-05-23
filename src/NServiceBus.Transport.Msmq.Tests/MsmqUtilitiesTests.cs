@@ -2,6 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
     using NUnit.Framework;
     using Particular.Msmq;
     using Support;
@@ -117,6 +119,20 @@
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
             Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
+        }
+
+        [Test]
+        public void Should_not_emit_bom_when_serializing_headers_for_backwards_compatibility()
+        {
+            var message =
+                MsmqUtilities.Convert(
+                    new OutgoingMessage("message id",
+                        new Dictionary<string, string> { { "some-header", "some value" } }, Array.Empty<byte>()));
+
+            var enc = new UTF8Encoding(true);
+            var preamble = enc.GetPreamble();
+
+            Assert.AreNotEqual(preamble, message.Extension.Take(preamble.Length));
         }
     }
 }

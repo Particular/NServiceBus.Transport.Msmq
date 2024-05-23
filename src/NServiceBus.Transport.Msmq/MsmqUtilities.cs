@@ -127,7 +127,11 @@ namespace NServiceBus.Transport.Msmq
 
             using (var stream = new MemoryStream())
             {
-                using var writer = XmlWriter.Create(stream, new XmlWriterSettings { CheckCharacters = false });
+                using var writer = XmlWriter.Create(stream, new XmlWriterSettings
+                {
+                    CheckCharacters = false,
+                    //Encoding = new UTF8Encoding(false), this fixes it
+                });
 
                 var headers = message.Headers.Select(pair => new HeaderInfo
                 {
