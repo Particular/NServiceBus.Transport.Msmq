@@ -147,6 +147,9 @@
                 Value = pair.Value
             }).ToList();
 
+            // this is a copy of what v1 and v2 of the transport does
+            // https://github.com/Particular/NServiceBus.Transport.Msmq/blob/release-2.0/src/NServiceBus.Transport.Msmq/MsmqUtilities.cs#L131
+            // https://github.com/Particular/NServiceBus.Transport.Msmq/blob/release-1.2/src/NServiceBus.Transport.Msmq/MsmqUtilities.cs#L144
             using (var stream = new MemoryStream())
             {
                 headerSerializer.Serialize(stream, wrappedHeaders);
