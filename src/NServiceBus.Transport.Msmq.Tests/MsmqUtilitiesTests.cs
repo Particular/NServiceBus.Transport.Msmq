@@ -123,7 +123,7 @@
         }
 
         [Test]
-        public void Should_not_emit_bom_when_serializing_headers_for_backwards_compatibility()
+        public void Should_not_emit_BOM_when_serializing_headers_for_backwards_compatibility()
         {
             var message =
                 MsmqUtilities.Convert(
@@ -137,7 +137,7 @@
         }
 
         [Test]
-        public void Version_1_and_2_does_not_emit_bom_in_headers()
+        public void Verify_that_Version_1_and_2_does_not_emit_BOM_in_headers()
         {
             var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
             var headers = new Dictionary<string, string> { { "some-header", "some value" } };
