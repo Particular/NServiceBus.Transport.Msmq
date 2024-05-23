@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using NUnit.Framework;
@@ -129,10 +130,34 @@
                     new OutgoingMessage("message id",
                         new Dictionary<string, string> { { "some-header", "some value" } }, Array.Empty<byte>()));
 
-            var enc = new UTF8Encoding(true);
-            var preamble = enc.GetPreamble();
+            var encodingWithBOM = new UTF8Encoding(true);
+            var preamble = encodingWithBOM.GetPreamble();
 
             Assert.AreNotEqual(preamble, message.Extension.Take(preamble.Length));
+        }
+
+        [Test]
+        public void Version_1_and_2_does_not_emit_bom_in_headers()
+        {
+            var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
+            var headers = new Dictionary<string, string> { { "some-header", "some value" } };
+            var wrappedHeaders = headers.Select(pair => new HeaderInfo
+            {
+                Key = pair.Key,
+                Value = pair.Value
+            }).ToList();
+
+            using (var stream = new MemoryStream())
+            {
+                headerSerializer.Serialize(stream, wrappedHeaders);
+
+                var seralizedHeaders = stream.ToArray();
+
+                var encodingWithBOM = new UTF8Encoding(true);
+                var preamble = encodingWithBOM.GetPreamble();
+
+                Assert.AreNotEqual(preamble, seralizedHeaders.Take(preamble.Length));
+            }
         }
     }
 }
