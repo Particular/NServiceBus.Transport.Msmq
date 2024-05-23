@@ -5,6 +5,7 @@
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Xml;
     using NUnit.Framework;
     using Particular.Msmq;
     using Support;
@@ -137,7 +138,20 @@
         }
 
         [Test]
-        public void Verify_that_Version_1_and_2_does_not_emit_BOM_in_headers()
+        public void Should_support_v1dot0_header_deserialization()
+        {
+            var headers = new Dictionary<string, string> { { "some-header", "some value" } };
+            var message =
+                MsmqUtilities.Convert(
+                    new OutgoingMessage("message id", headers, Array.Empty<byte>()));
+
+            var v1dot0Headers = DeserializeMessageHeadersV1dot0(message);
+
+            CollectionAssert.AreEqual(v1dot0Headers.Values, headers.Values);
+        }
+
+        [Test]
+        public void Verify_that_Version_1dot2_and_2_does_not_emit_BOM_in_headers()
         {
             var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
             var headers = new Dictionary<string, string> { { "some-header", "some value" } };
@@ -161,6 +175,43 @@
 
                 Assert.AreNotEqual(preamble, seralizedHeaders.Take(preamble.Length));
             }
+        }
+
+        //this is a copy of v1.0 header deserialization
+        static Dictionary<string, string> DeserializeMessageHeadersV1dot0(Message m)
+        {
+            var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
+            var result = new Dictionary<string, string>();
+
+            if (m.Extension.Length == 0)
+            {
+                return result;
+            }
+
+            //This is to make us compatible with v3 messages that are affected by this bug:
+            //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
+            var extension = Encoding.UTF8.GetString(m.Extension).TrimEnd('\0');
+            object o;
+            using (var stream = new StringReader(extension))
+            {
+                using (var reader = XmlReader.Create(stream, new XmlReaderSettings
+                {
+                    CheckCharacters = false
+                }))
+                {
+                    o = headerSerializer.Deserialize(reader);
+                }
+            }
+
+            foreach (var pair in (List<HeaderInfo>)o)
+            {
+                if (pair.Key != null)
+                {
+                    result.Add(pair.Key, pair.Value);
+                }
+            }
+
+            return result;
         }
     }
 }
