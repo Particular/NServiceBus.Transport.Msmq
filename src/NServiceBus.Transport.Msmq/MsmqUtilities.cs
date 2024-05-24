@@ -94,7 +94,7 @@ namespace NServiceBus.Transport.Msmq
 
             using (var stream = new MemoryStream(buffer: data, index: 0, count: xmlLength, writable: false, publiclyVisible: true))
             {
-                using var reader = XmlReader.Create(stream, new XmlReaderSettings { CheckCharacters = false });
+                using var reader = XmlReader.Create(stream, HeaderSerializerXmlReaderSettings);
 
                 o = headerSerializer.Deserialize(reader);
             }
@@ -207,6 +207,7 @@ namespace NServiceBus.Transport.Msmq
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
 
+        static XmlReaderSettings HeaderSerializerXmlReaderSettings = new XmlReaderSettings { CheckCharacters = false };
         static XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
         static System.Xml.Serialization.XmlSerializer headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
         static ILog Logger = LogManager.GetLogger<MsmqUtilities>();
