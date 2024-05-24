@@ -126,6 +126,12 @@
         [Test]
         public void Should_not_emit_BOM_when_serializing_headers_for_backwards_compatibility()
         {
+            // This test ensures that older versions of the transport can still parse the headers since that code can't handle a BOM 
+            // v1.0.X - https://github.com/Particular/NServiceBus.Transport.Msmq/blob/1.0.2/src/NServiceBus.Transport.Msmq/MsmqUtilities.cs#L94
+            // v6 with msmq bundled - https://github.com/Particular/NServiceBus/blob/6.5.10/src/NServiceBus.Core/Transports/Msmq/MsmqUtilities.cs#L98
+            // v5 with msmq bundled - https://github.com/Particular/NServiceBus/blob/5.2.26/src/NServiceBus.Core/Transports/Msmq/MsmqUtilities.cs#L199
+            // Note: As of v1.1 the transport can handle a BOM due to this change - https://github.com/Particular/NServiceBus.Transport.Msmq/pull/125
+
             var message =
                 MsmqUtilities.Convert(
                     new OutgoingMessage("message id",
@@ -138,35 +144,15 @@
         }
 
         [Test]
-        public void Should_support_v1dot0_header_deserialization()
+        public void Default_usage_of_xml_serializer_does_not_emit_bom()
         {
-            var headers = new Dictionary<string, string> { { "some-header", "some value" } };
-            var message =
-                MsmqUtilities.Convert(
-                    new OutgoingMessage("message id", headers, Array.Empty<byte>()));
+            // Older versions of the transport doesn't use XmlWriter settings and therefor no BOM is emitted. This test verified that behavior
 
-            var v1dot0Headers = DeserializeMessageHeadersV1dot0(message);
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(string));
 
-            CollectionAssert.AreEqual(v1dot0Headers.Values, headers.Values);
-        }
-
-        [Test]
-        public void Verify_that_Version_1dot2_and_2_does_not_emit_BOM_in_headers()
-        {
-            var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
-            var headers = new Dictionary<string, string> { { "some-header", "some value" } };
-            var wrappedHeaders = headers.Select(pair => new HeaderInfo
-            {
-                Key = pair.Key,
-                Value = pair.Value
-            }).ToList();
-
-            // this is a copy of what v1 and v2 of the transport does
-            // https://github.com/Particular/NServiceBus.Transport.Msmq/blob/release-2.0/src/NServiceBus.Transport.Msmq/MsmqUtilities.cs#L131
-            // https://github.com/Particular/NServiceBus.Transport.Msmq/blob/release-1.2/src/NServiceBus.Transport.Msmq/MsmqUtilities.cs#L144
             using (var stream = new MemoryStream())
             {
-                headerSerializer.Serialize(stream, wrappedHeaders);
+                serializer.Serialize(stream, "test");
 
                 var seralizedHeaders = stream.ToArray();
 
@@ -177,41 +163,26 @@
             }
         }
 
-        //this is a copy of v1.0 header deserialization
-        static Dictionary<string, string> DeserializeMessageHeadersV1dot0(Message m)
+        [Test]
+        public void Default_xmlwritersettings_emit_bom()
         {
-            var headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
-            var result = new Dictionary<string, string>();
+            // This test docments that the default XmlWriterSettings emits a BOM by default
 
-            if (m.Extension.Length == 0)
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof(string));
+
+            using (var stream = new MemoryStream())
             {
-                return result;
-            }
+                using var writer = XmlWriter.Create(stream, new XmlWriterSettings());
 
-            //This is to make us compatible with v3 messages that are affected by this bug:
-            //http://stackoverflow.com/questions/3779690/xml-serialization-appending-the-0-backslash-0-or-null-character
-            var extension = Encoding.UTF8.GetString(m.Extension).TrimEnd('\0');
-            object o;
-            using (var stream = new StringReader(extension))
-            {
-                using (var reader = XmlReader.Create(stream, new XmlReaderSettings
-                {
-                    CheckCharacters = false
-                }))
-                {
-                    o = headerSerializer.Deserialize(reader);
-                }
-            }
+                serializer.Serialize(writer, "test");
 
-            foreach (var pair in (List<HeaderInfo>)o)
-            {
-                if (pair.Key != null)
-                {
-                    result.Add(pair.Key, pair.Value);
-                }
-            }
+                var seralizedHeaders = stream.ToArray();
 
-            return result;
+                var encodingWithBOM = new UTF8Encoding(true);
+                var preamble = encodingWithBOM.GetPreamble();
+
+                Assert.AreEqual(preamble, seralizedHeaders.Take(preamble.Length));
+            }
         }
     }
 }
