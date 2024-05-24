@@ -110,6 +110,8 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
+        static XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
+
         public static Message Convert(OutgoingMessage message)
         {
             var result = new Message();
@@ -127,11 +129,7 @@ namespace NServiceBus.Transport.Msmq
 
             using (var stream = new MemoryStream())
             {
-                using var writer = XmlWriter.Create(stream, new XmlWriterSettings
-                {
-                    CheckCharacters = false,
-                    //Encoding = new UTF8Encoding(false), this fixes it
-                });
+                using var writer = XmlWriter.Create(stream, HeaderSerializerXmlWriterSettings);
 
                 var headers = message.Headers.Select(pair => new HeaderInfo
                 {
