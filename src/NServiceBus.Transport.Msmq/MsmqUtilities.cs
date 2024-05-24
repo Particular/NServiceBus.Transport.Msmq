@@ -207,8 +207,8 @@ namespace NServiceBus.Transport.Msmq
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
 
-        static XmlReaderSettings HeaderSerializerXmlReaderSettings = new XmlReaderSettings { CheckCharacters = false };
-        static XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
+        static readonly XmlReaderSettings HeaderSerializerXmlReaderSettings = new XmlReaderSettings { CheckCharacters = false };
+        static readonly XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
         static System.Xml.Serialization.XmlSerializer headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
         static ILog Logger = LogManager.GetLogger<MsmqUtilities>();
         static byte[] EndTag = Encoding.UTF8.GetBytes("</ArrayOfHeaderInfo>");
