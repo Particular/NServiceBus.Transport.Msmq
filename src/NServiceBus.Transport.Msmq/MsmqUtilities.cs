@@ -110,8 +110,6 @@ namespace NServiceBus.Transport.Msmq
             return result;
         }
 
-        static XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
-
         public static Message Convert(OutgoingMessage message)
         {
             var result = new Message();
@@ -209,6 +207,7 @@ namespace NServiceBus.Transport.Msmq
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
 
+        static XmlWriterSettings HeaderSerializerXmlWriterSettings = new XmlWriterSettings { CheckCharacters = false, Encoding = new UTF8Encoding(false) };
         static System.Xml.Serialization.XmlSerializer headerSerializer = new System.Xml.Serialization.XmlSerializer(typeof(List<HeaderInfo>));
         static ILog Logger = LogManager.GetLogger<MsmqUtilities>();
         static byte[] EndTag = Encoding.UTF8.GetBytes("</ArrayOfHeaderInfo>");
