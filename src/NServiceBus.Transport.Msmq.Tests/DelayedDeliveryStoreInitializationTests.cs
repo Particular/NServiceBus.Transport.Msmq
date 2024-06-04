@@ -1,6 +1,7 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
+    using System.Messaging;
     using System.Threading;
     using System.Threading.Tasks;
     using NServiceBus;
@@ -9,6 +10,9 @@
     [TestFixture]
     class DelayedDeliveryStoreInitializationTests
     {
+        const string EndpointName = "Test";
+        TransportInfrastructure transportInfrastructure;
+
         [TestCase(true, true, ExpectedResult = true)]
         [TestCase(true, false, ExpectedResult = false)]
         [TestCase(false, true, ExpectedResult = false)]
@@ -49,6 +53,24 @@
             return messageStore.SetupInfrastructureCalled;
         }
 
+        [SetUp]
+        public void Setup()
+        {
+            MsmqHelpers.CreateQueue($@".\private$\{EndpointName}");
+            MsmqHelpers.CreateQueue($@".\private$\{EndpointName}.Timeouts");
+            MsmqHelpers.CreateQueue($@".\private$\error");
+        }
+
+        [TearDown]
+        public async Task Teardown()
+        {
+            await transportInfrastructure.Shutdown();
+            MsmqHelpers.DeleteQueue($@".\private$\{EndpointName}");
+            MsmqHelpers.DeleteQueue($@".\private$\{EndpointName}.Timeouts");
+            MsmqHelpers.DeleteQueue($@".\private$\error");
+            MessageQueue.ClearConnectionCache();
+        }
+
         async Task InitializeTransport(IDelayedMessageStore messageStore, bool setupInfrastructure, bool createQueues, CancellationToken cancellationToken = default)
         {
             var transport = new MsmqTransport
@@ -57,16 +79,16 @@
                 CreateQueues = createQueues
             };
 
-            var hostSettings = new HostSettings("Test", "Test", new StartupDiagnosticEntries(), CriticalErrorAction, setupInfrastructure);
+            var hostSettings = new HostSettings(EndpointName, EndpointName, new StartupDiagnosticEntries(), CriticalErrorAction, setupInfrastructure);
 
             var recievers = new ReceiveSettings[]
             {
-                new ReceiveSettings("Main", new QueueAddress("Test"), false, false, "error")
+                new ReceiveSettings("Main", new QueueAddress(EndpointName), false, false, "error")
             };
 
             var sendingAddresses = Array.Empty<string>();
 
-            _ = await transport.Initialize(hostSettings, recievers, sendingAddresses, cancellationToken);
+            transportInfrastructure = await transport.Initialize(hostSettings, recievers, sendingAddresses, cancellationToken);
 
             void CriticalErrorAction(string s, Exception e, CancellationToken c)
             {
