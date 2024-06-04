@@ -52,7 +52,7 @@
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
 
                     transport.DelayedDelivery =
-                        new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore))
+                        new DelayedDeliverySettings(new FaultyDelayedMessageStore((IDelayedMessageStoreWithInfrastructure)transport.DelayedDelivery.DelayedMessageStore))
                         {
                             NumberOfRetries = 2,
                             TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
@@ -105,17 +105,20 @@
         {
         }
 
-        class FaultyDelayedMessageStore : IDelayedMessageStore
+        class FaultyDelayedMessageStore : IDelayedMessageStoreWithInfrastructure
         {
-            IDelayedMessageStore impl;
+            IDelayedMessageStoreWithInfrastructure impl;
 
-            public FaultyDelayedMessageStore(IDelayedMessageStore impl)
+            public FaultyDelayedMessageStore(IDelayedMessageStoreWithInfrastructure impl)
             {
                 this.impl = impl;
             }
 
             public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
                 => impl.Initialize(endpointName, transactionMode, cancellationToken);
+
+            public Task SetupInfrastructure(CancellationToken cancellationToken = default)
+                => impl.SetupInfrastructure(cancellationToken);
 
             public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => impl.Next(cancellationToken);
 

@@ -57,7 +57,7 @@
                 EndpointSetup<DefaultServer>((endpointConfiguration, run) =>
                 {
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    transport.DelayedDelivery = new DelayedDeliverySettings(new TestDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, (Context)run.ScenarioContext));
+                    transport.DelayedDelivery = new DelayedDeliverySettings(new TestDelayedMessageStore((IDelayedMessageStoreWithInfrastructure)transport.DelayedDelivery.DelayedMessageStore, (Context)run.ScenarioContext));
                 });
             }
 
@@ -82,12 +82,12 @@
         {
         }
 
-        class TestDelayedMessageStore : IDelayedMessageStore
+        class TestDelayedMessageStore : IDelayedMessageStoreWithInfrastructure
         {
-            readonly IDelayedMessageStore impl;
+            readonly IDelayedMessageStoreWithInfrastructure impl;
             readonly Context context;
 
-            public TestDelayedMessageStore(IDelayedMessageStore impl, Context context)
+            public TestDelayedMessageStore(IDelayedMessageStoreWithInfrastructure impl, Context context)
             {
                 this.impl = impl;
                 this.context = context;
@@ -95,6 +95,9 @@
 
             public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
                 => impl.Initialize(endpointName, transactionMode, cancellationToken);
+
+            public Task SetupInfrastructure(CancellationToken cancellationToken = default)
+                => impl.SetupInfrastructure(cancellationToken);
 
             public async Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default)
             {
