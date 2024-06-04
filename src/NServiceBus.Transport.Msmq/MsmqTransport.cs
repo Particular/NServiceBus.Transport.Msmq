@@ -8,11 +8,11 @@ namespace NServiceBus
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
+    using NServiceBus.Transport.Msmq.DelayedDelivery;
     using Routing;
     using Support;
     using Transport;
     using Transport.Msmq;
-    using Transport.Msmq.DelayedDelivery;
 
     /// <summary>
     /// Transport definition for MSMQ.
@@ -109,6 +109,15 @@ namespace NServiceBus
                 }
             }
 
+            if (requiresDelayedDelivery)
+            {
+                if (DelayedDelivery.DelayedMessageStore is IDelayedMessageStoreWithInfrastructure)
+                {
+                    // If the delayed message store does not implement IDelayedMessageStoreWithInfrastructure it is initialized only when queues are also being created
+                    await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
             if (hostSettings.SetupInfrastructure && CreateQueues)
             {
                 var installerUser = GetInstallationUserName();
@@ -116,7 +125,16 @@ namespace NServiceBus
 
                 if (requiresDelayedDelivery)
                 {
-                    await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
+                    if (DelayedDelivery.DelayedMessageStore is IDelayedMessageStoreWithInfrastructure delayedMessageStoreWithInfrastructure)
+                    {
+                        // If the delayed message store implemented IDelayedMessageStoreWithInfrastructure, it is initialized already
+                        await delayedMessageStoreWithInfrastructure.SetupInfrastructure(cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        // If the delayed message store does not implement IDelayedMessageStoreWithInfrastructure then it has not been initialized
+                        await DelayedDelivery.DelayedMessageStore.Initialize(hostSettings.Name, TransportTransactionMode, cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);

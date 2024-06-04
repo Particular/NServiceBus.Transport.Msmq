@@ -10,7 +10,7 @@ namespace NServiceBus
     public interface IDelayedMessageStore
     {
         /// <summary>
-        /// Initializes the storage e.g. creates required database artifacts etc.
+        /// Initializes the storage. If the store implements <see cref="IDelayedMessageStoreWithInfrastructure"/>, this method is called first.
         /// </summary>
         /// <param name="endpointName">Name of the endpoint that hosts the delayed delivery storage.</param>
         /// <param name="transactionMode">The transaction mode selected for the transport. The storage implementation should throw an exception if it can't support specified
