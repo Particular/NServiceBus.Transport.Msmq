@@ -217,7 +217,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                             {
                                 //If no timeouts, wait a while
                                 var nextPollTime = now.Add(MaxSleepDuration);
-                                Console.WriteLine($"The poller is gonna wait until {nextPollTime}");
+                                Log.WarnFormat($"The poller is gonna wait until {nextPollTime}");
                                 result.SetResult(nextPollTime);
                             }
                         }
