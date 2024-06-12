@@ -110,7 +110,7 @@
                 {
                     var context = (Context)run.ScenarioContext;
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
-                    var storage = new WrapDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore, context);
+                    var storage = new WrapDelayedMessageStore((IDelayedMessageStoreWithInfrastructure)transport.DelayedDelivery.DelayedMessageStore, context);
                     transport.DelayedDelivery =
                         new DelayedDeliverySettings(storage)
                         {
@@ -141,12 +141,12 @@
         {
         }
 
-        class WrapDelayedMessageStore : IDelayedMessageStore
+        class WrapDelayedMessageStore : IDelayedMessageStoreWithInfrastructure
         {
-            readonly IDelayedMessageStore delayedMessageStoreImplementation;
+            readonly IDelayedMessageStoreWithInfrastructure delayedMessageStoreImplementation;
             readonly Context context;
 
-            public WrapDelayedMessageStore(IDelayedMessageStore impl, Context context)
+            public WrapDelayedMessageStore(IDelayedMessageStoreWithInfrastructure impl, Context context)
             {
                 this.context = context;
                 delayedMessageStoreImplementation = impl;
@@ -154,6 +154,9 @@
 
             public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
                 => delayedMessageStoreImplementation.Initialize(endpointName, transactionMode, cancellationToken);
+
+            public Task SetupInfrastructure(CancellationToken cancellationToken = default)
+                => delayedMessageStoreImplementation.SetupInfrastructure(cancellationToken);
 
             public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default)
                 => delayedMessageStoreImplementation.Next(cancellationToken);

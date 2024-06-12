@@ -2,6 +2,7 @@
 {
     using System;
     using System.Diagnostics;
+    using System.Runtime.ExceptionServices;
     using System.Threading;
     using System.Threading.Tasks;
     using AcceptanceTesting;
@@ -15,30 +16,41 @@
         [Test]
         public async Task Should_trigger_circuit_breaker()
         {
-            AppDomain.CurrentDomain.FirstChanceException += (sender, args) => Console.WriteLine("\nFirstChanceException\n" + args.Exception.ToString().Replace("\n", "\n\t") + new StackTrace(args.Exception, 1).ToString().Replace("\n", "\n\t"));
             Requires.DelayedDelivery();
 
-            var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
+            try
+            {
+                AppDomain.CurrentDomain.FirstChanceException += HandleFirstChangeException;
 
-            var context = await Scenario.Define<Context>()
-                .WithEndpoint<Endpoint>(b => b.When((session, c) =>
-                {
-                    var options = new SendOptions();
+                var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
 
-                    options.DelayDeliveryWith(delay);
-                    options.RouteToThisEndpoint();
+                var context = await Scenario.Define<Context>()
+                    .WithEndpoint<Endpoint>(b => b.When((session, c) =>
+                    {
+                        var options = new SendOptions();
 
-                    return session.Send(new MyMessage(), options);
-                }).DoNotFailOnErrorMessages())
-                .WithEndpoint<ErrorSpy>()
-                .Done(c => c.CriticalActionCalled)
-                .Run();
+                        options.DelayDeliveryWith(delay);
+                        options.RouteToThisEndpoint();
 
-            Assert.False(context.Processed, nameof(context.Processed)); // When remove fails dispatch should be rolled back
-            Assert.False(context.MovedToErrorQueue, nameof(context.MovedToErrorQueue));
-            Assert.True(context.CriticalActionCalled, nameof(context.CriticalActionCalled));
-            StringAssert.AreEqualIgnoringCase("Failed to execute error handling for delayed message forwarding", context.FailureMessage);
+                        return session.Send(new MyMessage(), options);
+                    }).DoNotFailOnErrorMessages())
+                    .WithEndpoint<ErrorSpy>()
+                    .Done(c => c.CriticalActionCalled)
+                    .Run();
+
+                Assert.False(context.Processed, nameof(context.Processed)); // When remove fails dispatch should be rolled back
+                Assert.False(context.MovedToErrorQueue, nameof(context.MovedToErrorQueue));
+                Assert.True(context.CriticalActionCalled, nameof(context.CriticalActionCalled));
+                StringAssert.AreEqualIgnoringCase("Failed to execute error handling for delayed message forwarding", context.FailureMessage);
+            }
+            finally
+            {
+                AppDomain.CurrentDomain.FirstChanceException -= HandleFirstChangeException;
+            }
         }
+
+        static void HandleFirstChangeException(object sender, FirstChanceExceptionEventArgs args)
+            => Console.WriteLine("\nFirstChanceException\n" + args.Exception.ToString().Replace("\n", "\n\t") + new StackTrace(args.Exception, 1).ToString().Replace("\n", "\n\t"));
 
         public class Context : ScenarioContext
         {
@@ -64,7 +76,7 @@
                     });
                     var transport = endpointConfiguration.ConfigureTransport<MsmqTransport>();
                     transport.DelayedDelivery =
-                        new DelayedDeliverySettings(new FaultyDelayedMessageStore(transport.DelayedDelivery.DelayedMessageStore))
+                        new DelayedDeliverySettings(new FaultyDelayedMessageStore((IDelayedMessageStoreWithInfrastructure)transport.DelayedDelivery.DelayedMessageStore))
                         {
                             NumberOfRetries = 1,
                             TimeToTriggerStoreCircuitBreaker = TimeSpan.FromSeconds(5)
@@ -113,16 +125,18 @@
             }
         }
 
-        class FaultyDelayedMessageStore : IDelayedMessageStore
+        class FaultyDelayedMessageStore : IDelayedMessageStoreWithInfrastructure
         {
-            IDelayedMessageStore impl;
+            IDelayedMessageStoreWithInfrastructure impl;
 
-            public FaultyDelayedMessageStore(IDelayedMessageStore impl)
+            public FaultyDelayedMessageStore(IDelayedMessageStoreWithInfrastructure impl)
             {
                 this.impl = impl;
             }
 
             public Task Initialize(string endpointName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default) => impl.Initialize(endpointName, transactionMode, cancellationToken);
+
+            public Task SetupInfrastructure(CancellationToken cancellationToken = default) => impl.SetupInfrastructure(cancellationToken);
 
             public Task<DateTimeOffset?> Next(CancellationToken cancellationToken = default) => impl.Next(cancellationToken);
 

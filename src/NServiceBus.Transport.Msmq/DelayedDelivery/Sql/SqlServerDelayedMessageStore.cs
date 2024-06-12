@@ -16,12 +16,13 @@ namespace NServiceBus
     /// <summary>
     /// Implementation of the delayed message store based on the SQL Server.
     /// </summary>
-    public class SqlServerDelayedMessageStore : IDelayedMessageStore
+    public class SqlServerDelayedMessageStore : IDelayedMessageStoreWithInfrastructure
     {
         string schema;
         string tableName;
         CreateSqlConnection createSqlConnection;
 
+        string quotedFullName;
         string insertCommand;
         string removeCommand;
         string bumpFailureCountCommand;
@@ -96,23 +97,29 @@ namespace NServiceBus
         }
 
         /// <inheritdoc />
-        public async Task Initialize(string queueName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
+        public Task Initialize(string queueName, TransportTransactionMode transactionMode, CancellationToken cancellationToken = default)
         {
             if (tableName == null)
             {
                 tableName = $"{queueName}.timeouts";
             }
 
-            var quotedFullName = $"{SqlNameHelper.Quote(schema)}.{SqlNameHelper.Quote(tableName)}";
-
-            var creator = new TimeoutTableCreator(createSqlConnection, quotedFullName);
-            await creator.CreateIfNecessary(cancellationToken).ConfigureAwait(false);
+            quotedFullName = $"{SqlNameHelper.Quote(schema)}.{SqlNameHelper.Quote(tableName)}";
 
             insertCommand = string.Format(SqlConstants.SqlInsert, quotedFullName);
             removeCommand = string.Format(SqlConstants.SqlDelete, quotedFullName);
             bumpFailureCountCommand = string.Format(SqlConstants.SqlUpdate, quotedFullName);
             nextCommand = string.Format(SqlConstants.SqlGetNext, quotedFullName);
             fetchCommand = string.Format(SqlConstants.SqlFetch, quotedFullName);
+
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc />
+        public async Task SetupInfrastructure(CancellationToken cancellationToken = default)
+        {
+            var creator = new TimeoutTableCreator(createSqlConnection, quotedFullName);
+            await creator.CreateIfNecessary(cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc />

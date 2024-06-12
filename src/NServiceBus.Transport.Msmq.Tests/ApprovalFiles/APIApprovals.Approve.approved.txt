@@ -43,6 +43,10 @@ namespace NServiceBus
         System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage entity, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IDelayedMessageStoreWithInfrastructure : NServiceBus.IDelayedMessageStore
+    {
+        System.Threading.Tasks.Task SetupInfrastructure(System.Threading.CancellationToken cancellationToken = default);
+    }
     public class InstanceMappingFileSettings : NServiceBus.Configuration.AdvancedExtensibility.ExposeSettings
     {
         public InstanceMappingFileSettings(NServiceBus.Settings.SettingsHolder settings) { }
@@ -110,7 +114,7 @@ namespace NServiceBus
             ".0.", false)]
         public override string ToTransportAddress(NServiceBus.Transport.QueueAddress address) { }
     }
-    public class SqlServerDelayedMessageStore : NServiceBus.IDelayedMessageStore
+    public class SqlServerDelayedMessageStore : NServiceBus.IDelayedMessageStore, NServiceBus.IDelayedMessageStoreWithInfrastructure
     {
         public SqlServerDelayedMessageStore(NServiceBus.CreateSqlConnection connectionFactory, string schema = null, string tableName = null) { }
         public SqlServerDelayedMessageStore(string connectionString, string schema = null, string tableName = null) { }
@@ -119,6 +123,7 @@ namespace NServiceBus
         public System.Threading.Tasks.Task Initialize(string queueName, NServiceBus.TransportTransactionMode transactionMode, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTimeOffset?> Next(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> Remove(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SetupInfrastructure(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task Store(NServiceBus.DelayedMessage timeout, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
