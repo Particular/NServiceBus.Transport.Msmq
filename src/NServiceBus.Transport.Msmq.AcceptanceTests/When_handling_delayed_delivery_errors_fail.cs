@@ -25,18 +25,22 @@
                 var delay = TimeSpan.FromSeconds(5); // High value needed as most transports have multi second delay latency by default
 
                 var context = await Scenario.Define<Context>()
-                    .WithEndpoint<Endpoint>(b => b.When((session, c) =>
+                    .WithEndpoint<Endpoint>(b => b.When(async (session, c) =>
                     {
-                        var options = new SendOptions();
+                        //HINT: Two messages will cause the failure circuit breaker to be triggered sooner
+                        for (int i = 0; i < 2; i++)
+                        {
+                            var options = new SendOptions();
 
-                        options.DelayDeliveryWith(delay);
-                        options.RouteToThisEndpoint();
+                            options.DelayDeliveryWith(delay);
+                            options.RouteToThisEndpoint();
 
-                        return session.Send(new MyMessage(), options);
+                            await session.Send(new MyMessage(), options);
+                        }
                     }).DoNotFailOnErrorMessages())
                     .WithEndpoint<ErrorSpy>()
                     .Done(c => c.CriticalActionCalled)
-                    .Run();
+                    .Run(TimeSpan.FromSeconds(180));
 
                 Assert.False(context.Processed, nameof(context.Processed)); // When remove fails dispatch should be rolled back
                 Assert.False(context.MovedToErrorQueue, nameof(context.MovedToErrorQueue));
