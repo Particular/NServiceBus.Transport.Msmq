@@ -4,9 +4,41 @@
     using System.Threading.Tasks;
     using NServiceBus.AcceptanceTesting;
     using NServiceBus.AcceptanceTesting.Customization;
+    using NServiceBus.AcceptanceTesting.Support;
     using NServiceBus.AcceptanceTests.EndpointTemplates;
     using NServiceBus.Configuration.AdvancedExtensibility;
+    using NServiceBus.Installation;
     using NUnit.Framework;
+
+    class ServerWithInfrastructureWithoutInstallers : IEndpointSetupTemplate
+    {
+        public IConfigureEndpointTestExecution TransportConfiguration { get; set; } = TestSuiteConstraints.Current.CreateTransportConfiguration();
+        public IConfigureEndpointTestExecution PersistenceConfiguration { get; set; } = TestSuiteConstraints.Current.CreatePersistenceConfiguration();
+
+        public async Task<EndpointConfiguration> GetConfiguration(RunDescriptor runDescriptor, EndpointCustomizationConfiguration endpointConfiguration, Func<EndpointConfiguration, Task> configurationBuilderCustomization)
+        {
+            var builder = new EndpointConfiguration(endpointConfiguration.EndpointName);
+
+            builder.Recoverability()
+                .Delayed(delayed => delayed.NumberOfRetries(0))
+                .Immediate(immediate => immediate.NumberOfRetries(0));
+            builder.SendFailedMessagesTo("error");
+
+            await builder.DefineTransport(TransportConfiguration, runDescriptor, endpointConfiguration).ConfigureAwait(false);
+            await builder.DefinePersistence(PersistenceConfiguration, runDescriptor, endpointConfiguration).ConfigureAwait(false);
+
+            await configurationBuilderCustomization(builder).ConfigureAwait(false);
+
+            // scan types at the end so that all types used by the configuration have been loaded into the AppDomain
+            builder.TypesToIncludeInScan(endpointConfiguration.GetTypesScopedByTestClass());
+
+            await Installer.Setup(builder).ConfigureAwait(false);
+
+            builder.GetSettings().Set("Installers.Enable", false);
+
+            return builder;
+        }
+    }
 
     class When_endpoint_starts_without_installers_and_infrastructure_configured : NServiceBusAcceptanceTest
     {
@@ -17,14 +49,7 @@
 
             _ = await Scenario.Define<Context>()
                 .WithEndpoint<Receiver>()
-                .WithEndpoint<Sender>()
-                .Done(c => c.EndpointsStarted)
-                .Run();
-
-
-            _ = await Scenario.Define<Context>()
-                .WithEndpoint<Receiver>(s => s.CustomConfig(cfg => cfg.GetSettings().Set("Installers.Enable", false)))
-                .WithEndpoint<Sender>(s => s.CustomConfig(cfg => cfg.GetSettings().Set("Installers.Enable", false))
+                .WithEndpoint<Sender>(sender => sender
                     .When(
                         (session, _) =>
                         {
@@ -45,7 +70,7 @@
         {
             public Sender()
             {
-                EndpointSetup<DefaultServer>(cfg =>
+                EndpointSetup<ServerWithInfrastructureWithoutInstallers>(cfg =>
                     cfg.ConfigureRouting().RouteToEndpoint(typeof(DelayedMessage), typeof(Receiver))
                 );
             }
@@ -55,7 +80,7 @@
         {
             public Receiver()
             {
-                EndpointSetup<DefaultServer>();
+                EndpointSetup<ServerWithInfrastructureWithoutInstallers>();
             }
 
             class DelayedMessageHandler : IHandleMessages<DelayedMessage>

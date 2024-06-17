@@ -106,9 +106,7 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
                     throw new Exception("Error while storing delayed message", e);
                 }
 
-#pragma warning disable PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
                 poller.Signal(timeout.Time);
-#pragma warning restore PS0022 // A DateTime should not be implicitly cast to a DateTimeOffset
             }
         }
 
