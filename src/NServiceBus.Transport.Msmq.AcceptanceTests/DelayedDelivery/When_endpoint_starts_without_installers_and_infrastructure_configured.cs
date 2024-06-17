@@ -18,7 +18,7 @@
             _ = await Scenario.Define<Context>()
                 .WithEndpoint<Receiver>()
                 .WithEndpoint<Sender>()
-                .Done(c => c.Done)
+                .Done(c => c.EndpointsStarted)
                 .Run();
 
 
