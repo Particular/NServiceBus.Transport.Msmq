@@ -43,19 +43,19 @@ namespace NServiceBus.Transport.Msmq
         {
             var headers = MsmqUtilities.DeserializeMessageHeaders(extension);
 
-            if (headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var deadLetterQueue))
+            if (headers.TryGetValue(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var deadLetterQueue))
             {
                 context.Set(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, bool.Parse(deadLetterQueue));
             }
-            if (headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
+            if (headers.TryGetValue(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
                 context.Set(JournalOptionExtensions.KeyJournaling, bool.Parse(useJournalQueue));
             }
 
-            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination);
-            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + TimeoutAt);
-            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue);
-            headers.Remove(MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling);
+            headers.Remove(TimeoutDestination);
+            headers.Remove(TimeoutAt);
+            headers.Remove(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue);
+            headers.Remove(JournalOptionExtensions.KeyJournaling);
 
             var request = new OutgoingMessage(id, headers, body);
 
@@ -91,17 +91,17 @@ namespace NServiceBus.Transport.Msmq
             var destinationAddress = MsmqAddress.Parse(timeoutsQueue);
 
 
-            headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
-            headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+            headers[TimeoutDestination] = transportOperation.Destination;
+            headers[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
 
             var operationProperties = context.GetOperationProperties();
             if (operationProperties.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
             {
-                headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
+                headers[DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
             }
             if (operationProperties.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
-                headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
+                headers[JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
             }
 
             try

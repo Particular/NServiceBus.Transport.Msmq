@@ -60,12 +60,12 @@ namespace NServiceBus.Transport.Msmq.DelayedDelivery
 
         async Task TimeoutReceived(MessageContext context)
         {
-            if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutDestination, out var destination))
+            if (!context.Headers.TryGetValue(MsmqMessageDispatcher.TimeoutDestination, out var destination))
             {
                 throw new Exception("This message does not represent a timeout");
             }
 
-            if (!context.Headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + MsmqMessageDispatcher.TimeoutAt, out var atString))
+            if (!context.Headers.TryGetValue(MsmqMessageDispatcher.TimeoutAt, out var atString))
             {
                 throw new Exception("This message does not represent a timeout");
             }
