@@ -215,6 +215,7 @@ namespace NServiceBus.Transport.Msmq
             }
         }
 
+        public const string PropertyHeaderPrefix = "NServiceBus.Timeouts.Properties.";
         const string DIRECTPREFIX = "DIRECT=OS:";
         const string DIRECTPREFIX_TCP = "DIRECT=TCP:";
         internal const string PRIVATE = "\\private$\\";
