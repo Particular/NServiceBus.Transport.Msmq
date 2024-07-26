@@ -47,6 +47,7 @@ namespace NServiceBus.Transport.Msmq
             {
                 context.Set(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, bool.Parse(deadLetterQueue));
             }
+
             if (headers.TryGetValue(MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
                 context.Set(JournalOptionExtensions.KeyJournaling, bool.Parse(useJournalQueue));
@@ -94,11 +95,16 @@ namespace NServiceBus.Transport.Msmq
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutDestination] = transportOperation.Destination;
             headers[MsmqUtilities.PropertyHeaderPrefix + TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
 
+            // Add headers without prefix for backward compatibility with the TimeoutManager
+            headers[TimeoutDestination] = transportOperation.Destination;
+            headers[TimeoutAt] = DateTimeOffsetHelper.ToWireFormattedString(deliverAt);
+
             var operationProperties = context.GetOperationProperties();
             if (operationProperties.TryGet<bool>(DeadLetterQueueOptionExtensions.KeyDeadLetterQueue, out var useDeadLetterQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + DeadLetterQueueOptionExtensions.KeyDeadLetterQueue] = useDeadLetterQueue.ToString();
             }
+
             if (operationProperties.TryGet<bool>(JournalOptionExtensions.KeyJournaling, out var useJournalQueue))
             {
                 headers[MsmqUtilities.PropertyHeaderPrefix + JournalOptionExtensions.KeyJournaling] = useJournalQueue.ToString();
@@ -154,9 +160,9 @@ namespace NServiceBus.Transport.Msmq
             var deliveryConstraints = transportOperation.DeliveryConstraints;
 
             if (IsCombiningTimeToBeReceivedWithTransactions(
-                transaction,
-                transportOperation.RequiredDispatchConsistency,
-                transportOperation.DeliveryConstraints))
+                    transaction,
+                    transportOperation.RequiredDispatchConsistency,
+                    transportOperation.DeliveryConstraints))
             {
                 if (settings.DisableNativeTtbrInTransactions)
                 {
@@ -167,6 +173,7 @@ namespace NServiceBus.Transport.Msmq
                     throw new Exception($"Failed to send message to address: {destinationAddress.Queue}@{destinationAddress.Machine}. Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.");
                 }
             }
+
             try
             {
                 using (var q = new MessageQueue(destinationAddress.FullPath, false, settings.UseConnectionCache, QueueAccessMode.Send))
@@ -281,10 +288,12 @@ namespace NServiceBus.Transport.Msmq
             {
                 throw new Exception("MSMQ label convention returned a null. Either return a valid value or a String.Empty to indicate 'no value'.");
             }
+
             if (messageLabel.Length > 240)
             {
                 throw new Exception("MSMQ label convention returned a value longer than 240 characters. This is not supported.");
             }
+
             return messageLabel;
         }
 
