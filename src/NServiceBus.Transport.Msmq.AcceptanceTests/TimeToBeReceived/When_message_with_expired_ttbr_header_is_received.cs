@@ -37,7 +37,7 @@
                 .Run();
 
             Assert.IsTrue(context.WasSent, "Message was sent");
-            Assert.IsFalse(context.WasReceived, "Message was processed");
+            Assert.That(context.WasReceived, Is.False, "Message was processed");
         }
 
         [Test]
