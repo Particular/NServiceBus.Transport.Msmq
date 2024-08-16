@@ -34,7 +34,7 @@
                 .Run(TimeSpan.FromSeconds(10));
 
             Assert.True(context.Subscriber1GotTheEvent);
-            Assert.False(context.Subscriber2GotTheEvent);
+            Assert.That(context.Subscriber2GotTheEvent, Is.False);
         }
 
         public class TestContext : ScenarioContext
