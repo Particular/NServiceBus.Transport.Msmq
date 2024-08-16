@@ -33,7 +33,7 @@
                 .Done(ctx => ctx.MessageSent)
                 .Run();
 
-            Assert.IsTrue(context.MessageSent, "Message was sent");
+            Assert.That(context.MessageSent, Is.True, "Message was sent");
 
             using (var queue = new MessageQueue(queuePath))
             {
@@ -91,7 +91,7 @@
                 .Done(ctx => ctx.MessageSent = true)
                 .Run();
 
-            Assert.IsTrue(context.MessageSent, "Message was sent");
+            Assert.That(context.MessageSent, Is.True, "Message was sent");
         }
 
         class Sender : EndpointConfigurationBuilder

@@ -32,7 +32,7 @@
                     .Done(c => c.GotTheException)
                     .Run();
 
-            Assert.IsTrue(context.Exception.Message.EndsWith("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ."));
+            Assert.That(context.Exception.Message.EndsWith("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ."), Is.True);
         }
 
         public class Context : ScenarioContext
