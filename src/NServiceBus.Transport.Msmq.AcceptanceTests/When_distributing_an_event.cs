@@ -29,8 +29,11 @@
                 .Done(c => c.Receiver1TimesCalled + c.Receiver2TimesCalled >= 10)
                 .Run();
 
-            Assert.That(context.Receiver1TimesCalled, Is.EqualTo(5));
-            Assert.That(context.Receiver2TimesCalled, Is.EqualTo(5));
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.Receiver1TimesCalled, Is.EqualTo(5));
+                Assert.That(context.Receiver2TimesCalled, Is.EqualTo(5));
+            });
         }
 
         public class Context : ScenarioContext

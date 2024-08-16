@@ -70,8 +70,11 @@
                 .Done(c => c.MessagesForInstance1 + c.MessagesForInstance2 >= 5)
                 .Run();
 
-            Assert.That(context.MessagesForInstance1, Is.EqualTo(0));
-            Assert.That(context.MessagesForInstance2, Is.EqualTo(5));
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.MessagesForInstance1, Is.EqualTo(0));
+                Assert.That(context.MessagesForInstance2, Is.EqualTo(5));
+            });
         }
 
         static string destination;

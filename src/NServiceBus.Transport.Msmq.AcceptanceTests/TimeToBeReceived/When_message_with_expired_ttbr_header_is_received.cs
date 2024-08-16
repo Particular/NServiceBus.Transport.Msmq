@@ -36,8 +36,11 @@
                 .Done(c => tcs.Value.IsCancellationRequested) // wait at least 5 seconds to give the endpoint time to process any message
                 .Run();
 
-            Assert.That(context.WasSent, Is.True, "Message was sent");
-            Assert.That(context.WasReceived, Is.False, "Message was processed");
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.WasSent, Is.True, "Message was sent");
+                Assert.That(context.WasReceived, Is.False, "Message was processed");
+            });
         }
 
         [Test]
@@ -64,8 +67,11 @@
                 .Done(c => c.WasReceived)
                 .Run(TimeSpan.FromSeconds(30));
 
-            Assert.That(context.WasSent, Is.True, "Message was sent");
-            Assert.That(context.WasReceived, Is.True, "Message was not processed");
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.WasSent, Is.True, "Message was sent");
+                Assert.That(context.WasReceived, Is.True, "Message was not processed");
+            });
         }
 
         class SomeEndpoint : EndpointConfigurationBuilder

@@ -18,8 +18,11 @@
                     .Done(c => c.HandlerInvoked)
                     .Run();
 
-            Assert.That(context.DistributedIdentifierBefore, Is.EqualTo(Guid.Empty), "No DTC tx should exist before enlistment");
-            Assert.That(context.CanEnlistPromotable, Is.True, "A promotable RM should be able to enlist");
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.DistributedIdentifierBefore, Is.EqualTo(Guid.Empty), "No DTC tx should exist before enlistment");
+                Assert.That(context.CanEnlistPromotable, Is.True, "A promotable RM should be able to enlist");
+            });
         }
 
         public class Context : ScenarioContext
