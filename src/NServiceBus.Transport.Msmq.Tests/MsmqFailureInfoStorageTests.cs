@@ -20,10 +20,13 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
-            Assert.NotNull(failureInfo);
-            Assert.AreEqual(1, failureInfo.NumberOfProcessingAttempts);
-            Assert.AreSame(exception, failureInfo.Exception);
-            Assert.AreSame(context, failureInfo.Context);
+            Assert.Multiple(() =>
+            {
+                Assert.That(failureInfo, Is.Not.Null);
+                Assert.That(failureInfo.NumberOfProcessingAttempts, Is.EqualTo(1));
+                Assert.That(failureInfo.Exception, Is.SameAs(exception));
+                Assert.That(failureInfo.Context, Is.SameAs(context));
+            });
         }
 
         [Test]
@@ -40,8 +43,8 @@ namespace NServiceBus.Transport.Msmq.Tests
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
             Assert.NotNull(failureInfo);
-            Assert.AreEqual(2, failureInfo.NumberOfProcessingAttempts);
-            Assert.AreSame(secondException, failureInfo.Exception);
+            Assert.That(failureInfo.NumberOfProcessingAttempts, Is.EqualTo(2));
+            Assert.That(failureInfo.Exception, Is.SameAs(secondException));
         }
 
         [Test]

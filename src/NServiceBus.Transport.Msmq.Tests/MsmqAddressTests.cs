@@ -16,7 +16,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 throw new Exception("Should not call the lookup method");
             });
-            Assert.AreEqual("replyToMachine", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("replyToMachine"));
         }
 
         [Test]
@@ -27,7 +27,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 throw new Exception("Should not call the lookup method");
             });
-            Assert.AreEqual("202.171.13.141", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("202.171.13.141"));
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace NServiceBus.Transport.Msmq.Tests
         {
             var address = new MsmqAddress("replyToAddress", "replyToMachine");
             var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue", "202.171.13.140"), _ => "10.10.10.10");
-            Assert.AreEqual("10.10.10.10", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("10.10.10.10"));
         }
 
         [Test]

@@ -11,7 +11,7 @@
         {
             const string endpointNameGreaterThanOneHundredFiftyChars = "ThisisalooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongQueeeeeeeeeeeeeeeeeeeeeeeeeeee";
             var ex = Assert.Throws<InvalidOperationException>(() => CheckEndpointNameComplianceForMsmq.Check(endpointNameGreaterThanOneHundredFiftyChars));
-            StringAssert.Contains(endpointNameGreaterThanOneHundredFiftyChars, ex.Message);
+            Assert.That(ex.Message, Does.Contain(endpointNameGreaterThanOneHundredFiftyChars));
         }
 
         [Test]

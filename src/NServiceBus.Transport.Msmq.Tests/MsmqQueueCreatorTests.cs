@@ -131,7 +131,7 @@
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving }));
 
-            StringAssert.Contains("invalidaccount", ex.Message);
+            Assert.That(ex.Message, Does.Contain("invalidaccount"));
         }
 
         MessageQueue GetQueue(string queueName)
