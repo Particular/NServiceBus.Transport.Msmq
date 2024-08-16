@@ -33,7 +33,7 @@
                     .Run();
 
             Assert.That(context.AmbientTransactionPresent, Is.True, "There should be a ambient transaction present");
-            Assert.AreEqual(context.IsolationLevel, isolationLevel, "There should be an ambient transaction present");
+            Assert.That(isolationLevel, Is.EqualTo(context.IsolationLevel), "There should be an ambient transaction present");
         }
 
         [Test]

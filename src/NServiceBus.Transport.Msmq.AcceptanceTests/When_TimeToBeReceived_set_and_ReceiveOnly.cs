@@ -18,7 +18,7 @@
                     .Run();
 
             Assert.That(context.ReceivedTtbrMessage, Is.True);
-            Assert.AreEqual("00:00:15", context.TimeToBeReceived);
+            Assert.That(context.TimeToBeReceived, Is.EqualTo("00:00:15"));
         }
 
         class Context : ScenarioContext

@@ -18,7 +18,7 @@
                     .Done(c => c.HandlerInvoked)
                     .Run());
 
-            Assert.AreEqual(1, exception.ScenarioContext.FailedMessages.Count);
+            Assert.That(exception.ScenarioContext.FailedMessages.Count, Is.EqualTo(1));
             StringAssert.EndsWith(
                 "Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ.",
                 exception.FailedMessage.Exception.Message);
