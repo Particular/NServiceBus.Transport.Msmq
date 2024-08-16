@@ -17,7 +17,7 @@
                     .Done(c => c.ReceivedTtbrMessage)
                     .Run();
 
-            Assert.True(context.ReceivedTtbrMessage);
+            Assert.That(context.ReceivedTtbrMessage, Is.True);
             Assert.AreEqual("00:00:15", context.TimeToBeReceived);
         }
 

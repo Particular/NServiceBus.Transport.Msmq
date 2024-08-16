@@ -33,7 +33,7 @@
                     c.DeclinedSubscriber2)
                 .Run(TimeSpan.FromSeconds(10));
 
-            Assert.True(context.Subscriber1GotTheEvent);
+            Assert.That(context.Subscriber1GotTheEvent, Is.True);
             Assert.That(context.Subscriber2GotTheEvent, Is.False);
         }
 
