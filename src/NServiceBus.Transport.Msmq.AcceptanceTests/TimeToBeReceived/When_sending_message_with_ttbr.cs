@@ -66,7 +66,7 @@
                 .Done(ctx => ctx.ThrownException != null)
                 .Run();
 
-            StringAssert.Contains("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ", context.ThrownException.Message);
+            Assert.That(context.ThrownException.Message, Does.Contain("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ"));
         }
 
         [Test]

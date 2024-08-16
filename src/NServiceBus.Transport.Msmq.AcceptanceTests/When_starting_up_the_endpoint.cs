@@ -21,7 +21,7 @@
 
             var logItem = context.Logs.FirstOrDefault(item => item.Message.Contains($"[{everyone}]"));
             Assert.That(logItem, Is.Not.Null);
-            StringAssert.Contains("Consider setting appropriate permissions", logItem.Message);
+            Assert.That(logItem.Message, Does.Contain("Consider setting appropriate permissions"));
         }
 
         class Endpoint : EndpointConfigurationBuilder
