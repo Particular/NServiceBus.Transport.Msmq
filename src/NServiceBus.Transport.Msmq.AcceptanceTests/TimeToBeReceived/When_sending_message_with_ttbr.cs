@@ -33,7 +33,7 @@
                 .Done(ctx => ctx.MessageSent)
                 .Run();
 
-            Assert.IsTrue(context.MessageSent, "Message was sent");
+            Assert.That(context.MessageSent, Is.True, "Message was sent");
 
             using (var queue = new MessageQueue(queuePath))
             {
@@ -66,7 +66,7 @@
                 .Done(ctx => ctx.ThrownException != null)
                 .Run();
 
-            StringAssert.Contains("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ", context.ThrownException.Message);
+            Assert.That(context.ThrownException.Message, Does.Contain("Sending messages with a custom TimeToBeReceived is not supported on transactional MSMQ"));
         }
 
         [Test]
@@ -91,7 +91,7 @@
                 .Done(ctx => ctx.MessageSent = true)
                 .Run();
 
-            Assert.IsTrue(context.MessageSent, "Message was sent");
+            Assert.That(context.MessageSent, Is.True, "Message was sent");
         }
 
         class Sender : EndpointConfigurationBuilder

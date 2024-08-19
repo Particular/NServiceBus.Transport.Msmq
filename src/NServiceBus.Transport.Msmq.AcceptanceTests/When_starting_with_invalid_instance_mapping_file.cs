@@ -38,8 +38,11 @@
                 .Done(c => c.EndpointsStarted)
                 .Run());
 
-            Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping ({mappingFilePath}). See the inner exception for more details."));
-            Assert.That(exception.InnerException, Is.TypeOf<XmlSchemaValidationException>());
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain($"An error occurred while reading the endpoint instance mapping ({mappingFilePath}). See the inner exception for more details."));
+                Assert.That(exception.InnerException, Is.TypeOf<XmlSchemaValidationException>());
+            });
         }
 
         static string mappingFilePath = Path.Combine(TestContext.CurrentContext.TestDirectory, nameof(When_starting_with_invalid_instance_mapping_file) + ".xml");

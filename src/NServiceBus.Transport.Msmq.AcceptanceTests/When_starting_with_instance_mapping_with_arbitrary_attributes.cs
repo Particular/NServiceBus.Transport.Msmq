@@ -44,8 +44,11 @@
                 .Done(ctx => ctx.EndpointsStarted)
                 .Run());
 
-            Assert.That(exception.Message, Does.Contain("An error occurred while reading the endpoint instance mapping"));
-            Assert.That(exception.InnerException, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(exception.Message, Does.Contain("An error occurred while reading the endpoint instance mapping"));
+                Assert.That(exception.InnerException, Is.Not.Null);
+            });
             Assert.That(exception.InnerException.Message, Does.Contain("The 'someAttribute' attribute is not declared."));
         }
 

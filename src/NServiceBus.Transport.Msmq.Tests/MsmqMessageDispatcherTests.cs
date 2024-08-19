@@ -20,7 +20,7 @@
 
             var dispatchedMessage = await DispatchMessage("labelTest", transportSettings);
 
-            Assert.AreEqual("mylabel", dispatchedMessage.Label);
+            Assert.That(dispatchedMessage.Label, Is.EqualTo("mylabel"));
         }
 
         [Test]

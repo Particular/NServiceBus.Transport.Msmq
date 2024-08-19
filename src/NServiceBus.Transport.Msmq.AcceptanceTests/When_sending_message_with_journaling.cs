@@ -51,7 +51,7 @@
                 {
                     using (var message = queue.Receive(TimeSpan.FromSeconds(5)))
                     {
-                        Assert.AreEqual(result, message?.UseDeadLetterQueue, "UseDeadLetterQueue");
+                        Assert.That(message?.UseDeadLetterQueue, Is.EqualTo(result), "UseDeadLetterQueue");
                     }
                 }
             }
@@ -102,7 +102,7 @@
                 {
                     using (var message = queue.Receive(TimeSpan.FromSeconds(5)))
                     {
-                        Assert.AreEqual(result, message?.UseJournalQueue, "UseJournalQueue");
+                        Assert.That(message?.UseJournalQueue, Is.EqualTo(result), "UseJournalQueue");
                     }
                 }
             }

@@ -32,8 +32,11 @@
                     .Done(c => c.Done)
                     .Run();
 
-            Assert.True(context.AmbientTransactionPresent, "There should be a ambient transaction present");
-            Assert.AreEqual(context.IsolationLevel, isolationLevel, "There should be an ambient transaction present");
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.AmbientTransactionPresent, Is.True, "There should be a ambient transaction present");
+                Assert.That(isolationLevel, Is.EqualTo(context.IsolationLevel), "There should be an ambient transaction present");
+            });
         }
 
         [Test]
@@ -56,7 +59,7 @@
                         .Run();
             });
 
-            StringAssert.Contains("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower.", ex.Message);
+            Assert.That(ex.Message, Does.Contain("Isolation level `Snapshot` is not supported by the transport. Consider not sharing the transaction between transport and persistence if persistence should use `IsolationLevel.Snapshot` by using `TransportTransactionMode.SendsAtomicWithReceive` or lower."));
         }
         public class Context : ScenarioContext
         {

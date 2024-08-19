@@ -40,10 +40,13 @@
                 .Done(c => c.MessagesReceivedPerEndpoint == numberOfMessagesToSendPerEndpoint)
                 .Run();
 
-            Assert.That(context.ReceiverA1TimesCalled, Is.EqualTo(10));
-            Assert.That(context.ReceiverA2TimesCalled, Is.EqualTo(10));
-            Assert.That(context.ReceiverB1TimesCalled, Is.EqualTo(10));
-            Assert.That(context.ReceiverB2TimesCalled, Is.EqualTo(10));
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.ReceiverA1TimesCalled, Is.EqualTo(10));
+                Assert.That(context.ReceiverA2TimesCalled, Is.EqualTo(10));
+                Assert.That(context.ReceiverB1TimesCalled, Is.EqualTo(10));
+                Assert.That(context.ReceiverB2TimesCalled, Is.EqualTo(10));
+            });
         }
 
         public class Context : ScenarioContext

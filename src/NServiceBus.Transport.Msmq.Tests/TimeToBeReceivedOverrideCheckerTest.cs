@@ -27,7 +27,7 @@
                 TimeToBeReceivedOverrideChecker.Check(isTransactional: true, outBoxRunning: false,
                     auditTTBROverridden: true));
 
-            Assert.AreEqual("Setting a custom OverrideTimeToBeReceived for audits is not supported on transactional MSMQ.", exception.Message);
+            Assert.That(exception.Message, Is.EqualTo("Setting a custom OverrideTimeToBeReceived for audits is not supported on transactional MSMQ."));
         }
     }
 }
