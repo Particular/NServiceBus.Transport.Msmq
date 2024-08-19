@@ -42,9 +42,12 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
 
-            Assert.NotNull(failureInfo);
-            Assert.That(failureInfo.NumberOfProcessingAttempts, Is.EqualTo(2));
-            Assert.That(failureInfo.Exception, Is.SameAs(secondException));
+            Assert.That(failureInfo, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(failureInfo.NumberOfProcessingAttempts, Is.EqualTo(2));
+                Assert.That(failureInfo.Exception, Is.SameAs(secondException));
+            });
         }
 
         [Test]
@@ -57,12 +60,12 @@ namespace NServiceBus.Transport.Msmq.Tests
             storage.RecordFailureInfoForMessage(messageId, new Exception(), new ContextBag());
 
             storage.TryGetFailureInfoForMessage(messageId, out var failureInfo);
-            Assert.NotNull(failureInfo);
+            Assert.That(failureInfo, Is.Not.Null);
 
             storage.ClearFailureInfoForMessage(messageId);
 
             storage.TryGetFailureInfoForMessage(messageId, out failureInfo);
-            Assert.IsNull(failureInfo);
+            Assert.That(failureInfo, Is.Null);
         }
 
         [Test]
@@ -85,7 +88,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
 
-            Assert.IsNull(failureInfo);
+            Assert.That(failureInfo, Is.Null);
         }
 
         [Test]
@@ -115,7 +118,7 @@ namespace NServiceBus.Transport.Msmq.Tests
 
             storage.TryGetFailureInfoForMessage(lruMessageId, out var failureInfo);
 
-            Assert.IsNotNull(failureInfo);
+            Assert.That(failureInfo, Is.Not.Null);
         }
 
         static MsmqFailureInfoStorage GetFailureInfoStorage()

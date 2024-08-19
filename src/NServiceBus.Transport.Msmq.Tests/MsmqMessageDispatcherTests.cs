@@ -33,7 +33,7 @@
 
             var dispatchedMessage = await DispatchMessage("dlqOffForTTBR", dispatchProperties: dispatchProperties);
 
-            Assert.False(dispatchedMessage.UseDeadLetterQueue);
+            Assert.That(dispatchedMessage.UseDeadLetterQueue, Is.False);
         }
 
         [Test]
@@ -48,7 +48,7 @@
 
             var dispatchedMessage = await DispatchMessage("dlqOnForTTBR", transportSettings, dispatchProperties);
 
-            Assert.True(dispatchedMessage.UseDeadLetterQueue);
+            Assert.That(dispatchedMessage.UseDeadLetterQueue, Is.True);
         }
 
         [Test]
@@ -56,7 +56,7 @@
         {
             var dispatchedMessage = await DispatchMessage("dlqOnByDefault");
 
-            Assert.True(dispatchedMessage.UseDeadLetterQueue);
+            Assert.That(dispatchedMessage.UseDeadLetterQueue, Is.True);
         }
 
         static async Task<Message> DispatchMessage(string queueName, MsmqTransport settings = null, DispatchProperties dispatchProperties = null, CancellationToken cancellationToken = default)

@@ -36,8 +36,8 @@
                 testQueueNameForSending
             });
 
-            Assert.True(QueueExists(testQueueNameForSending));
-            Assert.True(QueueExists(testQueueNameForReceiving));
+            Assert.That(QueueExists(testQueueNameForSending), Is.True);
+            Assert.That(QueueExists(testQueueNameForReceiving), Is.True);
         }
 
         [Test]
@@ -51,7 +51,7 @@
                 remoteQueueName
             });
 
-            Assert.False(QueueExists(testQueueNameForReceiving));
+            Assert.That(QueueExists(testQueueNameForReceiving), Is.False);
         }
 
 
@@ -65,17 +65,17 @@
 
             var createdQueue = GetQueue(testQueueNameForReceiving);
 
-            Assert.True(createdQueue.TryGetPermissions(NetworkServiceAccountName, out var accountAccessRights, out var accessControlEntryType));
-            Assert.True(accountAccessRights.HasValue);
-            Assert.True(accessControlEntryType == AccessControlEntryType.Allow, "User should have access");
-            Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.WriteMessage), $"{NetworkServiceAccountName} should have write access");
-            Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.ReceiveMessage), $"{NetworkServiceAccountName} should have receive messages access");
-            Assert.True(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.GetQueueProperties), $"{NetworkServiceAccountName} should have get queue properties access");
+            Assert.That(createdQueue.TryGetPermissions(NetworkServiceAccountName, out var accountAccessRights, out var accessControlEntryType), Is.True);
+            Assert.That(accountAccessRights.HasValue, Is.True);
+            Assert.That(accessControlEntryType == AccessControlEntryType.Allow, Is.True, "User should have access");
+            Assert.That(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.WriteMessage), Is.True, $"{NetworkServiceAccountName} should have write access");
+            Assert.That(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.ReceiveMessage), Is.True, $"{NetworkServiceAccountName} should have receive messages access");
+            Assert.That(accountAccessRights.Value.HasFlag(MessageQueueAccessRights.GetQueueProperties), Is.True, $"{NetworkServiceAccountName} should have get queue properties access");
 
-            Assert.True(createdQueue.TryGetPermissions(LocalAdministratorsGroupName, out var localAdminAccessRights, out var accessControlEntryTypeForLocalAdmin));
-            Assert.True(localAdminAccessRights.HasValue);
-            Assert.True(localAdminAccessRights.Value.HasFlag(MessageQueueAccessRights.FullControl), $"{LocalAdministratorsGroupName} should have full control");
-            Assert.IsTrue(accessControlEntryTypeForLocalAdmin == AccessControlEntryType.Allow, $"{LocalAdministratorsGroupName} should have access");
+            Assert.That(createdQueue.TryGetPermissions(LocalAdministratorsGroupName, out var localAdminAccessRights, out var accessControlEntryTypeForLocalAdmin), Is.True);
+            Assert.That(localAdminAccessRights.HasValue, Is.True);
+            Assert.That(localAdminAccessRights.Value.HasFlag(MessageQueueAccessRights.FullControl), Is.True, $"{LocalAdministratorsGroupName} should have full control");
+            Assert.That(accessControlEntryTypeForLocalAdmin == AccessControlEntryType.Allow, Is.True, $"{LocalAdministratorsGroupName} should have access");
         }
 
         [Test]
@@ -87,7 +87,7 @@
 
             var queue = GetQueue(testQueueNameForReceiving);
 
-            Assert.True(queue.Transactional);
+            Assert.That(queue.Transactional, Is.True);
         }
 
         [Test]
@@ -99,7 +99,7 @@
 
             var queue = GetQueue(testQueueNameForReceiving);
 
-            Assert.False(queue.Transactional);
+            Assert.That(queue.Transactional, Is.False);
         }
 
         [Test]
@@ -118,8 +118,8 @@
             creator.CreateQueueIfNecessary(new[] { testQueueNameForReceiving });
 
             var existingQueue = GetQueue(testQueueNameForReceiving);
-            Assert.False(existingQueue.TryGetPermissions(LocalEveryoneGroupName, out _, out _));
-            Assert.False(existingQueue.TryGetPermissions(LocalAnonymousLogonName, out _, out _));
+            Assert.That(existingQueue.TryGetPermissions(LocalEveryoneGroupName, out _, out _), Is.False);
+            Assert.That(existingQueue.TryGetPermissions(LocalAnonymousLogonName, out _, out _), Is.False);
         }
 
 
