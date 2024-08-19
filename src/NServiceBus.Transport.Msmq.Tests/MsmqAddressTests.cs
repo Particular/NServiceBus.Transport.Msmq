@@ -43,13 +43,13 @@ namespace NServiceBus.Transport.Msmq.Tests
         [TestCase(".")]
         public void If_machine_is_looplocal_is_specified_is_remote_should_be_false(string machine)
         {
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machine).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + machine).IsRemote(), Is.False);
         }
 
         [Test]
         public void If_local_machine_name_is_remote_should_be_false()
         {
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + Environment.MachineName).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + Environment.MachineName).IsRemote(), Is.False);
         }
 
         [Test]
@@ -64,7 +64,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 Assert.Ignore($"Add `127.0.0.1 {machinename}` to hosts file for this test to run.");
             }
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machinename).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + machinename).IsRemote(), Is.False);
         }
     }
 }

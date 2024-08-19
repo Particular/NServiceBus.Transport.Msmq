@@ -71,7 +71,7 @@
             fail = true;
             await timer.Trigger();
 
-            Assert.IsTrue(errorCallbackInvoked);
+            Assert.That(errorCallbackInvoked, Is.True);
         }
 
         [Test]
