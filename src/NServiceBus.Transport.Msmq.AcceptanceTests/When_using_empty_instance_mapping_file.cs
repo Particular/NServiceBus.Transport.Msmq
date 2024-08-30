@@ -52,8 +52,8 @@
             Assert.Multiple(() =>
             {
                 // it should send messages to the shared queue
-                Assert.That(context.MessagesForInstance1, Is.GreaterThanOrEqualTo(1), "MessagesForInstance1 should have atleast 1 message");
-                Assert.That(context.MessagesForInstance2, Is.GreaterThanOrEqualTo(1), "MessagesForInstance2 should have atleast 1 message");
+                Assert.That(context.MessagesForInstance1, Is.GreaterThanOrEqualTo(1), "MessagesForInstance1 should have at least 1 message");
+                Assert.That(context.MessagesForInstance2, Is.GreaterThanOrEqualTo(1), "MessagesForInstance2 should have at least 1 message");
             });
         }
 
