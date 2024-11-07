@@ -110,7 +110,11 @@ namespace NServiceBus.Transport.Msmq
 
         public async Task StopReceive(CancellationToken cancellationToken = default)
         {
-            messagePumpCancellationTokenSource?.Cancel();
+            if (messagePumpCancellationTokenSource == null)
+            {
+                // already stopped or not started
+                return;
+            }
 
             using (cancellationToken.Register(() => messageProcessingCancellationTokenSource?.Cancel()))
             {
