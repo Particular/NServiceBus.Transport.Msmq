@@ -110,9 +110,15 @@ namespace NServiceBus.Transport.Msmq
 
         public async Task StopReceive(CancellationToken cancellationToken = default)
         {
-            messagePumpCancellationTokenSource?.Cancel();
+            if (messagePumpCancellationTokenSource == null)
+            {
+                // already stopped or not started
+                return;
+            }
 
-            using (cancellationToken.Register(() => messageProcessingCancellationTokenSource?.Cancel()))
+            await messagePumpCancellationTokenSource.CancelAsync().ConfigureAwait(false);
+
+            await using (cancellationToken.Register(() => messageProcessingCancellationTokenSource?.Cancel()))
             {
                 await messagePumpTask.ConfigureAwait(false);
 
@@ -136,13 +142,14 @@ namespace NServiceBus.Transport.Msmq
                 }
             }
 
-            concurrencyLimiter?.Dispose();
-            inputQueue?.Dispose();
-            errorQueue?.Dispose();
-            peekCircuitBreaker?.Dispose();
-            receiveCircuitBreaker?.Dispose();
-            messagePumpCancellationTokenSource?.Dispose();
-            messageProcessingCancellationTokenSource?.Dispose();
+            concurrencyLimiter.Dispose();
+            inputQueue.Dispose();
+            errorQueue.Dispose();
+            peekCircuitBreaker.Dispose();
+            receiveCircuitBreaker.Dispose();
+            messagePumpCancellationTokenSource.Dispose();
+            messagePumpCancellationTokenSource = null;
+            messageProcessingCancellationTokenSource.Dispose();
         }
 
         [DebuggerNonUserCode]
@@ -173,36 +180,35 @@ namespace NServiceBus.Transport.Msmq
 
         async Task PumpMessages(CancellationToken messagePumpCancellationToken)
         {
-            using (var enumerator = inputQueue.GetMessageEnumerator())
+            using var enumerator = inputQueue.GetMessageEnumerator();
+            while (true)
             {
-                while (true)
+                messagePumpCancellationToken.ThrowIfCancellationRequested();
+
+                try
                 {
-                    messagePumpCancellationToken.ThrowIfCancellationRequested();
-
-                    try
+                    //note: .Peek will throw an ex if no message is available. It also turns out that .MoveNext is faster since message isn't read
+                    if (!enumerator.MoveNext(messageEnumeratorTimeout))
                     {
-                        //note: .Peek will throw an ex if no message is available. It also turns out that .MoveNext is faster since message isn't read
-                        if (!enumerator.MoveNext(messageEnumeratorTimeout))
-                        {
-                            continue;
-                        }
-
-                        peekCircuitBreaker.Success();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warn("MSMQ receive operation failed", ex);
-                        await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
                         continue;
                     }
 
-                    messagePumpCancellationToken.ThrowIfCancellationRequested();
+                    peekCircuitBreaker.Success();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn("MSMQ receive operation failed", ex);
+                    await peekCircuitBreaker.Failure(ex, messagePumpCancellationToken).ConfigureAwait(false);
+                    continue;
+                }
 
-                    var localLimiter = concurrencyLimiter;
+                messagePumpCancellationToken.ThrowIfCancellationRequested();
 
-                    await localLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
+                var localLimiter = concurrencyLimiter;
 
-                    _ = Task.Factory.StartNew(state =>
+                await localLimiter.WaitAsync(messagePumpCancellationToken).ConfigureAwait(false);
+
+                _ = Task.Factory.StartNew(state =>
                         {
                             var (messagePump, limiter, cancellationToken) = ((MessagePump, SemaphoreSlim, CancellationToken))state;
                             return ReceiveMessagesSwallowExceptionsAndReleaseConcurrencyLimiter(messagePump, limiter, cancellationToken);
@@ -211,8 +217,7 @@ namespace NServiceBus.Transport.Msmq
                         CancellationToken.None,  // CancellationToken.None is used here since cancelling the task before it can run can cause the concurrencyLimiter to not be released
                         TaskCreationOptions.DenyChildAttach,
                         TaskScheduler.Default)
-                        .Unwrap();
-                }
+                    .Unwrap();
             }
         }
 
