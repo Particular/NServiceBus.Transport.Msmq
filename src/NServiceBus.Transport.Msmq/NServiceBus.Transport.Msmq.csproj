@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NServiceBus" Version="[9.0.0, 10.0.0)" />
-    <PackageReference Include="Particular.Msmq" Version="[1.0.0, 2.0.0)" PrivateAssets="None" />
+    <PackageReference Include="NServiceBus" Version="9.1.2" />
+    <PackageReference Include="Particular.Msmq" Version="1.0.0" PrivateAssets="None" />
     <PackageReference Include="Particular.Packaging" Version="4.1.0" PrivateAssets="All" />
   </ItemGroup>
 
