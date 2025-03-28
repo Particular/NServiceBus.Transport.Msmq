@@ -8,7 +8,7 @@ namespace NServiceBus.Transport.Msmq
     using Support;
     using Transport;
 
-    class MsmqTransportInfrastructure : TransportInfrastructure
+    class MsmqTransportInfrastructure : TransportInfrastructure, IDisposable
     {
         public MsmqTransportInfrastructure(IReadOnlyDictionary<string, IMessageReceiver> receivers, MsmqMessageDispatcher dispatcher)
         {
@@ -18,7 +18,18 @@ namespace NServiceBus.Transport.Msmq
 
         public Task Start(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        public override Task Shutdown(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public override Task Shutdown(CancellationToken cancellationToken = default)
+        {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            foreach (MessagePump r in Receivers)
+            {
+                r.Dispose();
+            }
+        }
 
         public override string ToTransportAddress(QueueAddress address) => TranslateAddress(address);
 
