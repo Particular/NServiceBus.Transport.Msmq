@@ -1,7 +1,9 @@
 
 namespace NServiceBus.Transport.Msmq
 {
+    using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -21,13 +23,14 @@ namespace NServiceBus.Transport.Msmq
         public override Task Shutdown(CancellationToken cancellationToken = default)
         {
             Dispose();
+            return Task.CompletedTask;
         }
 
         public void Dispose()
         {
-            foreach (MessagePump r in Receivers)
+            foreach (var receiver in Receivers.Values.Cast<MessagePump>())
             {
-                r.Dispose();
+                receiver.Dispose();
             }
         }
 
