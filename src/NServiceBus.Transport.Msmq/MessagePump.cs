@@ -152,14 +152,14 @@ namespace NServiceBus.Transport.Msmq
 
         public void Dispose()
         {
-            concurrencyLimiter.Dispose();
-            inputQueue.Dispose();
-            errorQueue.Dispose();
-            peekCircuitBreaker.Dispose();
-            receiveCircuitBreaker.Dispose();
-            messagePumpCancellationTokenSource.Dispose();
+            concurrencyLimiter?.Dispose();
+            inputQueue?.Dispose();
+            errorQueue?.Dispose();
+            peekCircuitBreaker?.Dispose();
+            receiveCircuitBreaker?.Dispose();
+            messagePumpCancellationTokenSource?.Dispose();
             messagePumpCancellationTokenSource = null;
-            messageProcessingCancellationTokenSource.Dispose();
+            messageProcessingCancellationTokenSource?.Dispose();
         }
 
         [DebuggerNonUserCode]
