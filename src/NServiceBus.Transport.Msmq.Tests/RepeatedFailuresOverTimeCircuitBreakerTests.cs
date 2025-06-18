@@ -50,8 +50,8 @@
 
             await circuitBreaker.Failure(new Exception("Test Exception"));
 
-            var ex = Assert.Throws<Exception>(() => circuitBreaker.Success());
-            Assert.That(ex.Message, Is.EqualTo("Exception from disarmed action"));
+            var exception = Assert.Throws<Exception>(() => circuitBreaker.Success());
+            Assert.That(exception.Message, Is.EqualTo("Exception from disarmed action"));
         }
 
         [Test]
@@ -87,8 +87,8 @@
                 timeToWaitWhenArmed: TimeSpan.Zero
             );
 
-            var ex = Assert.ThrowsAsync<Exception>(async () => await circuitBreaker.Failure(new Exception("Test Exception")));
-            Assert.That(ex.Message, Is.EqualTo("Exception from armed action"));
+            var exception = Assert.ThrowsAsync<Exception>(async () => await circuitBreaker.Failure(new Exception("Test Exception")));
+            Assert.That(exception.Message, Is.EqualTo("Exception from armed action"));
         }
 
         [Test]
