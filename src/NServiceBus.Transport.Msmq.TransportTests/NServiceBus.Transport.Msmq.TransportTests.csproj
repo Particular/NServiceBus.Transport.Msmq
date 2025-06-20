@@ -18,4 +18,5 @@
     <PackageReference Include="NUnit.Analyzers" Version="4.9.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
   </ItemGroup>
+
 </Project>
