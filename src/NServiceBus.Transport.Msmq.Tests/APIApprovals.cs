@@ -11,8 +11,9 @@ public class APIApprovals
     {
         var publicApi = typeof(MsmqTransport).Assembly.GeneratePublicApi(new ApiGeneratorOptions
         {
-            ExcludeAttributes = new[] { "System.Reflection.AssemblyMetadataAttribute" }
+            ExcludeAttributes = ["System.Runtime.Versioning.TargetFrameworkAttribute", "System.Reflection.AssemblyMetadataAttribute"]
         });
+
         Approver.Verify(publicApi);
     }
 }
