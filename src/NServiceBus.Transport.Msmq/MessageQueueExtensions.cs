@@ -1,4 +1,4 @@
-﻿#pragma ignore warning IDE1006 // Ignore naming rule for interop code
+﻿ragma warning disable IDE1006 // Ignore naming rule for interop code
 namespace NServiceBus.Transport.Msmq
 {
     using System;
