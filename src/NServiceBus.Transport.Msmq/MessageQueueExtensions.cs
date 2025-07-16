@@ -1,4 +1,5 @@
-﻿namespace NServiceBus.Transport.Msmq
+#pragma warning disable IDE1006 // Ignore naming rule for interop code
+namespace NServiceBus.Transport.Msmq
 {
     using System;
     using System.ComponentModel;
