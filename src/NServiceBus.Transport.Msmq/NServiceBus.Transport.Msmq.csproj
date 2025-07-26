@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="NServiceBus" Version="10.0.0-alpha.1" />
-    <PackageReference Include="Particular.Msmq" Version="2.0.0-alpha.1" PrivateAssets="None" />
+    <PackageReference Include="Particular.Msmq" Version="2.0.0-alpha.2" PrivateAssets="None" />
     <PackageReference Include="Particular.Packaging" Version="4.4.0" PrivateAssets="All" />
   </ItemGroup>
 
