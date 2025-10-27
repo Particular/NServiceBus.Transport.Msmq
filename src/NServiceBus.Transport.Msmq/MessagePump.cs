@@ -275,7 +275,7 @@ namespace NServiceBus.Transport.Msmq
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
                 {
                     error =
-                        $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
+                        $"The queue {inputQueue.Path} does not exist.";
                 }
 
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.AccessDenied)
