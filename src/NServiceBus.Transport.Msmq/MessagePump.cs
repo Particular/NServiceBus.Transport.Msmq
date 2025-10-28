@@ -37,8 +37,7 @@ namespace NServiceBus.Transport.Msmq
             if (!string.Equals(inputAddress.Machine, RuntimeEnvironment.MachineName,
                 StringComparison.OrdinalIgnoreCase))
             {
-                throw new Exception(
-                    $"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{receiveSettings.ReceiveAddress}'.");
+                throw new Exception($"MSMQ Dequeuing can only run against the local machine. Invalid inputQueue name '{receiveSettings.ReceiveAddress}'.");
             }
 
             inputQueue = new MessageQueue(inputAddress.FullPath, false, true, QueueAccessMode.Receive);
@@ -46,8 +45,7 @@ namespace NServiceBus.Transport.Msmq
 
             if (transactionMode != TransportTransactionMode.None && !QueueIsTransactional())
             {
-                throw new ArgumentException(
-                    $"Queue must be transactional if you configure the endpoint to be transactional ({receiveSettings.ReceiveAddress}).");
+                throw new ArgumentException($"Queue must be transactional if you configure the endpoint to be transactional ({receiveSettings.ReceiveAddress}).");
             }
 
             inputQueue.MessageReadPropertyFilter = DefaultReadPropertyFilter;
@@ -270,26 +268,23 @@ namespace NServiceBus.Transport.Msmq
             }
             catch (MessageQueueException msmqEx)
             {
-                var error =
-                    $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+                var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.QueueNotFound)
                 {
-                    error =
-                        $"The queue {inputQueue.Path} does not exist. Run the CreateQueues.ps1 script included in the project output, or enable queue creation on startup using EndpointConfiguration.EnableInstallers().";
+                    error = $"The queue {inputQueue.Path} does not exist.";
                 }
 
                 if (msmqEx.MessageQueueErrorCode == MessageQueueErrorCode.AccessDenied)
                 {
-                    error =
-                        $"Access denied for the queue {inputQueue.Path}. Ensure the user has Get Properties permission on the queue.";
+                    error = $"Access denied for the queue {inputQueue.Path}. Ensure the user has Get Properties permission on the queue.";
                 }
 
                 throw new Exception(error, msmqEx);
             }
             catch (Exception ex)
             {
-                var error =
-                    $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
+                var error = $"There is a problem with the input inputQueue: {inputQueue.Path}. See the enclosed exception for details.";
                 throw new Exception(error, ex);
             }
         }

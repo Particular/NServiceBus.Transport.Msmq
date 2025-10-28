@@ -167,10 +167,7 @@ namespace NServiceBus
         /// Indicates whether queues should be automatically created. Setting this to <c>false</c> disables the automatic queue creation, even when installers are enabled using `EndpointConfiguration.EnableInstallers()`.
         /// </summary>
         /// <remarks>
-        /// With installers enabled, required queues will be created automatically at startup.While this may be convenient for development,
-        /// we instead recommend that queues are created as part of deployment using the CreateQueues.ps1 script included in the NuGet package.
-        /// The installers might still need to be enabled to fulfill the installation needs of other components, but this method allows
-        /// scripts to be used for queue creation instead.
+        /// With installers enabled, required queues will be created automatically at startup.
         /// </remarks>
         public bool CreateQueues { get; set; } = true;
 
