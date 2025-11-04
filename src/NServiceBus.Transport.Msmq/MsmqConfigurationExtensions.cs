@@ -3,7 +3,9 @@
     using System;
     using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
+    using Features;
     using Routing;
+    using Transport.Msmq;
 
     /// <summary>
     /// Adds extensions methods to <see cref="TransportExtensions{T}" /> for configuration purposes.
@@ -29,6 +31,7 @@
         /// <param name="config">MSMQ Transport configuration object.</param>
         public static InstanceMappingFileSettings InstanceMappingFile(this RoutingSettings<MsmqTransport> config)
         {
+            config.GetSettings().EnableFeature<InstanceMappingFileFeature>();
             ArgumentNullException.ThrowIfNull(config);
             return new InstanceMappingFileSettings(config.GetSettings());
         }
