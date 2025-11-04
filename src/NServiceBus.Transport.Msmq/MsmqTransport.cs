@@ -48,7 +48,7 @@ namespace NServiceBus
                     throw new Exception("Faults forwarding requires an error queue to be specified using 'EndpointConfiguration.SendFailedMessagesTo()'");
                 }
 
-                bool outBoxRunning = hostSettings.CoreSettings.IsFeatureActive(typeof(Features.Outbox));
+                bool outBoxRunning = hostSettings.CoreSettings.IsFeatureActive<Features.Outbox>();
                 if (hostSettings.CoreSettings.TryGetAuditMessageExpiration(out var auditMessageExpiration))
                 {
                     TimeToBeReceivedOverrideChecker.Check(
