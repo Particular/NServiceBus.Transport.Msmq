@@ -17,7 +17,9 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         TransportDefinition.UseConnectionCache = false;
         TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
-        var routingConfig = configuration.UseTransport(TransportDefinition);
+        // Need to cast the testable transport as a regular transport so that the correct extension method overload
+        // gets called so that the required InstanceMappingFileFeature is enabled in the acceptance tests
+        var routingConfig = configuration.UseTransport(TransportDefinition as MsmqTransport);
 
         foreach (var publisher in publisherMetadata.Publishers)
         {
