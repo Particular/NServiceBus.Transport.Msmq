@@ -110,12 +110,12 @@
             {
                 if (scenarioContext.Id != message.Id)
                 {
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
 
                 scenarioContext.WasCalled = true;
 
-                return Task.FromResult(0);
+                return Task.CompletedTask;
             }
         }
     }

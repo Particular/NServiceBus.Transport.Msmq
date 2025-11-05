@@ -98,7 +98,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
                     scenarioContext.OnReceived1();
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
             }
         }
@@ -125,7 +125,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext context)
                 {
                     scenarioContext.OnReceived2();
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
             }
         }

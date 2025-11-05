@@ -71,6 +71,6 @@ class ConfigureMsmqTransportInfrastructure : IConfigureTransportInfrastructure
 
         MessageQueue.ClearConnectionCache();
 
-        return Task.FromResult(0);
+        return Task.CompletedTask;
     }
 }

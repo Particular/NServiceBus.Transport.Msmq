@@ -29,6 +29,7 @@ namespace NServiceBus
     {
         public static NServiceBus.InstanceMappingFileSettings InstanceMappingFile(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config) { }
         public static void SetMessageDistributionStrategy(this NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> config, NServiceBus.Routing.DistributionStrategy distributionStrategy) { }
+        public static NServiceBus.RoutingSettings<NServiceBus.MsmqTransport> UseTransport(this NServiceBus.EndpointConfiguration endpointConfiguration, NServiceBus.MsmqTransport transport) { }
     }
     public class MsmqTransport : NServiceBus.Transport.TransportDefinition, NServiceBus.Routing.IMessageDrivenSubscriptionTransport
     {

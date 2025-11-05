@@ -44,7 +44,7 @@
                                 queue.Send(message, MessageQueueTransactionType.Single);
                             }
 
-                            return Task.FromResult(0);
+                            return Task.CompletedTask;
                         });
                     })
                     .Done(c => c.Logs.Any(l => l.Level == LogLevel.Error))

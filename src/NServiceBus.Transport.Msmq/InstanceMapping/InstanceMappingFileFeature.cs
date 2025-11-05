@@ -10,8 +10,6 @@ namespace NServiceBus.Transport.Msmq
     {
         public InstanceMappingFileFeature()
         {
-            EnableByDefault();
-
             var defaultPath = GetRootedPath(DefaultInstanceMappingFileName);
             Uri.TryCreate(defaultPath, UriKind.Absolute, out var defaultUri);
 
