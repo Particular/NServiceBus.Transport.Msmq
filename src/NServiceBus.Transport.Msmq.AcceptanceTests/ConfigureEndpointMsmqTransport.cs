@@ -8,18 +8,18 @@ using Particular.Msmq;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
-    internal readonly TestableMsmqTransport TransportDefinition = new TestableMsmqTransport();
+    // Need to reference the testable transport as a regular transport so that the correct extension method overload
+    // gets called so that the required InstanceMappingFileFeature is enabled in the acceptance tests
+    readonly MsmqTransport transportDefinition = new TestableMsmqTransport();
 
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
 #pragma warning restore PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     {
-        TransportDefinition.UseConnectionCache = false;
-        TransportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
+        transportDefinition.UseConnectionCache = false;
+        transportDefinition.IgnoreIncomingTimeToBeReceivedHeaders = true;
 
-        // Need to cast the testable transport as a regular transport so that the correct extension method overload
-        // gets called so that the required InstanceMappingFileFeature is enabled in the acceptance tests
-        var routingConfig = configuration.UseTransport(TransportDefinition as MsmqTransport);
+        var routingConfig = configuration.UseTransport(transportDefinition);
 
         foreach (var publisher in publisherMetadata.Publishers)
         {
@@ -39,18 +39,20 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();
 
+        var testableTransport = (TestableMsmqTransport)transportDefinition;
+
         foreach (var messageQueue in allQueues)
         {
             using (messageQueue)
             {
-                if (TransportDefinition.ReceiveQueues.Any(ra =>
+                if (testableTransport.ReceiveQueues.Any(ra =>
                 {
                     var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
                     if (indexOfAt >= 0)
                     {
-                        ra = ra.Substring(0, indexOfAt);
+                        ra = ra[..indexOfAt];
                     }
-                    return messageQueue.QueueName.StartsWith(@"private$\" + ra, StringComparison.OrdinalIgnoreCase);
+                    return messageQueue.QueueName.StartsWith($@"private$\{ra}", StringComparison.OrdinalIgnoreCase);
                 }))
                 {
                     queuesToBeDeleted.Add(messageQueue.Path);
@@ -73,17 +75,6 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 
         MessageQueue.ClearConnectionCache();
 
-        return Task.FromResult(0);
-    }
-
-    public static string GetStorageConnectionString()
-    {
-        var connectionString = Environment.GetEnvironmentVariable("SQLServerConnectionString");
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            connectionString = @"Server=localhost\sqlexpress;Database=nservicebus;Trusted_Connection=True;";
-        }
-
-        return connectionString;
+        return Task.CompletedTask;
     }
 }
