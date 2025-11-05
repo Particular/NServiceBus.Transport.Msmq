@@ -109,7 +109,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext handlerContext)
                 {
                     context.Subscriber1GotTheEvent = true;
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
             }
         }
@@ -136,7 +136,7 @@
                 public Task Handle(MyEvent messageThatIsEnlisted, IMessageHandlerContext handlerContext)
                 {
                     context.Subscriber2GotTheEvent = true;
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
             }
         }

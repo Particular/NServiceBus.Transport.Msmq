@@ -29,7 +29,7 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
             }
         }
 
-        return Task.FromResult(0);
+        return Task.CompletedTask;
     }
 
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext

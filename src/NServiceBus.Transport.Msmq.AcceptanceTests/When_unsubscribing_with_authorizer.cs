@@ -94,7 +94,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext handlerContext)
                 {
                     context.SubscriberGotTheEvent = true;
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
             }
         }

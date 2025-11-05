@@ -123,7 +123,7 @@
                         Interlocked.Increment(ref testContext.MessagesForInstance2);
                     }
 
-                    return Task.FromResult(0);
+                    return Task.CompletedTask;
                 }
 
                 Context testContext;
