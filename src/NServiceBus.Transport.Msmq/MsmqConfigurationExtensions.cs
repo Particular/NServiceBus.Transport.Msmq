@@ -4,28 +4,12 @@
     using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
     using Routing;
-    using Transport.Msmq;
 
     /// <summary>
     /// Adds extensions methods to <see cref="TransportExtensions{T}" /> for configuration purposes.
     /// </summary>
-    public static partial class MsmqConfigurationExtensions
+    public static class MsmqConfigurationExtensions
     {
-
-        /// <summary>
-        /// Configure the endpoint to use the MSMQ transport.
-        /// </summary>
-        /// <param name="endpointConfiguration">this endpoint configuration.</param>
-        /// <param name="transport">The MSMQ transport.</param>
-        public static RoutingSettings<MsmqTransport> UseTransport(this EndpointConfiguration endpointConfiguration, MsmqTransport transport)
-        {
-            // Required feature
-            endpointConfiguration.EnableFeature<InstanceMappingFileFeature>();
-
-            // Call into the more general UseTransport<T> from Core
-            return endpointConfiguration.UseTransport<MsmqTransport>(transport);
-        }
-
         /// <summary>
         /// Sets a distribution strategy for a given endpoint.
         /// </summary>
