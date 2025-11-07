@@ -15,14 +15,13 @@ namespace NServiceBus
     /// <summary>
     /// Transport definition for MSMQ.
     /// </summary>
-    public partial class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
+    public class MsmqTransport : TransportDefinition, IMessageDrivenSubscriptionTransport
     {
         /// <summary>
         /// Creates a new instance of <see cref="MsmqTransport"/> for configuration.
         /// </summary>
         public MsmqTransport() : base(TransportTransactionMode.TransactionScope, false, false, true)
-        {
-        }
+            => EnableEndpointFeature<InstanceMappingFileFeature>();
 
         /// <inheritdoc />
         public override async Task<TransportInfrastructure> Initialize(HostSettings hostSettings, ReceiveSettings[] receivers, string[] sendingAddresses, CancellationToken cancellationToken = default)

@@ -6,7 +6,7 @@ namespace NServiceBus.Transport.Msmq
     using Routing;
     using Settings;
 
-    class InstanceMappingFileFeature : Feature
+    sealed class InstanceMappingFileFeature : Feature
     {
         public InstanceMappingFileFeature()
         {
@@ -34,14 +34,12 @@ namespace NServiceBus.Transport.Msmq
             context.RegisterStartupTask(instanceMappingTable);
         }
 
-        static string GetRootedPath(string filePath)
-        {
-            return Path.IsPathRooted(filePath)
+        static string GetRootedPath(string filePath) =>
+            Path.IsPathRooted(filePath)
                 ? filePath
                 : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
-        }
 
-        IInstanceMappingLoader CreateInstanceMappingLoader(IReadOnlySettings settings)
+        static IInstanceMappingLoader CreateInstanceMappingLoader(IReadOnlySettings settings)
         {
             var uri = settings.Get<Uri>(PathSettingsKey);
 
