@@ -8,9 +8,7 @@ using Particular.Msmq;
 
 public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
 {
-    // Need to reference the testable transport as a regular transport so that the correct extension method overload
-    // gets called so that the required InstanceMappingFileFeature is enabled in the acceptance tests
-    readonly MsmqTransport transportDefinition = new TestableMsmqTransport();
+    readonly TestableMsmqTransport transportDefinition = new();
 
 #pragma warning disable PS0018 // A task-returning method should have a CancellationToken parameter unless it has a parameter implementing ICancellableContext
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
@@ -39,13 +37,11 @@ public class ConfigureEndpointMsmqTransport : IConfigureEndpointTestExecution
         var allQueues = MessageQueue.GetPrivateQueuesByMachine("localhost");
         var queuesToBeDeleted = new List<string>();
 
-        var testableTransport = (TestableMsmqTransport)transportDefinition;
-
         foreach (var messageQueue in allQueues)
         {
             using (messageQueue)
             {
-                if (testableTransport.ReceiveQueues.Any(ra =>
+                if (transportDefinition.ReceiveQueues.Any(ra =>
                 {
                     var indexOfAt = ra.IndexOf("@", StringComparison.Ordinal);
                     if (indexOfAt >= 0)
