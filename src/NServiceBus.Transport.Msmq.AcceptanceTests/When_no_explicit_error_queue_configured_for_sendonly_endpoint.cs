@@ -1,5 +1,6 @@
 ﻿namespace NServiceBus.Transport.Msmq.AcceptanceTests
 {
+    using System.Threading.Tasks;
     using AcceptanceTesting;
     using NServiceBus.AcceptanceTests;
     using NUnit.Framework;
@@ -12,7 +13,14 @@
             Assert.DoesNotThrowAsync(async () =>
             {
                 await Scenario.Define<Context>()
-                    .WithEndpoint<EndpointWithNoErrorQConfig>()
+                    .WithEndpoint<EndpointWithNoErrorQConfig>(b =>
+                    {
+                        b.When((session, ctx) =>
+                        {
+                            ctx.MarkAsCompleted();
+                            return Task.CompletedTask;
+                        });
+                    })
                     .Run();
             });
         }
