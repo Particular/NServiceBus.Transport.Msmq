@@ -14,7 +14,11 @@
         public async Task Should_log_warning_as_queue_is_configured_for_everyone()
         {
             var context = await Scenario.Define<ScenarioContext>()
-                .WithEndpoint<Endpoint>(b => b.When((session, c) => Task.CompletedTask))
+                .WithEndpoint<Endpoint>(b => b.When((session, c) =>
+                {
+                    c.MarkAsCompleted();
+                    return Task.CompletedTask;
+                }))
                 .Run();
 
             var everyone = new SecurityIdentifier(WellKnownSidType.WorldSid, null).Translate(typeof(NTAccount)).ToString();

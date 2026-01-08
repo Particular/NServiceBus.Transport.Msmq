@@ -64,7 +64,7 @@
             public Guid Id { get; set; }
         }
 
-        public class Endpoint : EndpointConfigurationBuilder, IWantToRunBeforeConfigurationIsFinalized
+        public class Endpoint : EndpointConfigurationBuilder
         {
             public Endpoint()
             {
@@ -79,10 +79,6 @@
                     var transportSettings = (MsmqTransport)c.ConfigureTransport();
                     transportSettings.ApplyCustomLabelToOutgoingMessages = GetMessageLabel;
                 });
-            }
-
-            public void Run(SettingsHolder config)
-            {
             }
 
             string GetMessageLabel(IReadOnlyDictionary<string, string> headers)

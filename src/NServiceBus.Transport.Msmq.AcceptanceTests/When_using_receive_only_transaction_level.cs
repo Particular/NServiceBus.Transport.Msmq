@@ -23,16 +23,10 @@
                     sendOptions.SetMessageId(ctx.TestRunId.ToString());
                     return session.Send(new IncomingMessage(), sendOptions);
                 }))
-                .Done(c => c.ReceivedOutgoingMessage)
-                .Run(TimeSpan.FromSeconds(15));
-
-            Assert.That(context.ReceivedOutgoingMessage, Is.True);
+                .Run();
         }
 
-        class Context : ScenarioContext
-        {
-            public bool ReceivedOutgoingMessage { get; set; }
-        }
+        class Context : ScenarioContext;
 
         class ReceiveOnlyEndpoint : EndpointConfigurationBuilder
         {
@@ -69,7 +63,7 @@
                 {
                     if (message.SentBy == testContext.TestRunId.ToString())
                     {
-                        testContext.ReceivedOutgoingMessage = true;
+                        testContext.MarkAsCompleted();
                     }
                     return Task.CompletedTask;
                 }
@@ -97,9 +91,7 @@
             }
         }
 
-        public class IncomingMessage : ICommand
-        {
-        }
+        public class IncomingMessage : ICommand;
 
         public class OutgoingMessage : ICommand
         {
