@@ -64,8 +64,7 @@
                         ctx.WasSent = true;
                     })
                 )
-                .Done(c => c.WasReceived)
-                .Run(TimeSpan.FromSeconds(30));
+                .Run();
 
             Assert.Multiple(() =>
             {
@@ -93,6 +92,7 @@
                 public Task Handle(SomeMessage message, IMessageHandlerContext context)
                 {
                     scenarioContext.WasReceived = true;
+                    scenarioContext.MarkAsCompleted();
                     return Task.CompletedTask;
                 }
             }

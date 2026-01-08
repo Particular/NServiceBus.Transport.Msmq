@@ -31,7 +31,7 @@
                 .Done(c =>
                     c.Subscriber1GotTheEvent &&
                     c.DeclinedSubscriber2)
-                .Run(TimeSpan.FromSeconds(10));
+                .Run();
 
             Assert.Multiple(() =>
             {
@@ -47,6 +47,8 @@
             public bool Subscriber1Subscribed { get; set; }
             public bool Subscriber2Subscribed { get; set; }
             public bool DeclinedSubscriber2 { get; set; }
+
+            public void MaybeMarkAsCompleted() => MarkAsCompleted(Subscriber1GotTheEvent, Subscriber2GotTheEvent);
         }
 
         class Publisher : EndpointConfigurationBuilder
@@ -109,6 +111,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext handlerContext)
                 {
                     context.Subscriber1GotTheEvent = true;
+                    context.MaybeMarkAsCompleted();
                     return Task.CompletedTask;
                 }
             }
@@ -136,6 +139,7 @@
                 public Task Handle(MyEvent messageThatIsEnlisted, IMessageHandlerContext handlerContext)
                 {
                     context.Subscriber2GotTheEvent = true;
+                    context.MaybeMarkAsCompleted();
                     return Task.CompletedTask;
                 }
             }

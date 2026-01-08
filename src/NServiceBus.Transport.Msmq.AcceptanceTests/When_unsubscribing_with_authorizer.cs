@@ -27,7 +27,7 @@
                 .Done(c =>
                     c.SubscriberGotTheEvent &&
                     c.DeclinedUnSubscribe)
-                .Run(TimeSpan.FromSeconds(10));
+                .Run();
         }
 
         public class TestContext : ScenarioContext
@@ -36,6 +36,8 @@
             public bool UnsubscribeAttempted { get; set; }
             public bool DeclinedUnSubscribe { get; set; }
             public bool Subscribed { get; set; }
+
+            public void MaybeMarkAsCompleted() => MarkAsCompleted(SubscriberGotTheEvent, DeclinedUnSubscribe);
         }
 
         class Publisher : EndpointConfigurationBuilder
@@ -68,6 +70,7 @@
                 }
                 var testContext = (TestContext)ScenarioContext;
                 testContext.DeclinedUnSubscribe = true;
+                testContext.MaybeMarkAsCompleted();
                 return false;
             }
         }
@@ -94,6 +97,7 @@
                 public Task Handle(MyEvent message, IMessageHandlerContext handlerContext)
                 {
                     context.SubscriberGotTheEvent = true;
+                    context.MaybeMarkAsCompleted();
                     return Task.CompletedTask;
                 }
             }
