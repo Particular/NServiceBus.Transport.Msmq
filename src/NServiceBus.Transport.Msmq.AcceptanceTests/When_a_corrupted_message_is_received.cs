@@ -49,7 +49,7 @@
                     })
                     .Done(c => c.Logs.Any(l => l.Level == LogLevel.Error))
                     .Run();
-                Assert.True(MessageExistsInErrorQueue(), "The message should have been moved to the error queue");
+                Assert.That(MessageExistsInErrorQueue(), Is.True, "The message should have been moved to the error queue");
             }
             finally
             {
