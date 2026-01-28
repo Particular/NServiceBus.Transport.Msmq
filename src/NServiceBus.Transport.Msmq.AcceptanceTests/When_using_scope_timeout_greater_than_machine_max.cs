@@ -18,7 +18,7 @@
                         .Run();
             });
 
-            Assert.True(exception.Message.Contains("Timeout requested is longer than the maximum value for this machine"));
+            Assert.That(exception.Message.Contains("Timeout requested is longer than the maximum value for this machine"), Is.True);
         }
 
         public class ScopeEndpoint : EndpointConfigurationBuilder

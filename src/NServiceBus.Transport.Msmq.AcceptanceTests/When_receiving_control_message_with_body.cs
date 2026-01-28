@@ -26,7 +26,7 @@
                 .Done(c => c.ControlMessageProcessed || c.ControlMessageFailed)
                 .Run();
 
-            Assert.IsTrue(context.ControlMessageProcessed);
+            Assert.That(context.ControlMessageProcessed, Is.True);
         }
 
         public class Context : ScenarioContext

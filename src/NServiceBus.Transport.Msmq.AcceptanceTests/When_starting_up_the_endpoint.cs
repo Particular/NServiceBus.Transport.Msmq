@@ -20,8 +20,8 @@
             var everyone = new SecurityIdentifier(WellKnownSidType.WorldSid, null).Translate(typeof(NTAccount)).ToString();
 
             var logItem = context.Logs.FirstOrDefault(item => item.Message.Contains($"[{everyone}]"));
-            Assert.IsNotNull(logItem);
-            StringAssert.Contains("Consider setting appropriate permissions", logItem.Message);
+            Assert.That(logItem, Is.Not.Null);
+            Assert.That(logItem.Message, Does.Contain("Consider setting appropriate permissions"));
         }
 
         class Endpoint : EndpointConfigurationBuilder

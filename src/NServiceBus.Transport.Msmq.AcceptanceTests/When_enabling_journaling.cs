@@ -41,7 +41,7 @@
                 {
                     using (var message = queue.Receive(TimeSpan.FromSeconds(5)))
                     {
-                        Assert.AreEqual(global, message?.UseJournalQueue, "UseJournalQueue");
+                        Assert.That(message?.UseJournalQueue, Is.EqualTo(global), "UseJournalQueue");
                     }
                 }
             }
