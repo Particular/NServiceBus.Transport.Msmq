@@ -27,7 +27,7 @@ jobs:
       - name: Build
         run: dotnet build src --configuration Release
       - name: Upload packages
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: NuGet packages
           path: nugets/
