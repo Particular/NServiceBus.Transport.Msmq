@@ -41,9 +41,9 @@
                 Assert.Fail($"Unable to read permissions for queue: {queue.QueueName}");
             }
 
-            Assert.IsTrue(rights.HasValue);
-            Assert.True(rights.Value.HasFlag(MessageQueueAccessRights.WriteMessage));
-            Assert.True(rights.Value.HasFlag(MessageQueueAccessRights.ReceiveMessage));
+            Assert.That(rights.HasValue, Is.True);
+            Assert.That(rights.Value.HasFlag(MessageQueueAccessRights.WriteMessage), Is.True);
+            Assert.That(rights.Value.HasFlag(MessageQueueAccessRights.ReceiveMessage), Is.True);
             Assert.That(accessType == providedAccessType);
         }
     }

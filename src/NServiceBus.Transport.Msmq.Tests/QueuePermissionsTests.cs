@@ -59,7 +59,7 @@
             }
 
             QueuePermissions.CheckQueue(testQueueName);
-            Assert.IsFalse(logOutput.ToString().Contains("Consider setting appropriate permissions"));
+            Assert.That(logOutput.ToString().Contains("Consider setting appropriate permissions"), Is.False);
 
             // Resetting the queue permission to delete the queue to enable the cleanup of the unit test
             var path = @".\private$\" + testQueueName;
