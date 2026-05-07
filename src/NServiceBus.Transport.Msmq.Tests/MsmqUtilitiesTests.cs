@@ -24,7 +24,7 @@
                         new Dictionary<string, string> { { "NServiceBus.ExceptionInfo.Message", expected } }, Array.Empty<byte>()));
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
+            Assert.That(headers["NServiceBus.ExceptionInfo.Message"], Is.EqualTo(expected));
         }
 
         [Test]
@@ -45,7 +45,7 @@
 
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
+            Assert.That(headers["NServiceBus.ExceptionInfo.Message"], Is.EqualTo(expected));
         }
 
         [Test]
@@ -57,7 +57,7 @@
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual("local@" + RuntimeEnvironment.MachineName, headers[Headers.ReplyToAddress]);
+            Assert.That(headers[Headers.ReplyToAddress], Is.EqualTo("local@" + RuntimeEnvironment.MachineName));
         }
 
         [Test]
@@ -70,7 +70,7 @@
             message.ResponseQueue = new MessageQueue(new MsmqAddress("local", RuntimeEnvironment.MachineName).FullPath);
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual("SomeAddress", headers[Headers.ReplyToAddress]);
+            Assert.That(headers[Headers.ReplyToAddress], Is.EqualTo("SomeAddress"));
         }
 
         [Test]
@@ -84,7 +84,7 @@
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual("Send", headers[Headers.MessageIntent]);
+            Assert.That(headers[Headers.MessageIntent], Is.EqualTo("Send"));
         }
 
         [Test]
@@ -96,7 +96,7 @@
             message.AppSpecific = 3; //Send = 1, Publish = 2, Subscribe = 3, Unsubscribe = 4 and Reply = 5
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual("Subscribe", headers[Headers.MessageIntent]);
+            Assert.That(headers[Headers.MessageIntent], Is.EqualTo("Subscribe"));
         }
 
         [Test]
@@ -120,7 +120,7 @@
 
             Dictionary<string, string> headers = MsmqUtilities.ExtractHeaders(message);
 
-            Assert.AreEqual(expected, headers["NServiceBus.ExceptionInfo.Message"]);
+            Assert.That(headers["NServiceBus.ExceptionInfo.Message"], Is.EqualTo(expected));
         }
 
         [Test]
@@ -140,7 +140,7 @@
             var encodingWithBOM = new UTF8Encoding(true);
             var preamble = encodingWithBOM.GetPreamble();
 
-            Assert.AreNotEqual(preamble, message.Extension.Take(preamble.Length));
+            Assert.That(message.Extension.Take(preamble.Length), Is.Not.EqualTo(preamble));
         }
 
         [Test]
@@ -159,7 +159,7 @@
                 var encodingWithBOM = new UTF8Encoding(true);
                 var preamble = encodingWithBOM.GetPreamble();
 
-                Assert.AreNotEqual(preamble, seralizedHeaders.Take(preamble.Length));
+                Assert.That(seralizedHeaders.Take(preamble.Length), Is.Not.EqualTo(preamble));
             }
         }
 
@@ -181,7 +181,7 @@
                 var encodingWithBOM = new UTF8Encoding(true);
                 var preamble = encodingWithBOM.GetPreamble();
 
-                Assert.AreEqual(preamble, seralizedHeaders.Take(preamble.Length));
+                Assert.That(seralizedHeaders.Take(preamble.Length), Is.EqualTo(preamble));
             }
         }
     }
