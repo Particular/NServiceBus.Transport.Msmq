@@ -7,6 +7,9 @@ namespace NServiceBus
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Particular.Msmq;
     using Routing;
     using Transport;
@@ -70,7 +73,9 @@ namespace NServiceBus
 
             foreach (var address in sendingAddresses.Concat(messageReceivers.Select(r => r.Value.ReceiveAddress)))
             {
-                QueuePermissions.CheckQueue(address);
+                var logger = hostSettings.ServiceProvider != null ? hostSettings.ServiceProvider.GetRequiredService<ILogger<QueuePermissions>>() : new NullLogger<QueuePermissions>();
+
+                QueuePermissions.CheckQueue(address, logger);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new

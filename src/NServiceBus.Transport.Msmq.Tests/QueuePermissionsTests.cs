@@ -1,29 +1,20 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System.IO;
+    using System.Linq;
     using System.Security.Principal;
-    using System.Text;
-    using Logging;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Testing;
     using NUnit.Framework;
     using Particular.Msmq;
-    using Testing;
 
     [TestFixture]
     class QueuePermissionsTests
     {
-        StringBuilder logOutput;
         const string testQueueName = "NServiceBus.Core.Tests.QueuePermissionsTests";
+        FakeLogger<QueuePermissions> logger;
 
-        [OneTimeSetUp]
-        public void TestFixtureSetup()
-        {
-            var loggerFactory = LogManager.Use<TestingLoggerFactory>();
-            loggerFactory.Level(LogLevel.Debug);
-            logOutput = new StringBuilder();
-            var stringWriter = new StringWriter(logOutput);
-            loggerFactory.WriteTo(stringWriter);
-        }
-
+        [SetUp]
+        public void SetUp() => logger = new FakeLogger<QueuePermissions>();
 
         [TearDown]
         public void TearDown()
@@ -33,7 +24,6 @@
             {
                 MessageQueue.Delete(path);
             }
-            logOutput.Clear();
         }
 
 
@@ -58,8 +48,8 @@
                 queue.SetPermissions(anonymousGroupName, accessRights, AccessControlEntryType.Deny);
             }
 
-            QueuePermissions.CheckQueue(testQueueName);
-            Assert.That(logOutput.ToString().Contains("Consider setting appropriate permissions"), Is.False);
+            QueuePermissions.CheckQueue(testQueueName, logger);
+            Assert.That(LogContains("Consider setting appropriate permissions"), Is.False);
 
             // Resetting the queue permission to delete the queue to enable the cleanup of the unit test
             var path = @".\private$\" + testQueueName;
@@ -74,18 +64,18 @@
         {
             var remoteQueue = $"{testQueueName}@remotemachine";
 
-            QueuePermissions.CheckQueue(remoteQueue);
+            QueuePermissions.CheckQueue(remoteQueue, logger);
 
-            Assert.That(logOutput.ToString(), Does.Contain($"{remoteQueue} is remote, the queue could not be verified."));
+            Assert.That(LogContains($"{remoteQueue} is remote, the queue could not be verified."), Is.True);
         }
 
         [Test]
         public void Should_warn_if_queue_doesnt_exist()
         {
-            QueuePermissions.CheckQueue("NServiceBus.NonexistingQueueName");
+            QueuePermissions.CheckQueue("NServiceBus.NonexistingQueueName", logger);
 
-            Assert.That(logOutput.ToString(), Does.Contain("does not exist"));
-            Assert.That(logOutput.ToString(), Does.Contain("WARN"));
+            Assert.That(LogContains("does not exist"), Is.True);
+            Assert.That(logger.LatestRecord.Level, Is.EqualTo(LogLevel.Warning));
         }
 
         [Test]
@@ -93,9 +83,9 @@
         {
             MessageQueue.Create(@".\private$\" + testQueueName, false);
 
-            QueuePermissions.CheckQueue(testQueueName);
+            QueuePermissions.CheckQueue(testQueueName, logger);
 
-            Assert.That(logOutput.ToString(), Does.Contain("Verified that the queue"));
+            Assert.That(LogContains("Verified that the queue"), Is.True);
         }
 
         // MSMQ Access Rights are defined here: https://msdn.microsoft.com/en-us/library/system.messaging.messagequeueaccessrights(v=vs.110).aspx
@@ -126,8 +116,11 @@
                 queue.SetPermissions(groupName, rights);
             }
 
-            QueuePermissions.CheckQueue(testQueueName);
-            Assert.That(logOutput.ToString(), Does.Contain("Consider setting appropriate permissions"));
+            QueuePermissions.CheckQueue(testQueueName, logger);
+            Assert.That(LogContains("Consider setting appropriate permissions"), Is.True);
         }
+
+        bool LogContains(string messageFragment) =>
+            logger.Collector.GetSnapshot().Any(log => log.Message.Contains(messageFragment));
     }
 }

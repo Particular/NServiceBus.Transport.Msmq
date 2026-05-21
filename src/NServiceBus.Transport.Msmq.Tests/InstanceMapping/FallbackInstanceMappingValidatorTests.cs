@@ -1,12 +1,9 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using Logging;
-    using NUnit.Framework;
     using System;
-    using System.IO;
-    using System.Text;
     using System.Xml.Linq;
-    using Testing;
+    using Microsoft.Extensions.Logging.Testing;
+    using NUnit.Framework;
 
     [TestFixture]
     class FallbackInstanceMappingValidatorTests
@@ -14,12 +11,6 @@
         [OneTimeSetUp]
         public void FixtureSetup()
         {
-            var loggerFactory = LogManager.Use<TestingLoggerFactory>();
-            loggerFactory.Level(LogLevel.Info);
-            logOutput = new StringBuilder();
-            var stringWriter = new StringWriter(logOutput);
-            loggerFactory.WriteTo(stringWriter);
-
             preferredValidator = new FakeInstanceMappingValidator();
             secondaryValidator = new FakeInstanceMappingValidator();
             doc = null;
@@ -30,18 +21,16 @@
         {
             preferredValidator.Pass();
             secondaryValidator.Pass();
+            logger = new FakeLogger<FallbackInstanceMappingValidator>();
             fallbackValidator = new FallbackInstanceMappingValidator(
                 preferredValidator,
                 secondaryValidator,
-                FallbackMessage);
-            logOutput.Clear();
+                FallbackMessage,
+                logger);
         }
 
         [Test]
-        public void Passes_if_preferred_passes()
-        {
-            Assert.DoesNotThrow(() => fallbackValidator.Validate(doc));
-        }
+        public void Passes_if_preferred_passes() => Assert.DoesNotThrow(() => fallbackValidator.Validate(doc));
 
         [Test]
         public void Passes_if_primary_fails_but_secondary_passes()
@@ -64,7 +53,7 @@
         {
             preferredValidator.Fail("Preferred validator failed");
             fallbackValidator.Validate(doc);
-            Assert.That(logOutput.ToString(), Does.Contain(FallbackMessage));
+            Assert.That(logger.LatestRecord.Message, Does.Contain(FallbackMessage));
         }
 
         [Test]
@@ -72,9 +61,9 @@
         {
             preferredValidator.Fail("Preferred validator failed");
             fallbackValidator.Validate(doc);
-            logOutput.Clear();
+            logger.Collector.Clear();
             fallbackValidator.Validate(doc);
-            Assert.That(logOutput.ToString(), Does.Not.Contain(FallbackMessage));
+            Assert.That(logger.Collector.Count, Is.Zero);
         }
 
         [Test]
@@ -83,24 +72,24 @@
             // Fallback once
             preferredValidator.Fail("Preferred validator failed");
             fallbackValidator.Validate(doc);
-            logOutput.Clear();
+            logger.Collector.Clear();
 
             // Succeed once
             preferredValidator.Pass();
             fallbackValidator.Validate(doc);
-            Assert.That(logOutput.ToString(), Does.Not.Contain(FallbackMessage));
+            Assert.That(logger.Collector.Count, Is.Zero);
 
             // Fail again
             preferredValidator.Fail("Preferred validator failed again");
             fallbackValidator.Validate(doc);
-            Assert.That(logOutput.ToString(), Does.Contain(FallbackMessage));
+            Assert.That(logger.LatestRecord.Message, Does.Contain(FallbackMessage));
         }
 
         FakeInstanceMappingValidator preferredValidator;
         FakeInstanceMappingValidator secondaryValidator;
         IInstanceMappingValidator fallbackValidator;
+        FakeLogger<FallbackInstanceMappingValidator> logger;
         XDocument doc;
-        StringBuilder logOutput;
         const string FallbackMessage = "Falling Back";
 
         class FakeInstanceMappingValidator : IInstanceMappingValidator

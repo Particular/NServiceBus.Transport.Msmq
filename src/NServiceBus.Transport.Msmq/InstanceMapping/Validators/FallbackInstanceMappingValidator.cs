@@ -1,45 +1,31 @@
-﻿namespace NServiceBus.Transport.Msmq
-{
-    using System;
-    using System.Xml.Linq;
-    using Logging;
+﻿namespace NServiceBus.Transport.Msmq;
 
-    class FallbackInstanceMappingValidator : IInstanceMappingValidator
+using System;
+using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
+
+class FallbackInstanceMappingValidator(IInstanceMappingValidator preferredValidator,
+    IInstanceMappingValidator fallbackValidator,
+    string fallbackWarning,
+    ILogger<FallbackInstanceMappingValidator> logger) : IInstanceMappingValidator
+{
+    public void Validate(XDocument document)
     {
-        public FallbackInstanceMappingValidator(
-            IInstanceMappingValidator preferredValidator,
-            IInstanceMappingValidator fallbackValidator,
-            string fallbackWarning)
+        try
         {
-            this.preferredValidator = preferredValidator;
-            this.fallbackValidator = fallbackValidator;
-            this.fallbackWarning = fallbackWarning;
+            preferredValidator.Validate(document);
             logWarningOnFallback = true;
         }
-
-        public void Validate(XDocument document)
+        catch (Exception ex)
         {
-            try
+            if (logWarningOnFallback)
             {
-                preferredValidator.Validate(document);
-                logWarningOnFallback = true;
+                logger.LogWarning(fallbackWarning, ex);
+                logWarningOnFallback = false;
             }
-            catch (Exception ex)
-            {
-                if (logWarningOnFallback)
-                {
-                    Logger.Warn(fallbackWarning, ex);
-                    logWarningOnFallback = false;
-                }
-                fallbackValidator.Validate(document);
-            }
+            fallbackValidator.Validate(document);
         }
-
-        IInstanceMappingValidator preferredValidator;
-        IInstanceMappingValidator fallbackValidator;
-        string fallbackWarning;
-        bool logWarningOnFallback;
-
-        static ILog Logger = LogManager.GetLogger<FallbackInstanceMappingValidator>();
     }
+
+    bool logWarningOnFallback = true;
 }

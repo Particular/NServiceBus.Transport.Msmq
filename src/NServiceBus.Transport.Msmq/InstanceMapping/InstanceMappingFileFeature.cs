@@ -3,6 +3,8 @@ namespace NServiceBus.Transport.Msmq
     using System;
     using System.IO;
     using Features;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using Routing;
     using Settings;
 
@@ -24,14 +26,17 @@ namespace NServiceBus.Transport.Msmq
 
         protected override void Setup(FeatureConfigurationContext context)
         {
-            var instanceMappingLoader = CreateInstanceMappingLoader(context.Settings);
-
             var checkInterval = context.Settings.Get<TimeSpan>(CheckIntervalSettingsKey);
             var endpointInstances = context.Settings.Get<EndpointInstances>();
 
-            var instanceMappingTable = new InstanceMappingFileMonitor(checkInterval, new AsyncTimer(), instanceMappingLoader, endpointInstances);
-            instanceMappingTable.ReloadData();
-            context.RegisterStartupTask(instanceMappingTable);
+            context.RegisterStartupTask(sp =>
+            {
+                var instanceMappingLoader = CreateInstanceMappingLoader(context.Settings, sp);
+                var instanceMappingFileMonitor = new InstanceMappingFileMonitor(checkInterval, new AsyncTimer(), instanceMappingLoader, endpointInstances, sp.GetRequiredService<ILogger<InstanceMappingFileMonitor>>());
+                instanceMappingFileMonitor.ReloadData();
+
+                return instanceMappingFileMonitor;
+            });
         }
 
         static string GetRootedPath(string filePath) =>
@@ -39,7 +44,7 @@ namespace NServiceBus.Transport.Msmq
                 ? filePath
                 : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath);
 
-        static IInstanceMappingLoader CreateInstanceMappingLoader(IReadOnlySettings settings)
+        static IInstanceMappingLoader CreateInstanceMappingLoader(IReadOnlySettings settings, IServiceProvider serviceProvider)
         {
             var uri = settings.Get<Uri>(PathSettingsKey);
 
@@ -74,7 +79,8 @@ namespace NServiceBus.Transport.Msmq
                 validator = new FallbackInstanceMappingValidator(
                     EmbeddedSchemaInstanceMappingValidator.CreateValidatorV2(),
                     EmbeddedSchemaInstanceMappingValidator.CreateValidatorV1(),
-                    "Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes."
+                    "Validation error parsing instance mapping. Falling back on relaxed parsing method. Instance mapping may contain unsupported attributes.",
+                    serviceProvider.GetRequiredService<ILogger<FallbackInstanceMappingValidator>>()
                 );
             }
 
