@@ -32,6 +32,7 @@ namespace NServiceBus
             ArgumentNullException.ThrowIfNull(hostSettings);
             ArgumentNullException.ThrowIfNull(receivers);
             ArgumentNullException.ThrowIfNull(sendingAddresses);
+            ArgumentNullException.ThrowIfNull(hostSettings.ServiceProvider);
 
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
@@ -42,7 +43,7 @@ namespace NServiceBus
 
             var dispatcher = new MsmqMessageDispatcher(this, OnSendCallbackForTesting);
 
-            if (hostSettings.CoreSettings != null)
+            if (!hostSettings.IsRawMode)
             {
                 // enforce an explicitly configured error queue when using MSMQ transport with NServiceBus
                 if (receivers.Length > 0 && !hostSettings.CoreSettings.TryGetExplicitlyConfiguredErrorQueueAddress(out _))
@@ -71,10 +72,10 @@ namespace NServiceBus
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
+            var logger = hostSettings.ServiceProvider.GetRequiredService<ILogger<QueuePermissions>>();
+
             foreach (var address in sendingAddresses.Concat(messageReceivers.Select(r => r.Value.ReceiveAddress)))
             {
-                var logger = hostSettings.ServiceProvider != null ? hostSettings.ServiceProvider.GetRequiredService<ILogger<QueuePermissions>>() : new NullLogger<QueuePermissions>();
-
                 QueuePermissions.CheckQueue(address, logger);
             }
 
