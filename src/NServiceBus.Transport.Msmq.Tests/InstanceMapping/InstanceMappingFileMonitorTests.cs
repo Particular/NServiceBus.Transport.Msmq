@@ -20,7 +20,9 @@
         [OneTimeSetUp]
         public void TestFixtureSetup()
         {
+#pragma warning disable CS0618 // Configure logging through Microsoft.Extensions.Logging instead
             var loggerFactory = LogManager.Use<TestingLoggerFactory>();
+#pragma warning restore CS0618 // Configure logging through Microsoft.Extensions.Logging instead
             loggerFactory.Level(LogLevel.Info);
             logOutput = new StringBuilder();
             var stringWriter = new StringWriter(logOutput);
