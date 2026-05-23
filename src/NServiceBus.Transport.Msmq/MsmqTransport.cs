@@ -7,9 +7,6 @@ namespace NServiceBus
     using System.Threading.Tasks;
     using System.Transactions;
     using Features;
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Abstractions;
     using Particular.Msmq;
     using Routing;
     using Transport;
@@ -32,7 +29,6 @@ namespace NServiceBus
             ArgumentNullException.ThrowIfNull(hostSettings);
             ArgumentNullException.ThrowIfNull(receivers);
             ArgumentNullException.ThrowIfNull(sendingAddresses);
-            ArgumentNullException.ThrowIfNull(hostSettings.ServiceProvider);
 
             CheckMachineNameForCompliance.Check();
             ValidateIfDtcIsAvailable();
@@ -43,7 +39,7 @@ namespace NServiceBus
 
             var dispatcher = new MsmqMessageDispatcher(this, OnSendCallbackForTesting);
 
-            if (!hostSettings.IsRawMode)
+            if (hostSettings.CoreSettings != null)
             {
                 // enforce an explicitly configured error queue when using MSMQ transport with NServiceBus
                 if (receivers.Length > 0 && !hostSettings.CoreSettings.TryGetExplicitlyConfiguredErrorQueueAddress(out _))
@@ -72,11 +68,9 @@ namespace NServiceBus
                 queueCreator.CreateQueueIfNecessary(queuesToCreate);
             }
 
-            var logger = hostSettings.ServiceProvider.GetRequiredService<ILogger<QueuePermissions>>();
-
             foreach (var address in sendingAddresses.Concat(messageReceivers.Select(r => r.Value.ReceiveAddress)))
             {
-                QueuePermissions.CheckQueue(address, logger);
+                QueuePermissions.CheckQueue(address);
             }
 
             hostSettings.StartupDiagnostic.Add("NServiceBus.Transport.MSMQ", new

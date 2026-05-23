@@ -1,20 +1,31 @@
 ﻿namespace NServiceBus.Transport.Msmq.Tests
 {
-    using System.Linq;
+    using System.IO;
     using System.Security.Principal;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Testing;
+    using System.Text;
+    using Logging;
     using NUnit.Framework;
     using Particular.Msmq;
+    using Testing;
 
     [TestFixture]
     class QueuePermissionsTests
     {
+        StringBuilder logOutput;
         const string testQueueName = "NServiceBus.Core.Tests.QueuePermissionsTests";
-        FakeLogger<QueuePermissions> logger;
 
-        [SetUp]
-        public void SetUp() => logger = new FakeLogger<QueuePermissions>();
+        [OneTimeSetUp]
+        public void TestFixtureSetup()
+        {
+#pragma warning disable CS0618 // Configure logging through Microsoft.Extensions.Logging instead
+            var loggerFactory = LogManager.Use<TestingLoggerFactory>();
+#pragma warning restore CS0618 // Configure logging through Microsoft.Extensions.Logging instead
+            loggerFactory.Level(LogLevel.Debug);
+            logOutput = new StringBuilder();
+            var stringWriter = new StringWriter(logOutput);
+            loggerFactory.WriteTo(stringWriter);
+        }
+
 
         [TearDown]
         public void TearDown()
@@ -24,6 +35,7 @@
             {
                 MessageQueue.Delete(path);
             }
+            logOutput.Clear();
         }
 
 
@@ -48,8 +60,8 @@
                 queue.SetPermissions(anonymousGroupName, accessRights, AccessControlEntryType.Deny);
             }
 
-            QueuePermissions.CheckQueue(testQueueName, logger);
-            Assert.That(LogContains("Consider setting appropriate permissions"), Is.False);
+            QueuePermissions.CheckQueue(testQueueName);
+            Assert.That(logOutput.ToString().Contains("Consider setting appropriate permissions"), Is.False);
 
             // Resetting the queue permission to delete the queue to enable the cleanup of the unit test
             var path = @".\private$\" + testQueueName;
@@ -64,18 +76,18 @@
         {
             var remoteQueue = $"{testQueueName}@remotemachine";
 
-            QueuePermissions.CheckQueue(remoteQueue, logger);
+            QueuePermissions.CheckQueue(remoteQueue);
 
-            Assert.That(LogContains($"{remoteQueue} is remote, the queue could not be verified."), Is.True);
+            Assert.That(logOutput.ToString(), Does.Contain($"{remoteQueue} is remote, the queue could not be verified."));
         }
 
         [Test]
         public void Should_warn_if_queue_doesnt_exist()
         {
-            QueuePermissions.CheckQueue("NServiceBus.NonexistingQueueName", logger);
+            QueuePermissions.CheckQueue("NServiceBus.NonexistingQueueName");
 
-            Assert.That(LogContains("does not exist"), Is.True);
-            Assert.That(logger.LatestRecord.Level, Is.EqualTo(LogLevel.Warning));
+            Assert.That(logOutput.ToString(), Does.Contain("does not exist"));
+            Assert.That(logOutput.ToString(), Does.Contain("WARN"));
         }
 
         [Test]
@@ -83,9 +95,9 @@
         {
             MessageQueue.Create(@".\private$\" + testQueueName, false);
 
-            QueuePermissions.CheckQueue(testQueueName, logger);
+            QueuePermissions.CheckQueue(testQueueName);
 
-            Assert.That(LogContains("Verified that the queue"), Is.True);
+            Assert.That(logOutput.ToString(), Does.Contain("Verified that the queue"));
         }
 
         // MSMQ Access Rights are defined here: https://msdn.microsoft.com/en-us/library/system.messaging.messagequeueaccessrights(v=vs.110).aspx
@@ -116,11 +128,8 @@
                 queue.SetPermissions(groupName, rights);
             }
 
-            QueuePermissions.CheckQueue(testQueueName, logger);
-            Assert.That(LogContains("Consider setting appropriate permissions"), Is.True);
+            QueuePermissions.CheckQueue(testQueueName);
+            Assert.That(logOutput.ToString(), Does.Contain("Consider setting appropriate permissions"));
         }
-
-        bool LogContains(string messageFragment) =>
-            logger.Collector.GetSnapshot().Any(log => log.Message.Contains(messageFragment));
     }
 }

@@ -2,20 +2,38 @@
 {
     using System;
     using System.Collections.Generic;
-    using Microsoft.Extensions.Logging.Testing;
-    using NUnit.Framework;
-    using Routing;
-    using System.Threading;
+    using System.IO;
+    using System.Text;
     using System.Threading.Tasks;
     using System.Xml.Linq;
+    using Logging;
+    using Routing;
+    using NUnit.Framework;
+    using Testing;
+    using System.Threading;
 
     [TestFixture]
     public class InstanceMappingFileMonitorTests
     {
-        FakeLogger<InstanceMappingFileMonitor> logger;
+        StringBuilder logOutput;
+
+        [OneTimeSetUp]
+        public void TestFixtureSetup()
+        {
+#pragma warning disable CS0618 // Configure logging through Microsoft.Extensions.Logging instead
+            var loggerFactory = LogManager.Use<TestingLoggerFactory>();
+#pragma warning restore CS0618 // Configure logging through Microsoft.Extensions.Logging instead
+            loggerFactory.Level(LogLevel.Info);
+            logOutput = new StringBuilder();
+            var stringWriter = new StringWriter(logOutput);
+            loggerFactory.WriteTo(stringWriter);
+        }
 
         [SetUp]
-        public void Setup() => logger = new FakeLogger<InstanceMappingFileMonitor>();
+        public void Setup()
+        {
+            logOutput.Clear();
+        }
 
         [Test]
         public void Reload_should_throw_when_file_does_not_exist()
@@ -23,7 +41,7 @@
             var timer = new FakeTimer();
             var fileAccessException = new Exception("Simulated");
             var loader = new FakeLoader(() => throw fileAccessException);
-            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances(), logger);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances());
 
             var exception = Assert.Throws<Exception>(() => monitor.ReloadData());
 
@@ -49,7 +67,7 @@
                 return XDocument.Parse(@"<endpoints><endpoint name=""A""><instance/></endpoint></endpoints>");
             });
 
-            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances(), logger);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, timer, loader, new EndpointInstances());
             await monitor.Start(null);
 
             fail = true;
@@ -62,11 +80,11 @@
         public void Should_log_added_endpoints()
         {
             var loader = new FakeLoader(() => XDocument.Parse(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>"));
-            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances(), logger);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
 
-            Assert.That(logger.LatestRecord.Message, Does.Contain(@"Added endpoint 'A' with 2 instances"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Added endpoint 'A' with 2 instances"));
         }
 
         [Test]
@@ -76,13 +94,13 @@
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>");
             fileData.Enqueue("<endpoints></endpoints>");
             var loader = new FakeLoader(() => XDocument.Parse(fileData.Dequeue()));
-            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances(), logger);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
-            logger.Collector.Clear();
+            logOutput.Clear();
             monitor.ReloadData();
 
-            Assert.That(logger.LatestRecord.Message, Does.Contain(@"Removed all instances of endpoint 'A'"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Removed all instances of endpoint 'A'"));
         }
 
         [Test]
@@ -92,24 +110,37 @@
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""2"" /></endpoint></endpoints>");
             fileData.Enqueue(@"<endpoints><endpoint name=""A""><instance discriminator=""1"" /><instance discriminator=""3"" /><instance discriminator=""4"" /></endpoint></endpoints>");
             var loader = new FakeLoader(() => XDocument.Parse(fileData.Dequeue()));
-            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances(), logger);
+            var monitor = new InstanceMappingFileMonitor(TimeSpan.Zero, new FakeTimer(), loader, new EndpointInstances());
 
             monitor.ReloadData();
-            logger.Collector.Clear();
+            logOutput.Clear();
             monitor.ReloadData();
 
-            Assert.That(logger.LatestRecord.Message, Does.Contain(@"Updated endpoint 'A': +2 instances, -1 instance"));
+            Assert.That(logOutput.ToString(), Does.Contain(@"Updated endpoint 'A': +2 instances, -1 instance"));
         }
 
-        class FakeLoader(Func<XDocument> docCallback) : IInstanceMappingLoader
+        class FakeLoader : IInstanceMappingLoader
         {
+            readonly Func<XDocument> docCallback;
+
+            public FakeLoader(Func<XDocument> docCallback)
+            {
+                this.docCallback = docCallback;
+            }
+
             public XDocument Load() => docCallback();
         }
 
-        class FakeTimer(Action<Exception> errorSpyCallback = null) : IAsyncTimer
+        class FakeTimer : IAsyncTimer
         {
             Func<CancellationToken, Task> theCallback;
             Action<Exception> theErrorCallback;
+            Action<Exception> errorSpyCallback;
+
+            public FakeTimer(Action<Exception> errorSpyCallback = null)
+            {
+                this.errorSpyCallback = errorSpyCallback;
+            }
 
             public async Task Trigger(CancellationToken cancellationToken = default)
             {
