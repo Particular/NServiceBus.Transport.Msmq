@@ -25,7 +25,7 @@
                     })))
                     .Done(c => c.WasCalled)
                     .Run();
-                Assert.AreEqual("MyLabel", ReadMessageLabel());
+                Assert.That(ReadMessageLabel(), Is.EqualTo("MyLabel"));
             }
             finally
             {

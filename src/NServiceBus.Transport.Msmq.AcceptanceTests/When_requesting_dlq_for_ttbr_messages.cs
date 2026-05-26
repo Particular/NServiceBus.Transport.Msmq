@@ -31,7 +31,7 @@
                 {
                     using (var message = queue.Receive(TimeSpan.FromSeconds(5)))
                     {
-                        Assert.True(message?.UseDeadLetterQueue);
+                        Assert.That(message?.UseDeadLetterQueue, Is.True);
                     }
                 }
             }

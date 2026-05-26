@@ -1,4 +1,4 @@
-namespace NServiceBus.Transport.Msmq.Tests
+﻿namespace NServiceBus.Transport.Msmq.Tests
 {
     using System;
     using System.Net;
@@ -16,7 +16,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 throw new Exception("Should not call the lookup method");
             });
-            Assert.AreEqual("replyToMachine", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("replyToMachine"));
         }
 
         [Test]
@@ -27,7 +27,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 throw new Exception("Should not call the lookup method");
             });
-            Assert.AreEqual("202.171.13.141", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("202.171.13.141"));
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace NServiceBus.Transport.Msmq.Tests
         {
             var address = new MsmqAddress("replyToAddress", "replyToMachine");
             var returnAddress = address.MakeCompatibleWith(new MsmqAddress("someQueue", "202.171.13.140"), _ => "10.10.10.10");
-            Assert.AreEqual("10.10.10.10", returnAddress.Machine);
+            Assert.That(returnAddress.Machine, Is.EqualTo("10.10.10.10"));
         }
 
         [Test]
@@ -43,13 +43,13 @@ namespace NServiceBus.Transport.Msmq.Tests
         [TestCase(".")]
         public void If_machine_is_looplocal_is_specified_is_remote_should_be_false(string machine)
         {
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machine).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + machine).IsRemote(), Is.False);
         }
 
         [Test]
         public void If_local_machine_name_is_remote_should_be_false()
         {
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + Environment.MachineName).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + Environment.MachineName).IsRemote(), Is.False);
         }
 
         [Test]
@@ -64,7 +64,7 @@ namespace NServiceBus.Transport.Msmq.Tests
             {
                 Assert.Ignore($"Add `127.0.0.1 {machinename}` to hosts file for this test to run.");
             }
-            Assert.IsFalse(MsmqAddress.Parse("replyToAddress@" + machinename).IsRemote());
+            Assert.That(MsmqAddress.Parse("replyToAddress@" + machinename).IsRemote(), Is.False);
         }
     }
 }

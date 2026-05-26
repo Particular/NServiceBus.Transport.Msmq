@@ -17,7 +17,7 @@
                     .Run();
             });
 
-            StringAssert.Contains("Faults forwarding requires an error queue to be specified", ex.Message);
+            Assert.That(ex.Message, Does.Contain("Faults forwarding requires an error queue to be specified"));
         }
 
         public class EndpointWithNoErrorQConfig : EndpointConfigurationBuilder

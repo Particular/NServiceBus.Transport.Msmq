@@ -26,7 +26,7 @@
                 .Done(c => c.ReceivedOutgoingMessage)
                 .Run(TimeSpan.FromSeconds(15));
 
-            Assert.IsTrue(context.ReceivedOutgoingMessage);
+            Assert.That(context.ReceivedOutgoingMessage, Is.True);
         }
 
         class Context : ScenarioContext
